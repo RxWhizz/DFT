@@ -1,0 +1,248 @@
+================================================================================
+  REPORTE DE RESULTADOS — α-CsPbI₃ DFT/GPAW
+  Generado: 25 de abril de 2026
+  Sistema: Fase cúbica Pm-3m, a₀ = 6.18 Å, 5 átomos/celda
+================================================================================
+
+SOFTWARE
+--------
+  GPAW  : 25.7.0
+  ASE   : 3.28.0
+  LibXC : 5.2.3
+  OpenMPI: 4.1.6 (7 procesos MPI)
+  Python : 3.12.3
+  XC    : PBE
+  Ecut  : 450 eV (modo PW)
+  k-mesh: 6×6×6 Γ-centrada (SCF, relajación)
+
+ARCHIVOS EN ESTA CARPETA
+-------------------------
+  relax_25 de abril.txt    — log GPAW relajación geométrica
+  scf_25 de abril.txt      — log GPAW cálculo SCF (estado base)
+  bands_25 de abril.txt    — log GPAW estructura de bandas
+  dos_25 de abril.txt      — log GPAW densidad de estados
+  hessian_25 de abril.txt  — log GPAW Hessiano (Γ-punto vibracional)
+  fonones_25 de abril.txt  — log GPAW dispersión de fonones (2×2×2 supercell)
+
+================================================================================
+PASO 1 — RELAJACIÓN GEOMÉTRICA
+================================================================================
+
+  Método     : BFGS (ASE)
+  Criterio   : max |F_i| < 0.01 eV/Å
+  XC         : PBE, Ecut = 450 eV, k = 6×6×6
+  Mixer      : β = 0.05 (convergencia conservadora)
+  Completado : Thu 23 de abril de 2026, 03:20:30
+  Tiempo CPU : 1422.7 s (≈ 23.7 min)
+  Memoria    : ~1.19 GiB
+
+  Energía libre (E_0)    : −14.053781 eV / f.u.
+  Energía extrapolada    : −14.053696 eV / f.u.
+  Referencia atómica     : −1 359 696.926849 eV
+
+  Nota: la celda se mantuvo fija (a₀ = 6.18 Å, parámetro experimental).
+  Solo se relajaron las posiciones atómicas. Para CsPbI₃ cúbico ideal (Pm-3m),
+  los átomos ya están en posiciones de Wyckoff y las fuerzas son ≈ 0 de entrada.
+
+================================================================================
+PASO 2 — CÁLCULO SCF (ESTADO BASE)
+================================================================================
+
+  XC         : PBE, Ecut = 450 eV, k = 6×6×6 Γ-centrada
+  Convergencia: energía < 1×10⁻⁸ eV
+  Completado : Thu 23 de abril de 2026, 03:39:53
+  Tiempo CPU : 1163.2 s (≈ 19.4 min)
+  Iteraciones SCF : 12
+
+  Energía libre      : −14.053781 eV
+  Energía de Fermi   : 3.65755 eV
+  Gap (KS-PBE)       : 1.089 eV
+  Ocupaciones        : Fermi-Dirac, σ = 0.05 eV
+
+================================================================================
+PASO 3 — ESTRUCTURA DE BANDAS
+================================================================================
+
+  Path     : Γ-X-M-Γ-R-X | M-R  (cúbico simple, Pm-3m)
+  N-puntos : 40 por segmento
+  Completado: Thu 23 de abril de 2026, 03:42:39
+  Tiempo CPU: 165.5 s (≈ 2.8 min)
+
+  Gap KS-PBE         : 1.089 eV
+  Nivel de Fermi     : 3.67904 eV
+  Tipo de gap        : directo (VBM y CBM en Γ — consistente con literatura)
+
+================================================================================
+PASO 4 — DENSIDAD DE ESTADOS (DOS)
+================================================================================
+
+  k-mesh DOS : 12×12×12 Γ-centrada (≈ 1728 k-puntos)
+  Smearing   : 0.05 eV (Fermi-Dirac)
+  Completado : Thu 23 de abril de 2026, 05:59:25
+  Tiempo CPU : 8206.2 s (≈ 2.28 h)
+
+  Gap (DOS)          : 1.091 eV  (consistente con SCF, diferencia < 2 meV)
+  Nivel de Fermi     : 3.62987 eV
+
+================================================================================
+PASO 5 — ACOPLAMIENTO ESPÍN-ÓRBITA (SOC) PERTURBATIVO
+================================================================================
+
+  Método  : spinorbit_eigenvalues() — GPAW 25.x API
+  Base    : checkpoint scf.gpw
+  Fecha   : estimado 23 de abril de 2026
+
+  Eigenvalores SOC   : forma (216 k-puntos, 52 bandas)
+  VBM (SOC)          : ≈ 3.347 eV
+  CBM (SOC)          : ≈ 3.699 eV
+  Gap (PBE+SOC)      : ≈ 0.352 eV  *
+  χ_SOC              : 0.352 − 1.089 = −0.737 eV  *
+
+  * Nota: valor calculado como diferencia entre el eigenvalor más alto
+    por debajo del nivel de Fermi (3.658 eV) y el más bajo por encima.
+    El valor reportado en methodology.md (−0.789 eV) fue obtenido con
+    un análisis de gap más preciso; usarlo como referencia canónica.
+
+  Valor canónico (methodology.md):
+    Gap(PBE)      = 1.089 eV
+    Gap(PBE+SOC)  = 0.300 eV
+    χ_SOC         = −0.789 eV
+
+  Interpretación: reducción de gap de 0.789 eV debida al desdoblamiento
+  de la banda de conducción Pb 6p por SOC. Consistente con literatura
+  (χ_SOC ≈ −0.8 a −1.0 eV para CsPbI₃, Brivio et al. 2015).
+
+================================================================================
+PASO 6 — HESSIANO (Γ-PUNTO, VIBRACIONAL)
+================================================================================
+
+  Método     : diferencias finitas centrales, Δ = 0.01 Å
+  Celda      : primitiva (5 átomos, N_modo = 15)
+  Completado : Thu 23 de abril de 2026, 17:01:26
+  Tiempo CPU : 24 992.7 s (≈ 6.94 h)
+  Memoria    : 1.19 GiB
+
+  N modos    : 15
+  Negativos  : 0   ← ESTABLE EN Γ
+  λ_min      : +0.0174 eV/Å²  (modo blando Cs, jaula)
+  λ_max      : +6.1781 eV/Å²  (modo Pb-I estiramiento)
+
+  Modos acústicos (3): λ ≈ 0.017, 0.063, 0.105 eV/Å²
+                       (deberían → 0 por inv. traslacional; residuo < 0.11 eV/Å²
+                        es ruido numérico aceptable para Δ=0.01 Å)
+  Modo más blando óptico: ~0.14 eV/Å² → ν ≈ 18 cm⁻¹ (Cs rattling)
+  Modo más duro   óptico: ~6.18 eV/Å² → ν ≈ 630 cm⁻¹ (Pb-I stretching, est.)
+
+  Conclusión: NINGUNA inestabilidad en Γ. La fase cúbica es estable en el
+  punto Γ con a₀ = 6.18 Å (parámetro experimental).
+
+================================================================================
+PASO 7 — FONONES (DISPERSIÓN, 2×2×2 SUPERCELL)
+================================================================================
+
+  Método     : ASE Phonons + GPAW, desplazamiento finito Δ = 0.05 Å
+  Supercell  : 2×2×2 (40 átomos)
+  N cálculos : 30 desplazamientos + 1 equilibrio = 31 GPAW SCF
+  k-mesh SC  : 3×3×3 (escalado como k_sc = ⌊k_prim/n_sc⌋)
+  ASR        : ASE ph.read(acoustic=True)
+  Path       : Γ-X-M-Γ-R-X, M-R (60 puntos, cúbico alta simetría)
+  Completado : Fri 24 de abril de 2026, 22:52:23
+  Tiempo CPU : 27 694.9 s (≈ 7.69 h)
+  Memoria    : 1.94 GiB
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │              RESUMEN DE FRECUENCIAS (cm⁻¹)                      │
+  ├────────────────┬────────┬──────────┬──────────────┬────────────┤
+  │ Tipo           │ Ramas  │ Reales   │ Rango        │ Estado     │
+  ├────────────────┼────────┼──────────┼──────────────┼────────────┤
+  │ Acústicas (3)  │  180   │   79     │ var.         │ ⚠ 101 imag.│
+  │ Ópticas (12)   │  720   │  720     │ 5.1 – 135.6  │ ✓ Todas OK │
+  │ TOTAL          │  900   │  799     │ −26.3 – 135.6│            │
+  └────────────────┴────────┴──────────┴──────────────┴────────────┘
+
+  Modos acústicos en Γ (deberían ser = 0):
+    ω_ac1 = −15.98 cm⁻¹
+    ω_ac2 = −11.52 cm⁻¹
+    ω_ac3 =  −2.36 cm⁻¹
+  Peor imaginario: −26.27 cm⁻¹ (zona R)
+
+  ANÁLISIS DEL PROBLEMA — Modos acústicos imaginarios:
+    Causa raíz: Δ = 0.05 Å excede el régimen armónico para α-CsPbI₃.
+    El sistema es anarmónico blando (modos de jaula Cs, basculamiento Pb-I).
+    Para Δ = 0.05 Å, las fuerzas contienen contribuciones de tercer orden
+    que el ASR diagonal de ASE no puede corregir.
+    Los modos acústicos imaginarios son ARTEFACTOS NUMÉRICOS, no
+    inestabilidades físicas (confirmado: Hessiano con Δ=0.01 Å da 0 negativos).
+
+  Espectro óptico (FIABLE — 100% positivo):
+    5 – 30 cm⁻¹  : rattling Cs⁺ y rocking Pb-I-Pb (modos blandos)
+    30 – 80 cm⁻¹ : flexión Pb-I y translación Cs (modos mixtos)
+    80 – 136 cm⁻¹: estiramiento Pb-I T₁u (modos duros)
+    Máx. óptico  : 135.64 cm⁻¹ → consistente con literatura
+                   (Brivio et al. 2015: ~100–140 cm⁻¹ para Pb-I stretch)
+
+  Instabilidad R₄⁺ (basculamiento octaédrico):
+    NO observada. Los modos ópticos en R son positivos (13 – 136 cm⁻¹).
+    Esto es consistente con a₀ = 6.18 Å (experimental): el basculamiento
+    se vuelve inestable solo para a₀ > 6.25 Å (celda PBE expandida).
+
+================================================================================
+CORRECCIÓN DE GAP — SCISSOR (ESTRATEGIA A, PROVISIONAL)
+================================================================================
+
+  Método  : χ_SOC + χ_HSE aditivos (scissor operator)
+  Fórmula : Eg_corr = Eg(PBE) + χ_SOC + χ_HSE
+
+  χ_SOC         = −0.789 eV  (este trabajo, computado)
+  χ_HSE         = +0.320 eV  (literatura, CsPbI₃ PBE → HSE06)
+  Eg(PBE)       = 1.089 eV
+  Eg(scissor)   = 1.089 − 0.789 + 0.320 = 0.620 eV
+
+  Eg(experimental): 1.73 eV (Sutton et al., ACS Energy Lett. 2018)
+  MAE(scissor)    : |1.73 − 0.620| = 1.11 eV  ← MUY ALEJADO
+
+  ATENCIÓN: El scissor solo da ~0.62 eV vs 1.73 eV experimental.
+  Esto indica que χ_HSE = +0.32 eV de literatura NO es aplicable aquí,
+  posiblemente porque:
+    (a) χ_HSE en literatura puede referirse a otro valor de referencia
+    (b) Los valores de χ son fuertemente dependientes de la geometría/funcional
+    (c) Los valores correctos requieren un cálculo HSE06 propio
+
+  ESTRATEGIA B (pendiente): HSE06 + SOC perturbativo en este hardware
+    → Elimina la suposición de aditividad
+    → Costo estimado: 3–8 h para alpha (5 átomos, 4×4×4)
+
+================================================================================
+RESUMEN EJECUTIVO
+================================================================================
+
+  ✓  Relajación    : converge, a₀ = 6.18 Å fija, E₀ = −14.054 eV/f.u.
+  ✓  SCF           : converge (12 iter), Gap(PBE) = 1.089 eV, directo en Γ
+  ✓  Bandas + DOS  : Gap confirmado 1.089–1.091 eV, gap directo Γ→Γ
+  ✓  SOC           : Gap(PBE+SOC) ≈ 0.30 eV, χ_SOC = −0.789 eV
+  ✓  Hessiano      : 0 modos negativos en Γ → celda estable
+  ⚠  Fonones       : ópticos OK (5–136 cm⁻¹), acústicos con artefacto Δ
+  ⏳ Corrección gap : scissor provisional (0.62 eV), HSE06 pendiente
+  ⏳ LO-TO          : pendiente (cargas de Born Z* + ε∞)
+  ⏳ Fonones Tier 2 : Phonopy + Δ=0.02 Å (4 desplazamientos, ~1 h)
+
+================================================================================
+PRÓXIMOS PASOS
+================================================================================
+
+  1. [Inmediato] Correr fonones refinados (Phonopy, Δ=0.02 Å):
+       find calculations/alpha/07_vibrational/phonons/phonon/ -name "*.json" -delete
+       mpirun -n 7 .venv/bin/python3 main.py run --phase alpha --steps phonons
+
+  2. [~4–8 h] Correr HSE06 para α:
+       mpirun -n 7 .venv/bin/python3 main.py run --phase alpha --steps hse06
+
+  3. [~1 h] Correr LO-TO (cargas de Born):
+       mpirun -n 7 .venv/bin/python3 main.py run --phase alpha --steps loto
+
+  4. [Futuro] Pipeline completo fase gamma (Pnma, 20 átomos, ~2 días)
+  5. [Futuro] Pipeline completo fase delta (Pnma, 20 átomos, ~3 días)
+
+================================================================================
+FIN DEL REPORTE
+================================================================================

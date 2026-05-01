@@ -1,0 +1,8 @@
+{
+  "delta_Hf_eV": -48.897416836619996,
+  "E_perovskite_per_fu_eV": -14.05369599668557,
+  "E_CsI_per_fu_eV": 34.06930309783495,
+  "E_PbI2_per_fu_eV": 0.7744177420994772,
+  "stable": true,
+  "summary": "\u0394Hf = -48.897 eV/f.u. \u2192 STABLE vs binary decomposition"
+}

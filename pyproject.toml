@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dft-cspbi3-gpaw"
+version = "0.1.0"
+description = "Automated DFT simulations of CsPbI3 halide perovskite using GPAW"
+readme = "README.md"
+license = { text = "GPL-3.0" }
+requires-python = ">=3.11"
+authors = [
+    { name = "DFT-CsPbI3 Contributors" },
+]
+keywords = ["DFT", "GPAW", "perovskite", "CsPbI3", "ASE", "computational-chemistry"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "gpaw>=24.1.0",
+    "ase>=3.23.0",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "scipy>=1.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov", "ruff", "mypy"]
+
+[project.scripts]
+dft-run = "dft_cspbi3.cli:run_full_workflow"
+dft-converge = "dft_cspbi3.cli:run_convergence_test"
+dft-scissor = "dft_cspbi3.cli:apply_scissor"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dft_cspbi3"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

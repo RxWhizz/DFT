@@ -1,0 +1,81 @@
+{
+  "phase": "alpha-CsPbI3",
+  "xc": "PBE",
+  "ecut_eV": 450,
+  "kpts_scf": "6x6x6",
+  "gap_PBE_eV": 1.0891,
+  "gap_location": "R=(0.5,0.5,0.5) — direct",
+  "gap_PBE_SOC_approx_eV": 0.3517,
+  "chi_SOC_eV": -0.7374,
+  "chi_SOC_canonical_eV": -0.789,
+  "effective_mass_note": "unreliable (k-path sampling; gap at R is k-path corner)",
+  "effective_mass_e_m0": 1.0916,
+  "effective_mass_h_m0": 0.7971,
+  "soft_modes_hessian": [
+    {
+      "mode_index": 0,
+      "eigenvalue_eV_Ang2": 0.01736,
+      "freq_cm1": 5.47
+    },
+    {
+      "mode_index": 1,
+      "eigenvalue_eV_Ang2": 0.0627,
+      "freq_cm1": 10.53
+    },
+    {
+      "mode_index": 2,
+      "eigenvalue_eV_Ang2": 0.10475,
+      "freq_cm1": 14.41
+    },
+    {
+      "mode_index": 3,
+      "eigenvalue_eV_Ang2": 0.13694,
+      "freq_cm1": 16.9
+    }
+  ],
+  "gamma_point_freqs_dyn_matrix_cm1": [
+    5.47,
+    10.53,
+    14.41,
+    16.9,
+    17.3,
+    18.19,
+    19.18,
+    21.23,
+    22.54,
+    23.75,
+    25.03,
+    25.7,
+    105.4,
+    106.03,
+    106.28
+  ],
+  "gamma_point_freqs_ase_phonon_cm1": [
+    -15.98,
+    -11.52,
+    -2.36,
+    5.15,
+    13.44,
+    16.42,
+    18.2,
+    21.34,
+    23.98,
+    24.36,
+    26.38,
+    28.43,
+    102.55,
+    103.17,
+    103.32
+  ],
+  "phonon_n_imaginary_total": 101,
+  "phonon_n_imaginary_optical": 0,
+  "phonon_optical_range_cm1": [
+    5.1,
+    135.6
+  ],
+  "acoustic_gamma_cm1_ase": [
+    -15.98,
+    -11.52,
+    -2.36
+  ]
+}

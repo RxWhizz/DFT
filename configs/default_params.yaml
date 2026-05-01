@@ -1,0 +1,106 @@
+paw_datasets: {}
+# Cs.PBE/Pb.PBE/I.PBE are symlinks to the PBE datasets in
+# ~/.gpaw/gpaw-setups-24.11.0/  (PBE PAW is valid for PBE XC)
+
+cutoff:
+  pw_ecut: 450           # eV — equivalente a ENCUT en VASP
+  convergence_range: [300, 350, 400, 450, 500, 550]
+
+kpoints:
+  bulk_relax: [6, 6, 6]
+  supercell_2x2x2: [3, 3, 3]
+  hse06: [3, 3, 3]
+  bands_npoints: 40      # puntos por segmento en path
+
+relax:
+  xc: PBE
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]
+  convergence:
+    energy: 1.0e-6       # eV
+    forces: 0.01         # eV/Å
+  mixer:
+    type: Mixer
+    beta: 0.05           # mezcla conservadora para haluros blandos
+  maxiter: 333
+  symmetry: on
+
+scf:
+  xc: PBE
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]
+  convergence:
+    energy: 1.0e-8
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+
+bands:
+  kpts_path: "XRMGR"     # path alta simetría cúbico
+  npoints: 40
+  convergence:
+    bands: -10            # incluir 10 bandas desocupadas
+
+dos:
+  kpts: [12, 12, 12]     # malla densa para DOS
+  npts: 2000
+  width: 0.05            # smearing eV para DOS
+
+soc:
+  # En GPAW el SOC se aplica perturbativamente post-SCF con spinorbit_eigenvalues()
+  # o con modo no-colineal nativo
+  mode: perturbative     # 'perturbative' | 'noncollinear'
+  theta: 0               # ángulo polar cuantización
+  phi: 0                 # ángulo azimutal
+
+hse06:
+  xc: HSE06
+  mode: PW
+  ecut: 450
+  kpts: [3, 3, 3]        # reducido por costo O(N³); 4x4x4 tardaba ~11h/iter
+  convergence:
+    energy: 1.0e-6
+  mixer:
+    beta: 0.10            # 0.05→0.10: rompe estancamiento DIIS observado en iters 14-17
+    nmaxold: 8            # 5→8: subespacio más rico para el Pulay
+    weight: 50.0
+
+dispersion:
+  method: D3             # DFT-D3(BJ) vía GPAW + dftd3 library
+
+phonons:
+  method: phonopy          # "phonopy" | "ase"
+  delta: 0.02              # Å — small displacement for anharmonic perovskites
+  delta_validation: 0.03   # Å — cross-check displacement
+  supercell: [2, 2, 2]
+  kpath_npoints: 60
+  dos_kpts: [20, 20, 20]
+  scf_convergence:
+    energy: 1.0e-8
+    density: 1.0e-5        # tighter density for accurate forces
+    eigenstates: 1.0e-8    # 1e-8 sufficient for Δ=0.02 Å (Togo et al.); 1e-10 was overkill
+  asr: crystal             # Phonopy ASR: "translational" | "crystal"
+
+pes:
+  soft_mode_threshold_eV_Ang2: 0.05   # quasi-zero/negative Hessian modes activate scan
+  scan_amplitude_Ang: 0.5             # range ±0.5 Å along eigenvector
+  scan_n_steps: 20                    # points in [-A, +A]
+  double_well_barrier_meV: 10         # minimum barrier to classify as double well
+  neb_n_images: 7                     # NEB images (excluding endpoints)
+  neb_fmax_eV_Ang: 0.10              # NEB convergence criterion
+  neb_spring_constant: 0.10           # spring constant in eV/Å²
+  run_neb_if_double_well: true        # auto-launch CI-NEB if double well detected
+
+optical:
+  omega_max_eV: 6.0
+  d_omega_eV: 0.025
+  eta_eV: 0.1
+  onset_threshold_cm1: 1.0e4
+  scissor_eV: null               # null = auto-detect from HSE06−PBE; float = fixed shift
+  alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]
+
+# Composition-specific parameters (cell constants, bandgap references, PAW datasets).
+# Override with --composition-config on the CLI.
+composition_config: configs/compositions/CsPbI3.yaml

@@ -1,0 +1,16 @@
+gpaw>=24.1.0
+ase>=3.23.0
+numpy>=1.26
+pandas>=2.0
+matplotlib>=3.8
+pyyaml>=6.0
+click>=8.1
+scipy>=1.12
+phonopy>=2.20
+spglib>=2.0
+
+# Development
+pytest>=8.0
+pytest-cov
+ruff
+mypy

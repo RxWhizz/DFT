@@ -1,0 +1,27 @@
+{
+  "calculation_dir": "calculations/alpha",
+  "output_dir": "imagenes/test_gamma_beta_corrected",
+  "generated_files": [
+    "imagenes/test_gamma_beta_corrected/cell_views_gamma.png",
+    "imagenes/test_gamma_beta_corrected/cell_views_gamma.pdf",
+    "imagenes/test_gamma_beta_corrected/cell_3d_gamma.png",
+    "imagenes/test_gamma_beta_corrected/cell_3d_gamma.pdf",
+    "imagenes/test_gamma_beta_corrected/cell_views_beta.png",
+    "imagenes/test_gamma_beta_corrected/cell_views_beta.pdf",
+    "imagenes/test_gamma_beta_corrected/cell_3d_beta.png",
+    "imagenes/test_gamma_beta_corrected/cell_3d_beta.pdf",
+    "imagenes/test_gamma_beta_corrected/structure_panels_gamma_beta_2x2x2.png",
+    "imagenes/test_gamma_beta_corrected/structure_panels_gamma_beta_2x2x2.pdf",
+    "imagenes/test_gamma_beta_corrected/cell_3d_gamma_2x2x2.png",
+    "imagenes/test_gamma_beta_corrected/cell_3d_gamma_2x2x2.pdf",
+    "imagenes/test_gamma_beta_corrected/octahedra_gamma_2x2x2.png",
+    "imagenes/test_gamma_beta_corrected/octahedra_gamma_2x2x2.pdf",
+    "imagenes/test_gamma_beta_corrected/cell_3d_beta_2x2x2.png",
+    "imagenes/test_gamma_beta_corrected/cell_3d_beta_2x2x2.pdf",
+    "imagenes/test_gamma_beta_corrected/octahedra_beta_2x2x2.png",
+    "imagenes/test_gamma_beta_corrected/octahedra_beta_2x2x2.pdf"
+  ],
+  "messages": [
+    "Skipped non-structure plots by request."
+  ]
+}

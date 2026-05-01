@@ -1,0 +1,56 @@
+composition:
+  formula: CsPbI3
+  A: Cs
+  B: Pb
+  X: I
+  paw_datasets:
+    Cs: {}
+    Pb: {}
+    I:  {}
+
+structures:
+  alpha:
+    a0: 6.2965
+    space_group: "Pm-3m"
+    n_atoms: 5
+  beta:
+    a: 8.8269
+    c: 6.299
+    space_group: "P4/mbm"
+    n_atoms: 10
+  gamma:
+    a: 8.855
+    b: 8.579
+    c: 12.47
+    space_group: "Pnma"
+    n_atoms: 20
+  delta:
+    a: 10.47
+    b: 4.80
+    c: 17.77
+    space_group: "Pnma"
+    n_atoms: 20
+
+bandgap_reference:
+  alpha:
+    experimental: 1.73
+    exp_reference: "Sutton et al. ACS Energy Lett. 2018"
+    pbe_no_soc: 1.089
+    pbe_soc: 0.300
+    chi_soc_this_work: -0.789
+    hse06_no_soc: null
+    hse06_soc: null
+  gamma:
+    experimental: 1.68
+    exp_reference: "Steele et al. JACS 2019"
+    pbe_no_soc: null
+    pbe_soc: null
+    hse06_no_soc: null
+    hse06_soc: null
+  delta:
+    experimental: 2.82
+    exp_reference: "Sutton et al. ACS Energy Lett. 2018"
+    pbe_no_soc: null
+    pbe_soc: null
+    hse06_no_soc: null
+    hse06_soc: null

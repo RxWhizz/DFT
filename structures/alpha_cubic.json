@@ -1,0 +1,27 @@
+{
+    "1": {
+        "numbers": [55, 82, 53, 53, 53],
+        "positions": [
+            [3.14825, 3.14825, 3.14825],
+            [0.0, 0.0, 0.0],
+            [3.14825, 0.0, 0.0],
+            [0.0, 3.14825, 0.0],
+            [0.0, 0.0, 3.14825]
+        ],
+        "cell": [
+            [6.2965, 0.0, 0.0],
+            [0.0, 6.2965, 0.0],
+            [0.0, 0.0, 6.2965]
+        ],
+        "pbc": [true, true, true],
+        "info": {
+            "phase": "alpha_cubic",
+            "space_group": "Pm-3m",
+            "space_group_number": 221,
+            "a0_angstrom": 6.2965,
+            "natoms": 5,
+            "formula": "CsPbI3",
+            "note": "Regenerate with structure_builder.build_alpha() for production use"
+        }
+    }
+}
