@@ -1,0 +1,10 @@
+{
+  "e_pbe_eV": 1.0891184942269563,
+  "chi_soc_eV": -0.7374184942269563,
+  "chi_hse_eV": 0.6708815057730437,
+  "e_corrected_eV": 1.0225815057730436,
+  "e_experimental_eV": 1.73,
+  "mae_vs_experiment_eV": 0.7074184942269564,
+  "chi_soc_source": "literature",
+  "chi_hse_source": "literature"
+}

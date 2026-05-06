@@ -9,7 +9,7 @@ cutoff:
 kpoints:
   bulk_relax: [6, 6, 6]
   supercell_2x2x2: [3, 3, 3]
-  hse06: [3, 3, 3]
+  hse06: [2, 2, 2]
   bands_npoints: 40      # puntos por segmento en path
 
 relax:
@@ -59,13 +59,46 @@ hse06:
   xc: HSE06
   mode: PW
   ecut: 450
-  kpts: [3, 3, 3]        # reducido por costo O(N³); 4x4x4 tardaba ~11h/iter
+  kpts: [2, 2, 2]        # 2x2x2 incluye R=(0.5,0.5,0.5) donde está el gap real de CsPbI3
+  nbands: 36             # 22 ocupadas + 14 vacías — subespacio más rico para Davidson
+  eigensolver_niter: 3   # pasos Davidson internos por ciclo SCF (default=1 para híbridos)
   convergence:
     energy: 1.0e-6
+    eigenstates: 1.0e-4   # relajado: 4e-8 default inalcanzable bajo Fock oscilante
+    density: 1.0e-4
+  occupations:
+    name: fermi-dirac
+    width: 0.10           # suaviza discontinuidades en densidad bajo Fock oscilante
   mixer:
-    beta: 0.10            # 0.05→0.10: rompe estancamiento DIIS observado en iters 14-17
-    nmaxold: 8            # 5→8: subespacio más rico para el Pulay
+    beta: 0.05
+    nmaxold: 5            # historia DIIS larga — necesaria para amortiguar oscilaciones Fock
     weight: 50.0
+
+scan:
+  xc: SCAN
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]       # misma malla que SCF — R-point incluido
+  convergence:
+    energy: 1.0e-6
+    eigenstates: 1.0e-8
+    density: 1.0e-6
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+
+r2scan:
+  xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN   # alias GPAW no existe; usar string LibXC directo
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]
+  convergence:
+    energy: 1.0e-6
+    eigenstates: 1.0e-8
+    density: 1.0e-4         # libxc --fhc activo hace la densidad muy lenta; 1e-4 suficiente para gap
+  occupations:
+    name: fermi-dirac
+    width: 0.05
 
 dispersion:
   method: D3             # DFT-D3(BJ) vía GPAW + dftd3 library

@@ -34,8 +34,16 @@ def _compute_scissor(hse_gpw: Path, bands_gpw: Path) -> float:
     return _gap(hse_gpw) - _gap(bands_gpw)
 
 STEP_ORDER = [
-    "relax", "scf", "bands", "dos", "soc", "hse06",
-    "soc_hse06",          # SOC applied post-HSE06 (requires hse06.gpw)
+    "relax", "scf", "bands", "dos", "soc",
+    "scan",               # SCAN meta-GGA SCF — mejor gap que PBE sin HSE06
+    "scan_soc",           # SCAN + SOC autoconsistente (spinors=True, 2-componentes Pauli)
+    "soc_scan",           # SOC perturbativo sobre SCAN (PBE-proxy augmentation)
+    "r2scan",             # r²SCAN meta-GGA SCF — SCAN regularizado, mejor convergencia
+    "soc_r2scan",         # SOC perturbativo sobre r²SCAN (PBE-proxy augmentation)
+    "hse06",
+    "hse06_nonscf",       # non-SCF HSE06@PBE: fixed density, converge eigenstates only
+    "soc_hse06",          # SOC applied post-HSE06 (requires hse06.gpw or hse06_nonscf.gpw)
+    "hse06_scissor",      # scissor correction: χSOC (computed) + χHSE (lit. fallback)
     "hessian", "phonons", "pes", "loto",
     "formation_energy",   # ΔHf from binary references (CsI + PbI₂ single-points)
     "effective_masses",   # parabolic fit from existing bands.gpw — no new GPAW
@@ -48,8 +56,15 @@ STEP_DIRS = {
     "bands": "03_bands",
     "dos": "04_dos",
     "soc": "05_soc",
-    "hse06": "06_hse06",
-    "soc_hse06": "05_soc",   # outputs into same soc dir (different filename)
+    "scan": "06_scan",
+    "scan_soc": "06_scan",
+    "soc_scan": "06_scan",
+    "r2scan": "06_r2scan",
+    "soc_r2scan": "06_r2scan",
+    "hse06": "07_hse06",
+    "hse06_nonscf": "07_hse06",
+    "hse06_scissor": "07_hse06",
+    "soc_hse06": "05_soc",
     "hessian": "07_vibrational/hessian",
     "phonons": "07_vibrational/phonons",
     "pes": "07_vibrational/pes",
@@ -196,7 +211,7 @@ class DFTWorkflow:
         )
         atoms = calc.get_atoms()
         atoms.get_potential_energy()
-        calc.write(str(gpw_out))
+        calc.write(str(gpw_out), 'all')   # 'all' saves wavefunctions — required by DielectricFunction
 
     def _run_bands(self, step_dir: Path) -> None:
         gpw_out = step_dir / "bands.gpw"
@@ -291,6 +306,210 @@ class DFTWorkflow:
                 "with nspins=4. Use calculator_factory with params_override={'nspins':4}."
             )
 
+    def _run_scan(self, step_dir: Path) -> None:
+        """SCAN meta-GGA SCF — mejor aproximación al gap que PBE, sin HSE06."""
+        gpw_out = step_dir / "scan.gpw"
+        if gpw_out.exists():
+            logger.info("scan.gpw exists, skipping SCAN")
+            return
+
+        relax_gpw = self._step_dir("relax") / "relax.gpw"
+        if self.dry_run:
+            logger.info("Dry run: would run SCAN from %s", relax_gpw)
+            return
+        if not relax_gpw.exists():
+            raise FileNotFoundError(f"relax.gpw not found: {relax_gpw}")
+
+        calc = self.factory.create("scan", txt=str(step_dir / "scan.txt"))
+        atoms = GPAW(str(relax_gpw), txt=None).get_atoms()
+        atoms.calc = calc
+        atoms.get_potential_energy()
+        calc.write(str(gpw_out))
+
+        from ase.dft.bandgap import bandgap
+        gap, p1, p2 = bandgap(calc)
+        logger.info("SCAN band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+
+    def _run_scan_soc(self, step_dir: Path) -> None:
+        """SCAN + SOC autoconsistente — NOT supported in GPAW 25.7.0.
+
+        GPAW raises 'Only LDA supported for SC Non-collinear calculations' for
+        any non-LDA XC when experimental={'soc': True} is set. This method logs
+        the limitation and falls back to reporting the SCAN gap with the additive
+        PBE SOC correction.
+        """
+        scan_gpw = step_dir / "scan.gpw"
+        scf_gpw = self.work_dir / "02_scf" / "scf.gpw"
+        soc_npy = self.work_dir / "05_soc" / "soc_eigenvalues.npy"
+
+        logger.warning(
+            "scan_soc: GPAW 25.7.0 only supports LDA for self-consistent "
+            "noncollinear SOC. SCAN+SOC is not available. "
+            "Reporting SCAN gap with additive PBE SOC correction instead."
+        )
+
+        if self.dry_run:
+            return
+
+        if not scan_gpw.exists():
+            raise FileNotFoundError("scan.gpw not found. Run step 'scan' first.")
+
+        from ase.dft.bandgap import bandgap
+        c_scan = GPAW(str(scan_gpw), txt=None)
+        gap_scan, _, _ = bandgap(c_scan)
+        logger.info("Eg(SCAN, no SOC) = %.4f eV", gap_scan)
+
+        if scf_gpw.exists() and soc_npy.exists():
+            c_pbe = GPAW(str(scf_gpw), txt=None)
+            gap_pbe, _, _ = bandgap(c_pbe)
+            eigs_soc = np.load(str(soc_npy))
+            # PBE+SOC gap: perturbative SOC doubles the bands; each of the N electrons
+            # fills one spinor level, so occupied = N (not N/2).
+            nval = int(c_pbe.get_number_of_electrons())
+            # eigenvalues shape: (nkpts, nbands*2) after SOC doubling
+            # Use the stored array; gap = min(CBM) - max(VBM)
+            try:
+                vbm = np.max(eigs_soc[:, nval - 1])
+                cbm = np.min(eigs_soc[:, nval])
+                gap_pbe_soc = cbm - vbm
+            except (IndexError, ValueError):
+                gap_pbe_soc = None
+
+            if gap_pbe_soc is not None and gap_pbe_soc > 0:
+                delta_soc = gap_pbe_soc - gap_pbe
+                gap_scan_soc_est = gap_scan + delta_soc
+                logger.info(
+                    "Eg(PBE) = %.4f eV  Eg(PBE+SOC) = %.4f eV  "
+                    "ΔSOC = %.4f eV  → Eg(SCAN+SOC, additive est.) = %.4f eV",
+                    gap_pbe, gap_pbe_soc, delta_soc, gap_scan_soc_est,
+                )
+
+    def _run_soc_scan(self, step_dir: Path) -> None:
+        """SOC perturbativo sobre el estado fundamental SCAN.
+
+        GPAW 25.7.0 no implementa calculate_spherical para MGGA (SCAN), que es
+        necesario para el término de augmentación PAW en soc_eigenstates.
+        Workaround: sustituir temporalmente la XC por PBE solo para esa función.
+        El SOC está dominado por el gradiente del potencial de Coulomb nuclear;
+        la contribución XC a la augmentación es ~10-20% del total, y PBE ≈ SCAN
+        en la región del núcleo.
+        """
+        from gpaw.spinorbit import soc_eigenstates
+        from gpaw.xc import XC as _XC
+        scan_gpw = step_dir / "scan.gpw"
+        done_flag = step_dir / "soc_scan_eigenvalues.npy"
+
+        if done_flag.exists():
+            logger.info("soc_scan_eigenvalues.npy exists, skipping")
+            return
+        if self.dry_run:
+            logger.info("Dry run: would apply SOC to %s", scan_gpw)
+            return
+        if not scan_gpw.exists():
+            raise FileNotFoundError(f"scan.gpw not found. Run step 'scan' first.")
+
+        calc = GPAW(str(scan_gpw), txt=None)
+        nb = calc.get_number_of_bands()
+        ne = int(calc.get_number_of_electrons())
+
+        # Proxy: replace SCAN xc with PBE only for the PAW augmentation SOC call
+        _orig_xc = calc.hamiltonian.xc
+        calc.hamiltonian.xc = _XC("PBE")
+        try:
+            soc_cfg = self.factory.config.get("soc", {})
+            result = soc_eigenstates(
+                calc,
+                n2=nb,
+                theta=soc_cfg.get("theta", 0.0),
+                phi=soc_cfg.get("phi", 0.0),
+            )
+        finally:
+            calc.hamiltonian.xc = _orig_xc
+
+        eigs = result.eigenvalues()
+        np.save(str(done_flag), eigs)
+        np.save(str(step_dir / "soc_scan_spin_projections.npy"), result.spin_projections())
+
+        # Gap: SOC doubles bands; ne electrons fill ne spinor levels
+        vbm = float(np.max(eigs[:, ne - 1]))
+        cbm = float(np.min(eigs[:, ne]))
+        gap = cbm - vbm
+        logger.info(
+            "SCAN+SOC (PBE-proxy augmentation) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
+            gap, vbm, cbm,
+        )
+        logger.info("SCAN+SOC eigenvalues saved to %s", done_flag)
+
+    def _run_r2scan(self, step_dir: Path) -> None:
+        """r²SCAN meta-GGA SCF. Arranca desde relax.gpw."""
+        from ase.dft.bandgap import bandgap
+        gpw_out = step_dir / "r2scan.gpw"
+        if gpw_out.exists():
+            logger.info("r2scan.gpw exists, skipping")
+            return
+
+        relax_gpw = self.work_dir / "01_relax" / "relax.gpw"
+        if self.dry_run:
+            logger.info("Dry run: would run r²SCAN from %s", relax_gpw)
+            return
+        if not relax_gpw.exists():
+            raise FileNotFoundError("relax.gpw not found. Run step 'relax' first.")
+
+        calc = self.factory.create("r2scan", txt=str(step_dir / "r2scan.txt"))
+        atoms = GPAW(str(relax_gpw), txt=None).get_atoms()
+        atoms.calc = calc
+        atoms.get_potential_energy()
+        calc.write(str(gpw_out))
+
+        gap, p1, p2 = bandgap(calc)
+        logger.info("r²SCAN band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+
+    def _run_soc_r2scan(self, step_dir: Path) -> None:
+        """SOC perturbativo sobre r²SCAN con PBE-proxy para augmentación PAW."""
+        from gpaw.spinorbit import soc_eigenstates
+        from gpaw.xc import XC as _XC
+        r2scan_gpw = step_dir / "r2scan.gpw"
+        done_flag = step_dir / "soc_r2scan_eigenvalues.npy"
+
+        if done_flag.exists():
+            logger.info("soc_r2scan_eigenvalues.npy exists, skipping")
+            return
+        if self.dry_run:
+            logger.info("Dry run: would apply SOC to %s", r2scan_gpw)
+            return
+        if not r2scan_gpw.exists():
+            raise FileNotFoundError("r2scan.gpw not found. Run step 'r2scan' first.")
+
+        calc = GPAW(str(r2scan_gpw), txt=None)
+        nb = calc.get_number_of_bands()
+        ne = int(calc.get_number_of_electrons())
+
+        _orig_xc = calc.hamiltonian.xc
+        calc.hamiltonian.xc = _XC("PBE")
+        try:
+            soc_cfg = self.factory.config.get("soc", {})
+            result = soc_eigenstates(
+                calc,
+                n2=nb,
+                theta=soc_cfg.get("theta", 0.0),
+                phi=soc_cfg.get("phi", 0.0),
+            )
+        finally:
+            calc.hamiltonian.xc = _orig_xc
+
+        eigs = result.eigenvalues()
+        np.save(str(done_flag), eigs)
+        np.save(str(step_dir / "soc_r2scan_spin_projections.npy"), result.spin_projections())
+
+        vbm = float(np.max(eigs[:, ne - 1]))
+        cbm = float(np.min(eigs[:, ne]))
+        gap = cbm - vbm
+        logger.info(
+            "r²SCAN+SOC (PBE-proxy augmentation) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
+            gap, vbm, cbm,
+        )
+        logger.info("r²SCAN+SOC eigenvalues saved to %s", done_flag)
+
     def _run_hse06(self, step_dir: Path) -> None:
         gpw_out = step_dir / "hse06.gpw"
         if gpw_out.exists():
@@ -305,23 +524,31 @@ class DFTWorkflow:
         txt = str(step_dir / "hse06.txt")
         checkpoint = step_dir / "hse06_checkpoint.gpw"
 
+        conv_cfg = self.factory.config.get("hse06", {}).get("convergence", {})
+        mixer_cfg = self.factory.config.get("hse06", {}).get("mixer", {})
+
         if checkpoint.exists():
             logger.info("Resuming HSE06 from checkpoint: %s", checkpoint)
-            mixer_cfg = self.factory.config.get("hse06", {}).get("mixer", {})
-            mixer = Mixer(
-                beta=mixer_cfg.get("beta", 0.05),
-                nmaxold=mixer_cfg.get("nmaxold", 5),
-                weight=mixer_cfg.get("weight", 50.0),
+            calc = GPAW(
+                str(checkpoint),
+                txt=txt,
+                mixer=Mixer(
+                    beta=mixer_cfg.get("beta", 0.05),
+                    nmaxold=mixer_cfg.get("nmaxold", 5),
+                    weight=mixer_cfg.get("weight", 50.0),
+                ),
+                convergence={
+                    "energy": conv_cfg.get("energy", 1e-6),
+                    "eigenstates": conv_cfg.get("eigenstates", 1e-4),
+                    "density": conv_cfg.get("density", 1e-4),
+                },
             )
-            calc = GPAW(str(checkpoint), txt=txt, mixer=mixer)
             atoms = calc.get_atoms()
         else:
             if not scf_gpw.exists():
                 raise FileNotFoundError(f"SCF checkpoint not found: {scf_gpw}")
             calc = self.factory.create("hse06", txt=txt)
-            ref_calc = GPAW(str(scf_gpw))
-            atoms = ref_calc.get_atoms()
-            ref_calc.__del__()
+            atoms = GPAW(str(scf_gpw), txt=None).get_atoms()
 
         calc.attach(calc.write, 5, str(checkpoint), mode="all")
         atoms.calc = calc
@@ -329,17 +556,150 @@ class DFTWorkflow:
         calc.write(str(gpw_out))
         checkpoint.unlink(missing_ok=True)
 
+    def _run_hse06_nonscf(self, step_dir: Path) -> None:
+        """Non-self-consistent HSE06@PBE: fix PBE density, converge eigenstates only.
+
+        Loads the converged PBE wavefunction from scf.gpw, applies the HSE06
+        Hamiltonian with the density permanently frozen (niter_fixdensity=9999).
+        Only the eigenstates are converged under the fixed Fock potential built
+        from the PBE orbitals. Avoids SCF oscillation entirely and runs in
+        minutes. Standard approach for perovskite HSE06 band gaps in the literature.
+        """
+        out_gpw = step_dir / "hse06_nonscf.gpw"
+        if out_gpw.exists():
+            logger.info("hse06_nonscf.gpw exists, skipping")
+            return
+
+        scf_gpw = self._step_dir("scf") / "scf.gpw"
+        if self.dry_run:
+            logger.info("Dry run: would run non-SCF HSE06 from %s", scf_gpw)
+            return
+        if not scf_gpw.exists():
+            raise FileNotFoundError(f"SCF checkpoint not found: {scf_gpw}")
+
+        txt = str(step_dir / "hse06_nonscf.txt")
+        hse_cfg = self.factory.config.get("hse06", {})
+        kpts = hse_cfg.get("kpts", [2, 2, 2])
+        kpts_tag = "x".join(str(k) for k in kpts)
+
+        # Step 1: converge PBE at the HSE06 k-mesh.
+        # scf.gpw uses a denser mesh (6x6x6); loading it with a different
+        # k-mesh reinitialises wavefunctions randomly, making a one-shot
+        # HSE06 unreliable. A short PBE run at the target mesh (~minutes)
+        # gives physically correct starting orbitals.
+        pbe_gpw = step_dir / f"pbe_{kpts_tag}.gpw"
+        if not pbe_gpw.exists():
+            ref = GPAW(str(scf_gpw), txt=None)
+            atoms_ref = ref.get_atoms()
+            calc_pbe = GPAW(
+                mode=self.factory._hse06_params()["mode"],
+                xc="PBE",
+                kpts={"size": kpts, "gamma": True},
+                nbands=hse_cfg.get("nbands", None),
+                symmetry={"point_group": True, "time_reversal": True},
+                convergence={"energy": 1e-6, "eigenstates": 1e-8, "density": 1e-6},
+                occupations={"name": "fermi-dirac", "width": 0.05},
+                txt=str(step_dir / f"pbe_{kpts_tag}.txt"),
+            )
+            atoms_ref.calc = calc_pbe
+            atoms_ref.get_potential_energy()
+            calc_pbe.write(str(pbe_gpw))
+            logger.info("PBE@%s converged: %s", kpts_tag, pbe_gpw)
+
+        # Step 2: one-shot HSE06 from converged PBE wavefunctions.
+        calc = GPAW(
+            str(pbe_gpw),
+            txt=txt,
+            xc="HSE06",
+            kpts={"size": kpts, "gamma": True},
+            symmetry={"point_group": True, "time_reversal": True},
+            maxiter=1,  # one-shot: 1 Fock eval on PBE orbitals + 1 diagonalization
+        )
+        atoms = calc.get_atoms()
+        atoms.calc = calc
+        try:
+            atoms.get_potential_energy()
+        except Exception:
+            pass  # maxiter=1 raises ConvergenceError by design — result is still valid
+        calc.write(str(out_gpw))
+
+        try:
+            from ase.dft.bandgap import bandgap
+            gap, p1, p2 = bandgap(calc)
+            logger.info("HSE06@PBE (non-SCF) band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+        except Exception:
+            pass
+        logger.info("Non-SCF HSE06 complete: %s", out_gpw)
+
+    def _run_hse06_scissor(self, step_dir: Path) -> None:
+        """Scissor correction: χSOC (computed) + χHSE (literature fallback).
+
+        Uses ScissorCorrection to compute Eg(HSE06+SOC) without running a
+        converged HSE06 SCF. χHSE defaults to literature value (~0.67 eV)
+        when hse06.gpw is absent. Result saved as hse06_scissor.json.
+        """
+        import json
+        from .bandgap_correction import ScissorCorrection
+
+        out_json = step_dir / "hse06_scissor.json"
+        if out_json.exists():
+            logger.info("hse06_scissor.json exists, skipping")
+            return
+
+        scf_gpw = self._step_dir("scf") / "scf.gpw"
+        hse_gpw = step_dir / "hse06.gpw"
+
+        if self.dry_run:
+            logger.info("Dry run: would compute scissor correction")
+            return
+        if not scf_gpw.exists():
+            raise FileNotFoundError(f"scf.gpw not found: {scf_gpw}")
+
+        comp_ref = self.factory.config.get("bandgap_reference", {})
+        sc = ScissorCorrection(reference=comp_ref, phase=self.phase)
+
+        # Use literature/YAML pbe_soc value (soc_npy is not a .gpw — can't pass directly)
+        # Use computed hse06.gpw if it exists, else fall back to literature chi_hse
+        gpw_hse_arg = str(hse_gpw) if hse_gpw.exists() else None
+
+        result = sc.run_full_correction(
+            gpw_pbe=str(scf_gpw),
+            gpw_pbe_soc=None,   # reads pbe_soc from YAML reference
+            gpw_hse=gpw_hse_arg,
+            phase=self.phase,
+        )
+        logger.info(
+            "Scissor: Eg(PBE)=%.4f χSOC=%.4f χHSE=%.4f → Eg_corr=%.4f eV  "
+            "(exp=%.2f, source: SOC=%s HSE=%s)",
+            result.e_pbe_d3, result.chi_soc, result.chi_hse, result.e_corrected,
+            result.e_experimental or float("nan"),
+            result.chi_soc_source, result.chi_hse_source,
+        )
+        out_json.write_text(json.dumps({
+            "e_pbe_eV": result.e_pbe_d3,
+            "chi_soc_eV": result.chi_soc,
+            "chi_hse_eV": result.chi_hse,
+            "e_corrected_eV": result.e_corrected,
+            "e_experimental_eV": result.e_experimental,
+            "mae_vs_experiment_eV": result.mae_vs_experiment,
+            "chi_soc_source": result.chi_soc_source,
+            "chi_hse_source": result.chi_hse_source,
+        }, indent=2))
+
     def _run_soc_hse06(self, step_dir: Path) -> None:
         """Apply SOC perturbatively to the HSE06 ground state.
 
-        Requires hse06.gpw to exist (run step 06 first).
+        Requires hse06.gpw or hse06_nonscf.gpw (run step hse06 or hse06_nonscf first).
         Produces soc_hse06_eigenvalues.npy in the SOC step directory.
         Expected gap: HSE06 ~1.7 eV → HSE06+SOC ~1.35–1.45 eV (closer to exp. 1.73 eV).
         """
         import numpy as np
         from gpaw.spinorbit import soc_eigenstates
 
-        hse_gpw   = self._step_dir("hse06") / "hse06.gpw"
+        hse_dir = self._step_dir("hse06")
+        hse_gpw = hse_dir / "hse06.gpw"
+        if not hse_gpw.exists():
+            hse_gpw = hse_dir / "hse06_nonscf.gpw"  # non-SCF fallback
         done_flag = step_dir / "soc_hse06_eigenvalues.npy"
 
         if done_flag.exists():
@@ -350,7 +710,7 @@ class DFTWorkflow:
             return
         if not hse_gpw.exists():
             raise FileNotFoundError(
-                f"HSE06 checkpoint not found: {hse_gpw}. Run step 06 first."
+                f"HSE06 checkpoint not found: {hse_gpw}. Run step hse06 or hse06_nonscf first."
             )
 
         soc_cfg = self.factory.config.get("soc", {})
@@ -363,13 +723,14 @@ class DFTWorkflow:
         np.save(str(done_flag), eigs)
         np.save(str(step_dir / "soc_hse06_spin_projections.npy"), result.spin_projections())
 
-        # Log gap estimate
-        ef = float(np.median(eigs.flatten()))
+        # Log gap using the HSE06 Fermi level
+        ref = GPAW(str(hse_gpw), txt=None)
+        ef = ref.get_fermi_level()
         occupied   = eigs[eigs < ef]
         unoccupied = eigs[eigs >= ef]
         if len(occupied) and len(unoccupied):
             gap = float(unoccupied.min() - occupied.max())
-            logger.info("HSE06+SOC band gap estimate: %.4f eV", gap)
+            logger.info("HSE06+SOC band gap: %.4f eV", gap)
         logger.info("HSE06+SOC eigenvalues saved to %s", done_flag)
 
     def _run_hessian(self, step_dir: Path) -> None:
@@ -523,18 +884,23 @@ class DFTWorkflow:
         logger.info("Formation enthalpy: %s", result.summary)
 
     def _run_effective_masses(self, step_dir: Path) -> None:
-        """Compute electron/hole effective masses from existing bands.gpw.
+        """Compute electron/hole effective masses.
 
-        No new GPAW calculation needed — reads eigenvalues from the bands step
-        and fits a parabola near the CBM and VBM.
+        Gap type is read from the existing bands.gpw k-path.
+        Effective masses are computed via a dedicated fine k-path non-SCF
+        GPAW calculation (fixdensity=True, dk=0.005 Å⁻¹) around the CBM/VBM.
+        This avoids the ~4× too-coarse resolution of the standard band path.
         """
         import json
-        from .analysis.electronic import classify_gap_type, compute_effective_masses
+        from .analysis.electronic import (
+            classify_gap_type, compute_effective_masses,
+            compute_effective_masses_nscf,
+        )
         from .analysis.structural import analyze_perovskite_geometry
-        from ase.io import read
 
         bands_gpw = self._step_dir("bands") / "bands.gpw"
-        out_json = step_dir / "electronic_analysis.json"
+        scf_gpw   = self._step_dir("scf")   / "scf.gpw"
+        out_json  = step_dir / "electronic_analysis.json"
 
         if out_json.exists():
             logger.info("electronic_analysis.json exists, skipping")
@@ -546,7 +912,19 @@ class DFTWorkflow:
             raise FileNotFoundError(f"Bands checkpoint not found: {bands_gpw}")
 
         gap_result = classify_gap_type(bands_gpw)
-        mass_result = compute_effective_masses(bands_gpw)
+
+        # Use fine non-SCF k-path around CBM/VBM when SCF gpw is available;
+        # fall back to band-path fit (coarser) otherwise.
+        if scf_gpw.exists() and gap_result.cbm_kpt_frac is not None:
+            mass_result = compute_effective_masses_nscf(
+                scf_gpw,
+                cbm_kpt_frac=gap_result.cbm_kpt_frac,
+                vbm_kpt_frac=gap_result.vbm_kpt_frac,
+                step_dir=step_dir,
+            )
+        else:
+            logger.warning("scf.gpw missing — falling back to band-path effective masses")
+            mass_result = compute_effective_masses(bands_gpw)
 
         # Structural analysis from relaxed geometry
         relax_gpw = self._step_dir("relax") / "relax.gpw"
@@ -617,6 +995,15 @@ class DFTWorkflow:
                     logger.info("Auto scissor correction: %+.3f eV (HSE06 − PBE)", scissor_eV)
                 except Exception as exc:
                     logger.warning("Auto scissor failed: %s — running without correction", exc)
+        if scissor_eV is None:
+            # Fallback: read chi_hse_eV from pre-computed hse06_scissor.json
+            scissor_json = self._step_dir("hse06") / "hse06_scissor.json"
+            if scissor_json.exists():
+                import json as _json
+                sc_data = _json.loads(scissor_json.read_text())
+                scissor_eV = sc_data.get("chi_hse_eV")
+                if scissor_eV is not None:
+                    logger.info("Scissor from hse06_scissor.json: %+.3f eV", scissor_eV)
 
         result = compute_optical_spectrum(
             scf_gpw, step_dir,

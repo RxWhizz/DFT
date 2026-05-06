@@ -1,0 +1,46 @@
+Using integrator: PointIntegrator
+FrequencyGridDescriptor(from 0.000 to 6.000 eV, 241 points)
+Nonperiodic BCs:  [False False False]
+Using integrator: PointIntegrator
+FrequencyGridDescriptor(from 0.000 to 6.000 eV, 241 points)
+Nonperiodic BCs:  [False False False]
+Using integrator: PointIntegrator
+
+Tue May  5 16:42:19 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 216
+    Number of completely occupied states: 21
+    Number of partially occupied states: 25
+    Occupied states memory: 12.5 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.0, 0.0, 0.0]
+    Number of frequency points: 241
+    Planewave cutoff: 50.0
+    Number of bands: 26
+    Number of planewaves: 179
+    Broadening (eta): 0.1
+    comm.size: 7
+    kncomm.size: 7
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 117.82655334472656 M / cpu
+        Memory usage before allocation: 170.73046875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 1
+    Indirect symmetries (TUq -> q): 0
+In total 1 allowed symmetries.
+
+  ( 1  0  0)
+  ( 0  1  0)
+  ( 0  0  1)
+
+216 groups of equivalent kpoints. 0.0% reduction.
+
+Integral kind: response function

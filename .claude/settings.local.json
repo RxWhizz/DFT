@@ -50,7 +50,8 @@
       "Bash(/home/luis-ochoa/Documents/Vscode/py/dft-cspbi3-gpaw-main/.venv/bin/python3 -c \"import numpy as np; e=np.load\\('calculations/alpha/07_vibrational/hessian/hessian_eigenvalues.npy'\\); print\\('hessian eigs:', e.min\\(\\), e.max\\(\\), 'n_neg:', \\(e<0\\).sum\\(\\)\\)\")",
       "Bash(.venv/bin/python3 -c \"import phonopy; import spglib; print\\(f'phonopy {phonopy.__version__}, spglib {spglib.__version__}'\\)\")",
       "Read(//home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/agent/**)",
-      "Read(//home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/**)"
+      "Read(//home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/**)",
+      "WebSearch"
     ],
     "additionalDirectories": [
       "/home/luis-ochoa/Documents/Vscode/py/hts-perovskite/hts/nodes",

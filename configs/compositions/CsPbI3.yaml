@@ -35,10 +35,10 @@ bandgap_reference:
   alpha:
     experimental: 1.73
     exp_reference: "Sutton et al. ACS Energy Lett. 2018"
-    pbe_no_soc: 1.089
-    pbe_soc: 0.300
-    chi_soc_this_work: -0.789
-    hse06_no_soc: null
+    pbe_no_soc: 1.0891       # this work: 6x6x6 SCF, R-point (0.5,0.5,0.5)
+    pbe_soc: 0.3517          # this work: perturbative SOC on scf.gpw
+    chi_soc_this_work: -0.7374  # this work: Eg(PBE+SOC) - Eg(PBE)
+    hse06_no_soc: null       # HSE06 SCF oscillates; lit. fallback 1.76 eV in ScissorCorrection
     hse06_soc: null
   gamma:
     experimental: 1.68

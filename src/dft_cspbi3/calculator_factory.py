@@ -13,7 +13,7 @@ from gpaw import GPAW, Mixer, PW
 CONFIG_PATH = Path(__file__).parent.parent.parent / "configs" / "default_params.yaml"
 
 # Valid calculation types
-CALC_TYPES = ("relax", "scf", "bands", "dos", "soc", "hse06")
+CALC_TYPES = ("relax", "scf", "bands", "dos", "soc", "hse06", "scan", "r2scan")
 
 
 def _load_config(config_path: str | Path = CONFIG_PATH) -> dict:
@@ -64,10 +64,12 @@ class GPAWCalculatorFactory:
             "dos": self._dos_params,
             "soc": self._soc_params,
             "hse06": self._hse06_params,
+            "scan": self._scan_params,
+            "r2scan": self._r2scan_params,
         }
         kwargs = builders[calc_type]()
         kwargs["txt"] = txt
-        kwargs["parallel"] = {"domain": 1}
+        kwargs.setdefault("parallel", {"domain": 1})
         kwargs.setdefault("setups", self._paw_setups())
 
         if params_override:
@@ -150,15 +152,71 @@ class GPAWCalculatorFactory:
     def _hse06_params(self) -> dict:
         p = self.config["hse06"]
         mixer_cfg = p.get("mixer", {})
-        return {
+        conv_cfg = p.get("convergence", {})
+        params: dict = {
             "mode": PW(p.get("ecut", 450)),
-            "xc": "HSE06",  # omega=0.11 Bohr⁻¹ is HSE06 default; dict form rejected by this GPAW version
-            "kpts": {"size": p.get("kpts", [3, 3, 3]), "gamma": True},
-            "convergence": {"energy": p["convergence"].get("energy", 1e-6)},
-            "occupations": {"name": "fermi-dirac", "width": 0.05},
+            "xc": "HSE06",
+            "kpts": {"size": p.get("kpts", [2, 2, 2]), "gamma": True},
+            "convergence": {
+                "energy": conv_cfg.get("energy", 1e-6),
+                "eigenstates": conv_cfg.get("eigenstates", 1e-4),
+                "density": conv_cfg.get("density", 1e-4),
+            },
+            "occupations": {
+                "name": p.get("occupations", {}).get("name", "fermi-dirac"),
+                "width": p.get("occupations", {}).get("width", 0.05),
+            },
             "mixer": Mixer(
                 beta=mixer_cfg.get("beta", 0.05),
                 nmaxold=mixer_cfg.get("nmaxold", 5),
                 weight=mixer_cfg.get("weight", 50.0),
             ),
+            # k-point parallelization: each rank owns a k-point slice; the Fock
+            # exchange loop is embarrassingly parallel over k so this dominates.
+            # domain=(1,1,1) disables real-space decomp entirely.
+            "parallel": {"domain": (1, 1, 1)},
+        }
+        if "nbands" in p:
+            params["nbands"] = p["nbands"]
+        niter = p.get("eigensolver_niter")
+        if niter:
+            params["eigensolver"] = {"name": "dav", "niter": int(niter)}
+        return params
+
+    def _scan_params(self) -> dict:
+        p = self.config["scan"]
+        occ = p.get("occupations", {})
+        conv = p.get("convergence", {})
+        return {
+            "mode": PW(p.get("ecut", 450)),
+            "xc": "SCAN",
+            "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
+            "convergence": {
+                "energy": conv.get("energy", 1e-6),
+                "eigenstates": conv.get("eigenstates", 1e-8),
+                "density": conv.get("density", 1e-6),
+            },
+            "occupations": {
+                "name": occ.get("name", "fermi-dirac"),
+                "width": occ.get("width", 0.05),
+            },
+        }
+
+    def _r2scan_params(self) -> dict:
+        p = self.config["r2scan"]
+        occ = p.get("occupations", {})
+        conv = p.get("convergence", {})
+        return {
+            "mode": PW(p.get("ecut", 450)),
+            "xc": p.get("xc", "MGGA_X_R2SCAN+MGGA_C_R2SCAN"),
+            "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
+            "convergence": {
+                "energy": conv.get("energy", 1e-6),
+                "eigenstates": conv.get("eigenstates", 1e-8),
+                "density": conv.get("density", 1e-6),
+            },
+            "occupations": {
+                "name": occ.get("name", "fermi-dirac"),
+                "width": occ.get("width", 0.05),
+            },
         }

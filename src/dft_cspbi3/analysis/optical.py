@@ -131,6 +131,7 @@ def compute_optical_spectrum(
             calc=str(scf_gpw),
             frequencies=omega_w,
             eta=eta_eV,
+            hilbert=False,   # linear freq array requires hilbert=False (NonLinearFrequencyDescriptor needed otherwise)
             txt=str(step_dir / "optical.txt"),
         )
         if scissor_eV is not None:

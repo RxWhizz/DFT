@@ -6,9 +6,9 @@
  |___|_|             
 
 User:   luis-ochoa@luis-pc
-Date:   Tue May  5 03:55:06 2026
+Date:   Tue May  5 03:54:35 2026
 Arch:   x86_64
-Pid:    496406
+Pid:    491528
 CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
 Python: 3.12.3
 gpaw:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw
@@ -209,26 +209,26 @@ Hamiltonian:
 XC parameters: PBE with 2 nearest neighbor stencil
 
 Memory estimate:
-  Process memory now: 134.92 MiB
-  Calculator: 29.60 MiB
-    Density: 17.18 MiB
-      Arrays: 6.50 MiB
-      Localized functions: 8.18 MiB
-      Mixer: 2.50 MiB
-    Hamiltonian: 4.47 MiB
-      Arrays: 4.25 MiB
+  Process memory now: 183.74 MiB
+  Calculator: 7.49 MiB
+    Density: 2.58 MiB
+      Arrays: 1.02 MiB
+      Localized functions: 1.17 MiB
+      Mixer: 0.39 MiB
+    Hamiltonian: 0.70 MiB
+      Arrays: 0.66 MiB
       XC: 0.00 MiB
       Poisson: 0.00 MiB
-      vbar: 0.22 MiB
-    Wavefunctions: 7.95 MiB
-      Arrays psit_nG: 1.88 MiB
-      Eigensolver: 0.59 MiB
-      Projections: 0.03 MiB
-      Projectors: 3.89 MiB
-      PW-descriptor: 1.56 MiB
+      vbar: 0.03 MiB
+    Wavefunctions: 4.21 MiB
+      Arrays psit_nG: 1.61 MiB
+      Eigensolver: 0.66 MiB
+      Projections: 0.02 MiB
+      Projectors: 0.56 MiB
+      PW-descriptor: 1.36 MiB
 
 Total number of cores used: 7
-Parallelization over states: 7
+Domain decomposition: 7 x 1 x 1
 
 Number of atoms: 5
 Number of atomic orbitals: 26
@@ -239,20 +239,9 @@ Bands to converge: occupied
 ... initialized
 
 Input parameters:
-  convergence: {density: 0.0001,
-                eigenstates: 0.0001,
-                energy: 1e-06}
-  eigensolver: {name: dav,
-                niter: 3}
-  mixer: {backend: pulay,
-          beta: 0.05,
-          method: separate,
-          nmaxold: 5,
-          weight: 50.0}
-  mode: {ecut: 450.00000000000006,
-         name: pw}
-  occupations: {name: fermi-dirac,
-                width: 0.1}
+  maxiter: 1
+  symmetry: {point_group: True,
+             time_reversal: True}
   xc: HSE06
 
 Initialize ...
@@ -334,9 +323,9 @@ Spin-paired calculation
 
 Convergence criteria:
  Maximum [total energy] change in last 3 cyles: 1e-06 eV / valence electron
- Maximum integral of absolute [dens]ity change: 0.0001 electrons / valence electron
- Maximum integral of absolute [eigenst]ate change: 0.0001 eV^2 / valence electron
- Maximum number of scf [iter]ations: 333
+ Maximum integral of absolute [dens]ity change: 1e-06 electrons / valence electron
+ Maximum integral of absolute [eigenst]ate change: 1e-08 eV^2 / valence electron
+ Maximum number of scf [iter]ations: 1
  (Square brackets indicate name in SCF output, whereas a 'c' in
  the SCF output indicates the quantity has converged.)
 
@@ -392,16 +381,11 @@ Wave functions: Plane wave expansion
     Improved wavefunction reuse through dual PAW basis 
 
 Occupation numbers: Fermi-Dirac:
-  width: 0.1000  # eV
+  width: 0.0500  # eV
  
 
 Eigensolver
-   Davidson(niter=3) 
-
-Densities:
-  Coarse grid: 32*32*32 grid
-  Fine grid: 64*64*64 grid
-  Total Charge: 0.000000 
+   Davidson(niter=2) 
 
 Density mixing:
   Method: separate
@@ -420,7 +404,7 @@ Hamiltonian:
 XC parameters: HYB_GGA_XC_HSE06 + 0.25 * EXX(omega = 0.11 bohr^-1)
 
 Memory estimate:
-  Process memory now: 142.72 MiB
+  Process memory now: 187.13 MiB
 Attribute error: AttributeError("'HybridXC' object has no attribute 'estimate_memory'")
 Some object probably lacks estimate_memory() method
 Memory breakdown may be incomplete
@@ -445,7 +429,6 @@ Bands to converge: occupied
 
 Initializing position-dependent things.
 
-Density initialized from atomic densities
 Creating initial wave functions:
   26 bands from LCAO basis set
   10 bands from random numbers
@@ -486,4 +469,72 @@ Effective grid spacing dv^(1/3) = 0.1931
 
      iter     time        total  log10-change:
                          energy   eigst   dens
-iter:   1 03:55:22
+iter:   1 03:54:52
+Not enough bands for occupied
+Writing to calculations/alpha/06_hse06/hse06_nonscf.gpw (mode='')
+
+Timing:                              incl.     excl.
+-----------------------------------------------------------
+Hamiltonian:                         0.705     0.059   0.3% |
+ Atomic:                             0.217     0.217   1.2% |
+  XC Correction:                     0.000     0.000   0.0% |
+ Calculate atomic Hamiltonians:      0.004     0.004   0.0% |
+ Communicate:                        0.014     0.014   0.1% |
+ Initialize Hamiltonian:             0.000     0.000   0.0% |
+ Poisson:                            0.072     0.072   0.4% |
+ XC 3D grid:                         0.340     0.340   1.9% ||
+LCAO initialization:                 1.188     0.206   1.2% |
+ LCAO eigensolver:                   0.627     0.000   0.0% |
+  Calculate projections:             0.000     0.000   0.0% |
+  DenseAtomicCorrection:             0.001     0.001   0.0% |
+  Distribute overlap matrix:         0.194     0.194   1.1% |
+  Orbital Layouts:                   0.276     0.276   1.6% ||
+  Potential matrix:                  0.042     0.042   0.2% |
+  Sum over cells:                    0.113     0.113   0.6% |
+ LCAO to grid:                       0.300     0.300   1.7% ||
+ Set positions (LCAO WFS):           0.054     0.013   0.1% |
+  Basic WFS set positions:           0.009     0.009   0.1% |
+  Basis functions set positions:     0.000     0.000   0.0% |
+  P tci:                             0.014     0.014   0.1% |
+  ST tci:                            0.010     0.010   0.1% |
+  mktci:                             0.008     0.008   0.0% |
+PWDescriptor:                        0.013     0.013   0.1% |
+Redistribute:                        0.001     0.001   0.0% |
+SCF-cycle:                          14.503     0.023   0.1% |
+ Davidson:                          11.533     2.160  12.2% |----|
+  Subspace diag:                     2.958     0.000   0.0% |
+   calc_h_matrix:                    2.150     1.243   7.0% |--|
+    Apply H:                         0.906     0.905   5.1% |-|
+     HMM T:                          0.001     0.001   0.0% |
+   diagonalize:                      0.323     0.323   1.8% ||
+   rotate_psi:                       0.485     0.485   2.7% ||
+  calc. matrices:                    4.151     3.592  20.2% |-------|
+   Apply H:                          0.560     0.559   3.1% ||
+    HMM T:                           0.001     0.001   0.0% |
+  diagonalize:                       1.531     1.531   8.6% |--|
+  rotate_psi:                        0.733     0.733   4.1% |-|
+ Density:                            0.189     0.000   0.0% |
+  Atomic density matrices:           0.004     0.004   0.0% |
+  Mix:                               0.012     0.012   0.1% |
+  Multipole moments:                 0.000     0.000   0.0% |
+  Pseudo density:                    0.173     0.081   0.5% |
+   Symmetrize density:               0.092     0.092   0.5% |
+ Hamiltonian:                        0.698     0.048   0.3% |
+  Atomic:                            0.216     0.216   1.2% |
+   XC Correction:                    0.000     0.000   0.0% |
+  Calculate atomic Hamiltonians:     0.004     0.004   0.0% |
+  Communicate:                       0.002     0.002   0.0% |
+  Poisson:                           0.084     0.084   0.5% |
+  XC 3D grid:                        0.344     0.344   1.9% ||
+ Orthonormalize:                     2.061     0.000   0.0% |
+  calc_s_matrix:                     0.611     0.611   3.4% ||
+  inverse-cholesky:                  0.177     0.177   1.0% |
+  projections:                       1.033     1.033   5.8% |-|
+  rotate_psi_s:                      0.239     0.239   1.3% ||
+Set symmetry:                        0.036     0.036   0.2% |
+Other:                               1.314     1.314   7.4% |--|
+-----------------------------------------------------------
+Total:                                        17.760 100.0%
+
+Memory usage: 200.50 MiB
+Date: Tue May  5 03:54:53 2026
