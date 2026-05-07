@@ -14,6 +14,7 @@ import numpy as np
 from ase.io import read, write
 from ase.optimize import BFGS
 from gpaw import GPAW, Mixer
+from gpaw.mixer import MixerSum
 
 from .calculator_factory import GPAWCalculatorFactory
 from .structure_builder import StructureBuilder
@@ -48,6 +49,7 @@ STEP_ORDER = [
     "formation_energy",   # ΔHf from binary references (CsI + PbI₂ single-points)
     "effective_masses",   # parabolic fit from existing bands.gpw — no new GPAW
     "optical",            # RPA dielectric function → ε(ω), α(ω)
+    "sq_limit",           # detailed Shockley-Queisser limit from α(ω)
     "score",              # composite PV solar score from all collected data
 ]
 STEP_DIRS = {
@@ -61,9 +63,9 @@ STEP_DIRS = {
     "soc_scan": "06_scan",
     "r2scan": "06_r2scan",
     "soc_r2scan": "06_r2scan",
-    "hse06": "07_hse06",
-    "hse06_nonscf": "07_hse06",
-    "hse06_scissor": "07_hse06",
+    "hse06": "06_hse06",
+    "hse06_nonscf": "06_hse06",
+    "hse06_scissor": "06_hse06",
     "soc_hse06": "05_soc",
     "hessian": "07_vibrational/hessian",
     "phonons": "07_vibrational/phonons",
@@ -72,6 +74,7 @@ STEP_DIRS = {
     "formation_energy": "09_formation_energy",
     "effective_masses": "10_effective_masses",
     "optical": "11_optical",
+    "sq_limit": "13_sq_limit",
     "score": "12_score",
 }
 
@@ -524,17 +527,37 @@ class DFTWorkflow:
         txt = str(step_dir / "hse06.txt")
         checkpoint = step_dir / "hse06_checkpoint.gpw"
 
-        conv_cfg = self.factory.config.get("hse06", {}).get("convergence", {})
-        mixer_cfg = self.factory.config.get("hse06", {}).get("mixer", {})
+        hse_cfg  = self.factory.config.get("hse06", {})
+        conv_cfg = hse_cfg.get("convergence", {})
+        mixer_cfg = hse_cfg.get("mixer", {})
+
+        # Auto-compute nbands = int(n_occ * 1.3) from SCF electron count.
+        # Extra empty bands (≥20-30% of occupied) stabilise the Fock operator and
+        # prevent eigensolver failures when the Davidson subspace is too small.
+        nbands_override: int | None = None
+        nbands_cfg = hse_cfg.get("nbands", "auto")
+        if nbands_cfg == "auto":
+            if scf_gpw.exists():
+                _ref = GPAW(str(scf_gpw), txt=None)
+                n_occ = int(_ref.get_number_of_electrons()) // 2  # spin-paired
+                # n_occ + 50% extra vacías: el factor 1.3 aplicado al TOTAL daría solo 6
+                # vacías para n_occ=22; con +50% se obtienen 11 vacías — suficiente para
+                # que la corrección de Fock en la banda de conducción esté convergida
+                nbands_override = n_occ + int(n_occ * 0.5)
+                logger.info("HSE06 nbands auto: n_occ=%d → nbands=%d (+50%% vacías)", n_occ, nbands_override)
+        elif isinstance(nbands_cfg, int):
+            nbands_override = nbands_cfg
 
         if checkpoint.exists():
             logger.info("Resuming HSE06 from checkpoint: %s", checkpoint)
+            # MixerSum (MSR1): mezcla densidad total con beta conservador para
+            # estabilizar el potencial de intercambio exacto entre ciclos SCF.
             calc = GPAW(
                 str(checkpoint),
                 txt=txt,
-                mixer=Mixer(
-                    beta=mixer_cfg.get("beta", 0.05),
-                    nmaxold=mixer_cfg.get("nmaxold", 5),
+                mixer=MixerSum(
+                    beta=mixer_cfg.get("beta", 0.01),
+                    nmaxold=mixer_cfg.get("nmaxold", 8),
                     weight=mixer_cfg.get("weight", 50.0),
                 ),
                 convergence={
@@ -547,7 +570,10 @@ class DFTWorkflow:
         else:
             if not scf_gpw.exists():
                 raise FileNotFoundError(f"SCF checkpoint not found: {scf_gpw}")
-            calc = self.factory.create("hse06", txt=txt)
+            override: dict = {}
+            if nbands_override is not None:
+                override["nbands"] = nbands_override
+            calc = self.factory.create("hse06", txt=txt, params_override=override or None)
             atoms = GPAW(str(scf_gpw), txt=None).get_atoms()
 
         calc.attach(calc.write, 5, str(checkpoint), mode="all")
@@ -591,44 +617,104 @@ class DFTWorkflow:
         if not pbe_gpw.exists():
             ref = GPAW(str(scf_gpw), txt=None)
             atoms_ref = ref.get_atoms()
-            calc_pbe = GPAW(
+            # nbands: "auto" → int(n_occ * 1.3); entero → usar directamente; None → GPAW default
+            _nbands_cfg = hse_cfg.get("nbands", None)
+            if _nbands_cfg == "auto":
+                _n_occ = int(ref.get_number_of_electrons()) // 2
+                _nbands_pbe: int | None = _n_occ + int(_n_occ * 0.5)
+            elif isinstance(_nbands_cfg, int):
+                _nbands_pbe = _nbands_cfg
+            else:
+                _nbands_pbe = None
+            pbe_kwargs: dict = dict(
                 mode=self.factory._hse06_params()["mode"],
                 xc="PBE",
                 kpts={"size": kpts, "gamma": True},
-                nbands=hse_cfg.get("nbands", None),
                 symmetry={"point_group": True, "time_reversal": True},
                 convergence={"energy": 1e-6, "eigenstates": 1e-8, "density": 1e-6},
-                occupations={"name": "fermi-dirac", "width": 0.05},
+                occupations={"name": "fermi-dirac", "width": 0.01},
                 txt=str(step_dir / f"pbe_{kpts_tag}.txt"),
             )
+            if _nbands_pbe is not None:
+                pbe_kwargs["nbands"] = _nbands_pbe
+                logger.info("PBE@%s nbands=%d (auto: n_occ=%d × 1.3)", kpts_tag, _nbands_pbe, _n_occ)
+            calc_pbe = GPAW(**pbe_kwargs)
             atoms_ref.calc = calc_pbe
             atoms_ref.get_potential_energy()
-            calc_pbe.write(str(pbe_gpw))
+            # 'all' guarda las funciones de onda (psit_nG) — requerido por
+            # non_self_consistent_eigenvalues para calcular ⟨ψ|vxc|ψ⟩
+            calc_pbe.write(str(pbe_gpw), mode="all")
             logger.info("PBE@%s converged: %s", kpts_tag, pbe_gpw)
 
-        # Step 2: one-shot HSE06 from converged PBE wavefunctions.
-        calc = GPAW(
-            str(pbe_gpw),
-            txt=txt,
-            xc="HSE06",
-            kpts={"size": kpts, "gamma": True},
-            symmetry={"point_group": True, "time_reversal": True},
-            maxiter=1,  # one-shot: 1 Fock eval on PBE orbitals + 1 diagonalization
-        )
-        atoms = calc.get_atoms()
-        atoms.calc = calc
+        # Step 2: aplica corrección HSE06 no autoconsistente sobre los autovalores PBE.
+        # Ruta principal: non_self_consistent_eigenvalues (gpaw.hybrids.eigenvalues).
+        #   eig_hse = eig_pbe − vxc_pbe + vxc_hse
+        # Es más ligera que maxiter=1 (sin reconstruir la densidad) y evita el error
+        # de convergencia que maxiter=1 lanza por diseño.
+        # Ruta fallback: maxiter=1 (una evaluación Fock + rediagonalización).
+        _used_nsc_api = False
         try:
-            atoms.get_potential_energy()
-        except Exception:
-            pass  # maxiter=1 raises ConvergenceError by design — result is still valid
-        calc.write(str(out_gpw))
+            from gpaw.hybrids.eigenvalues import non_self_consistent_eigenvalues
 
-        try:
-            from ase.dft.bandgap import bandgap
-            gap, p1, p2 = bandgap(calc)
-            logger.info("HSE06@PBE (non-SCF) band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
-        except Exception:
-            pass
+            # Pasar objeto GPAW con txt= para que la corrida quede registrada en el log
+            _calc_for_nsc = GPAW(str(pbe_gpw), txt=txt)
+            eig_pbe, vxc_pbe, vxc_hse = non_self_consistent_eigenvalues(
+                _calc_for_nsc,
+                xcname="HSE06",
+            )
+            eig_hse = eig_pbe - vxc_pbe + vxc_hse   # shape: (nspins, nk, nbands)
+            np.save(str(step_dir / "hse06_nsc_eigenvalues.npy"), eig_hse)
+            _used_nsc_api = True
+            logger.info(
+                "non_self_consistent_eigenvalues HSE06 complete — saved hse06_nsc_eigenvalues.npy"
+            )
+
+            # Log band gap from corrected eigenvalues
+            _ref_pbe = _calc_for_nsc
+            _ef = _ref_pbe.get_fermi_level()
+            _eigs_flat = eig_hse.flatten()
+            _occ = _eigs_flat[_eigs_flat < _ef]
+            _unocc = _eigs_flat[_eigs_flat >= _ef]
+            if len(_occ) and len(_unocc):
+                _gap_nsc = float(_unocc.min() - _occ.max())
+                logger.info("HSE06 non-SCF (eigenvalue correction) band gap: %.4f eV", _gap_nsc)
+        except Exception as _exc:
+            logger.warning(
+                "non_self_consistent_eigenvalues failed (%s) — falling back to maxiter=1", _exc
+            )
+
+        if not _used_nsc_api:
+            # Fallback: one-shot HSE06 — 1 Fock eval on PBE orbitals + 1 diagonalisation.
+            # maxiter=1 levanta ConvergenceError por diseño; el resultado es válido.
+            calc = GPAW(
+                str(pbe_gpw),
+                txt=txt,
+                xc="HSE06",
+                kpts={"size": kpts, "gamma": True},
+                symmetry={"point_group": True, "time_reversal": True},
+                maxiter=1,
+            )
+            atoms = calc.get_atoms()
+            atoms.calc = calc
+            try:
+                atoms.get_potential_energy()
+            except Exception:
+                pass
+            calc.write(str(out_gpw))
+
+            try:
+                from ase.dft.bandgap import bandgap
+                gap, p1, p2 = bandgap(calc)
+                logger.info("HSE06@PBE (maxiter=1) band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+            except Exception:
+                pass
+
+        # Guardar el PBE como out_gpw si la ruta nsc_api funcionó (no hay calc HSE06 GPAW)
+        if _used_nsc_api and not out_gpw.exists():
+            import shutil as _shutil
+            _shutil.copy(str(pbe_gpw), str(out_gpw))
+            logger.info("hse06_nonscf.gpw es copia de pbe_%s.gpw (fuente de eigenvalores nsc)", kpts_tag)
+
         logger.info("Non-SCF HSE06 complete: %s", out_gpw)
 
     def _run_hse06_scissor(self, step_dir: Path) -> None:
@@ -894,7 +980,7 @@ class DFTWorkflow:
         import json
         from .analysis.electronic import (
             classify_gap_type, compute_effective_masses,
-            compute_effective_masses_nscf,
+            compute_effective_masses_nscf, compute_effective_masses_soc,
         )
         from .analysis.structural import analyze_perovskite_geometry
 
@@ -926,6 +1012,20 @@ class DFTWorkflow:
             logger.warning("scf.gpw missing — falling back to band-path effective masses")
             mass_result = compute_effective_masses(bands_gpw)
 
+        # SOC-corrected masses: apply soc_eigenstates to the existing fine k-path gpw.
+        # The triply-degenerate PBE CBM at R splits under SOC giving the true light m_e.
+        fine_gpw = step_dir / "effmass_fine.gpw"
+        soc_cfg = self.factory.config.get("soc", {})
+        mass_soc: object = None
+        if fine_gpw.exists():
+            mass_soc = compute_effective_masses_soc(
+                fine_gpw,
+                n_fit=5,
+                theta=float(soc_cfg.get("theta", 0.0)),
+                phi=float(soc_cfg.get("phi", 0.0)),
+            )
+            logger.info("SOC masses: %s", mass_soc.summary)
+
         # Structural analysis from relaxed geometry
         relax_gpw = self._step_dir("relax") / "relax.gpw"
         struct_result = None
@@ -944,8 +1044,12 @@ class DFTWorkflow:
             "m_e_m0": mass_result.m_e,
             "m_h_m0": mass_result.m_h,
             "m_reduced_m0": mass_result.m_reduced,
+            "m_e_soc_m0": mass_soc.m_e if mass_soc else None,
+            "m_h_soc_m0": mass_soc.m_h if mass_soc else None,
+            "m_reduced_soc_m0": mass_soc.m_reduced if mass_soc else None,
             "flags_gap": gap_result.flags,
             "flags_masses": mass_result.flags,
+            "flags_masses_soc": mass_soc.flags if mass_soc else [],
         }
         if struct_result is not None:
             out_dict["tolerance_factor"] = struct_result.tolerance_factor
@@ -1018,6 +1122,70 @@ class DFTWorkflow:
         if result.flags:
             logger.warning("Optical flags: %s", result.flags)
 
+    def _run_sq_limit(self, step_dir: Path) -> None:
+        """Compute detailed Shockley-Queisser PV efficiency from DFT α(ω).
+
+        Reads optical data from the optical step, applies Würfel detailed balance
+        to compute J_sc, J₀, V_oc, FF, PCE for a range of film thicknesses.
+        Also computes the classical ideal SQ limit (infinite thickness, step at Eg).
+        Saves sq_limit.json, generation_rate.npy, depth_cm.npy.
+        """
+        import json as _json
+        from .analysis.sq_limit import compute_sq_limit
+        from .analysis.optical import load_optical_result
+
+        opt_result = load_optical_result(self._step_dir("optical"))
+        if opt_result is None:
+            raise FileNotFoundError("Run the 'optical' step first — optical_frequencies.npy not found")
+
+        cfg = self.factory.config.get("sq_limit", {})
+
+        # If optical data is at PBE level (no scissor), use HSE06-corrected onset
+        # to avoid artificially large J_sc/J₀ from sub-gap PBE absorption
+        onset_override: float | None = None
+        scissor_json = self._step_dir("hse06") / "hse06_scissor.json"
+        if scissor_json.exists():
+            import json as _json2
+            sc = _json2.loads(scissor_json.read_text())
+            pbe_gap = sc.get("e_pbe_eV")
+            chi_hse = sc.get("chi_hse_eV")
+            if pbe_gap is not None and chi_hse is not None:
+                onset_override = float(pbe_gap + chi_hse)
+                logger.info(
+                    "SQ onset override: PBE(%.3f) + HSE06(%.3f) = %.3f eV",
+                    pbe_gap, chi_hse, onset_override,
+                )
+
+        result = compute_sq_limit(
+            opt_result,
+            thickness_nm=cfg.get("thickness_nm", 500.0),
+            T_K=cfg.get("T_K", 300.0),
+            thickness_scan_nm=cfg.get(
+                "thickness_scan_nm", [100, 200, 300, 400, 500, 750, 1000, 2000]
+            ),
+            onset_eV_override=onset_override,
+        )
+
+        np.save(str(step_dir / "generation_rate.npy"), result.generation_x)
+        np.save(str(step_dir / "depth_cm.npy"), result.x_cm)
+
+        step_dir.joinpath("sq_limit.json").write_text(_json.dumps({
+            "thickness_nm":   result.thickness_nm,
+            "jsc_mA_cm2":     result.jsc_mA_cm2,
+            "j0_mA_cm2":      result.j0_mA_cm2,
+            "voc_V":          result.voc_V,
+            "ff":             result.ff,
+            "pce_pct":        result.pce_pct,
+            "jsc_sq_ideal":   result.jsc_sq_ideal,
+            "pce_sq_ideal":   result.pce_sq_ideal,
+            "thickness_scan": result.thickness_scan,
+            "flags":          result.flags,
+        }, indent=2))
+        logger.info(
+            "SQ limit: J_sc=%.2f mA/cm², V_oc=%.3f V, FF=%.3f, PCE=%.1f%%",
+            result.jsc_mA_cm2, result.voc_V, result.ff, result.pce_pct,
+        )
+
     def _run_score(self, step_dir: Path) -> None:
         """Collect all completed analyses and compute composite PV solar score."""
         import json
@@ -1031,31 +1199,30 @@ class DFTWorkflow:
         # Gather available data
         kwargs: dict = {}
 
-        # Band gap from SOC result
-        soc_dir = self._step_dir("soc")
-        soc_npy = soc_dir / "soc_eigenvalues.npy"
-        if soc_npy.exists():
-            try:
-                import numpy as np
-                eigs = np.load(str(soc_npy))
-                # Approximate gap from eigenvalue array (sorted)
-                ef_approx = np.median(eigs.flatten())
-                occupied = eigs[eigs < ef_approx]
-                unoccupied = eigs[eigs >= ef_approx]
-                if len(occupied) and len(unoccupied):
-                    kwargs["bandgap_eV"] = float(unoccupied.min() - occupied.max())
-            except Exception:
-                pass
-
         # Electronic analysis (gap type + effective masses)
+        # Prefer SOC-corrected masses (m_e_soc_m0 / m_h_soc_m0) when available;
+        # they capture the CBM splitting that PBE-only misses.
         em_json = self._step_dir("effective_masses") / "electronic_analysis.json"
         if em_json.exists():
             em_data = json.loads(em_json.read_text())
             kwargs["gap_type"] = em_data.get("gap_type")
-            if kwargs.get("bandgap_eV") is None:
-                kwargs["bandgap_eV"] = em_data.get("gap_eV")
-            kwargs["m_e"] = em_data.get("m_e_m0")
-            kwargs["m_h"] = em_data.get("m_h_m0")
+            kwargs["bandgap_eV"] = em_data.get("gap_eV")
+            m_e_soc = em_data.get("m_e_soc_m0")
+            m_h_soc = em_data.get("m_h_soc_m0")
+            kwargs["m_e"] = m_e_soc if m_e_soc is not None else em_data.get("m_e_m0")
+            kwargs["m_h"] = m_h_soc if m_h_soc is not None else em_data.get("m_h_m0")
+
+        # HSE06 scissor: best available gap = PBE + HSE06 correction (closer to experiment)
+        scissor_json = self._step_dir("hse06") / "hse06_scissor.json"
+        if scissor_json.exists():
+            import json as _json
+            sc_data = _json.loads(scissor_json.read_text())
+            pbe_gap = sc_data.get("e_pbe_eV")
+            chi_hse = sc_data.get("chi_hse_eV")
+            if pbe_gap is not None and chi_hse is not None:
+                kwargs["bandgap_eV"] = float(pbe_gap + chi_hse)
+                logger.info("Gap for scoring: PBE(%.3f) + HSE06(%.3f) = %.3f eV",
+                            pbe_gap, chi_hse, kwargs["bandgap_eV"])
 
         # Formation energy
         fe_json = self._step_dir("formation_energy") / "formation_energy.json"
@@ -1070,11 +1237,37 @@ class DFTWorkflow:
             freqs = np.load(str(ph_npy))
             kwargs["phonon_stable"] = bool(np.all(freqs > -10))
 
-        # Optical: ε∞, absorption score
+        # Optical: ε∞
         opt_result = load_optical_result(self._step_dir("optical"))
         if opt_result is not None:
-            kwargs["eps_r"]        = opt_result.eps_inf
-            kwargs["optical_score"] = opt_result.visible_absorption_score
+            kwargs["eps_r"] = opt_result.eps_inf
+
+        # In-gap DOS: compute from dos.gpw eigenvalues if available
+        dos_gpw = self._step_dir("dos") / "dos.gpw"
+        if dos_gpw.exists():
+            try:
+                from gpaw import GPAW as _GPAW
+                _c = _GPAW(str(dos_gpw), txt=None)
+                _ef = _c.get_fermi_level()
+                _nk = len(_c.get_bz_k_points())
+                _all_eigs = np.array([_c.get_eigenvalues(k) for k in range(_nk)]).flatten()
+                _occ = _all_eigs[_all_eigs < _ef]
+                _unocc = _all_eigs[_all_eigs >= _ef]
+                if len(_occ) and len(_unocc):
+                    _vbm = float(_occ.max())
+                    _cbm = float(_unocc.min())
+                    _gap_win = _cbm - _vbm
+                    # Count eigenvalues in the gap interior (10% inset)
+                    _inset = 0.05 * _gap_win
+                    _ingap = _all_eigs[(_all_eigs > _vbm + _inset) & (_all_eigs < _cbm - _inset)]
+                    _in_gap_dos = float(len(_ingap)) / _gap_win  # rough states/eV
+                    kwargs["in_gap_dos"] = _in_gap_dos
+                    logger.info(
+                        "In-gap DOS: %d states in [%.3f, %.3f] eV → %.4f states/eV",
+                        len(_ingap), _vbm + _inset, _cbm - _inset, _in_gap_dos,
+                    )
+            except Exception as _e:
+                logger.warning("In-gap DOS computation failed: %s", _e)
 
         score = compute_solar_score(**kwargs)
 
@@ -1083,6 +1276,23 @@ class DFTWorkflow:
             E_b = exciton_binding_energy(kwargs["m_e"], kwargs["m_h"], kwargs["eps_r"])
         else:
             E_b = None
+
+        # SQ limit metrics — informational only, do not affect scoring weights
+        pv_metrics: dict = {}
+        sq_json = self._step_dir("sq_limit") / "sq_limit.json"
+        if sq_json.exists():
+            sq_data = json.loads(sq_json.read_text())
+            pv_metrics["jsc_mA_cm2"]   = sq_data.get("jsc_mA_cm2")
+            pv_metrics["voc_V"]        = sq_data.get("voc_V")
+            pv_metrics["ff"]           = sq_data.get("ff")
+            pv_metrics["pce_pct"]      = sq_data.get("pce_pct")
+            pv_metrics["jsc_sq_ideal"] = sq_data.get("jsc_sq_ideal")
+            pv_metrics["pce_sq_ideal"] = sq_data.get("pce_sq_ideal")
+            pv_metrics["thickness_nm"] = sq_data.get("thickness_nm")
+            logger.info(
+                "SQ from file: J_sc=%.2f mA/cm², PCE=%.1f%%",
+                pv_metrics["jsc_mA_cm2"] or 0, pv_metrics["pce_pct"] or 0,
+            )
 
         out_json.write_text(json.dumps({
             "total_score": score.total,
@@ -1104,6 +1314,7 @@ class DFTWorkflow:
                 "eps_r": score.eps_r,
                 "exciton_binding_meV": E_b * 1000 if E_b else None,
             },
+            "pv_metrics": pv_metrics if pv_metrics else None,
             "disqualified": score.disqualified,
             "flags": score.flags,
             "summary": score.summary,

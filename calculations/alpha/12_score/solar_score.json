@@ -1,27 +1,33 @@
 {
-  "total_score": 49.76403529605515,
-  "grade": "C",
+  "total_score": 83.79631484004379,
+  "grade": "A",
   "components": {
-    "bandgap": 0.003743721342052473,
+    "bandgap": 0.7814503960127992,
     "gap_type": 1.0,
     "stability": 0.6,
-    "transport": 0.5113628175002554,
-    "exciton": 0.5,
-    "defects": 0.5
+    "transport": 0.8631640283835493,
+    "exciton": 0.9312594513970585,
+    "defects": 1.0
   },
   "inputs": {
-    "bandgap_eV": 2.5100343635965503,
+    "bandgap_eV": 1.5858004942269563,
     "gap_type": "direct",
-    "delta_Hf_eV": -48.897416836619996,
-    "m_e_m0": 0.7535861057352072,
-    "m_h_m0": 0.21882574596161183,
-    "eps_r": null,
-    "exciton_binding_meV": null
+    "delta_Hf_eV": -0.18941358998878322,
+    "m_e_m0": 0.11075530981101663,
+    "m_h_m0": 0.15104305790906267,
+    "eps_r": 6.164805,
+    "exciton_binding_meV": 22.876026668727366
+  },
+  "pv_metrics": {
+    "jsc_mA_cm2": 23.87864743051411,
+    "voc_V": 1.2646510014242023,
+    "ff": 0.901745110937311,
+    "pce_pct": 27.23103897833974,
+    "jsc_sq_ideal": 23.98106522781122,
+    "pce_sq_ideal": 28.389906860073864,
+    "thickness_nm": 500.0
   },
   "disqualified": false,
-  "flags": [
-    "DIELECTRIC_MISSING:exciton_approx",
-    "IN_GAP_DOS_MISSING"
-  ],
-  "summary": "PV Score: 49.8/100 [C]"
+  "flags": [],
+  "summary": "PV Score: 83.8/100 [A]  |  Eg=1.59 eV (direct), \u0394Hf=-0.189 eV, m*_e=0.11 m\u2080, E_b=23 meV"
 }

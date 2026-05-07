@@ -1,8 +1,8 @@
 {
-  "delta_Hf_eV": -48.897416836619996,
-  "E_perovskite_per_fu_eV": -14.05369599668557,
-  "E_CsI_per_fu_eV": 34.06930309783495,
-  "E_PbI2_per_fu_eV": 0.7744177420994772,
+  "delta_Hf_eV": -0.18941358998878322,
+  "E_perovskite_per_fu_eV": -14.053695996680313,
+  "E_CsI_per_fu_eV": -5.394232498539241,
+  "E_PbI2_per_fu_eV": -8.470049908152289,
   "stable": true,
-  "summary": "\u0394Hf = -48.897 eV/f.u. \u2192 STABLE vs binary decomposition"
+  "summary": "\u0394Hf = -0.189 eV/f.u. \u2192 STABLE vs binary decomposition"
 }

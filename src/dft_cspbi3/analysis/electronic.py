@@ -415,6 +415,71 @@ def compute_effective_masses_nscf(
 
 
 # ---------------------------------------------------------------------------
+# SOC-corrected effective masses from fine k-path
+# ---------------------------------------------------------------------------
+
+
+def compute_effective_masses_soc(
+    fine_gpw: str | Path,
+    n_fit: int = 5,
+    theta: float = 0.0,
+    phi: float = 0.0,
+) -> EffectiveMassResult:
+    """Effective masses from perturbative SOC applied to the fine k-path .gpw.
+
+    Uses soc_eigenstates() on effmass_fine.gpw (already on a fine k-grid around R).
+    After SOC, the triply-degenerate PBE CBM at R splits; the true light electron
+    mass is extracted from the lowest spinor conduction band.
+
+    Args:
+        fine_gpw: Path to effmass_fine.gpw (fine k-path non-SCF calculation).
+        n_fit:    Points on each side of extremum for parabolic fit.
+        theta:    Polar angle of spin quantisation axis (degrees).
+        phi:      Azimuthal angle of spin quantisation axis (degrees).
+    """
+    from gpaw import GPAW
+    from gpaw.spinorbit import soc_eigenstates
+
+    flags: list[str] = []
+    try:
+        calc = GPAW(str(fine_gpw), txt=None)
+        nb = calc.get_number_of_bands()
+        ne = int(calc.get_number_of_electrons())  # 44 for CsPbI₃ — NOT ne//2
+        kpts_frac = calc.get_bz_k_points()
+        cell = calc.atoms.cell
+        rec = np.linalg.inv(cell.T) * 2 * np.pi
+
+        soc_result = soc_eigenstates(calc, n2=nb, theta=theta, phi=phi)
+        eigs = soc_result.eigenvalues()   # shape (nk, 2*nb)
+        calc.__del__()
+
+        # After SOC doubling: ne electrons fill the ne lowest spinor levels
+        cb = eigs[:, ne]        # first conduction spinor band
+        vb = eigs[:, ne - 1]    # last valence spinor band
+
+        cbm_k = int(np.argmin(cb))
+        vbm_k = int(np.argmax(vb))
+
+        m_e = _fit_mass(cb, kpts_frac, rec, cbm_k, n_fit, flags, "CBM_SOC")
+        m_h_raw = _fit_mass(-vb, kpts_frac, rec, vbm_k, n_fit, flags, "VBM_SOC")
+        m_h = abs(m_h_raw) if m_h_raw is not None else None
+
+        m_reduced = None
+        if m_e is not None and m_h is not None and (m_e + m_h) > 0:
+            m_reduced = (m_e * m_h) / (m_e + m_h)
+
+        result = EffectiveMassResult(m_e=m_e, m_h=m_h, m_reduced=m_reduced,
+                                     n_kpts_fit=n_fit, flags=flags)
+        logger.info("SOC effective masses: %s", result.summary)
+        return result
+
+    except Exception as exc:
+        flags.append(f"SOC_MASS_FAILED:{exc}")
+        logger.warning("SOC effective mass calculation failed: %s", exc)
+        return EffectiveMassResult(m_e=None, m_h=None, m_reduced=None, flags=flags)
+
+
+# ---------------------------------------------------------------------------
 # DOS near gap
 # ---------------------------------------------------------------------------
 

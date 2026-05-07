@@ -60,7 +60,11 @@ hse06:
   mode: PW
   ecut: 450
   kpts: [2, 2, 2]        # 2x2x2 incluye R=(0.5,0.5,0.5) donde está el gap real de CsPbI3
-  nbands: 36             # 22 ocupadas + 14 vacías — subespacio más rico para Davidson
+  # "auto" calcula nbands = n_occ + int(n_occ * 0.5) desde scf.gpw (50% extra vacías)
+  # int(n_occ*1.3) daba solo 6 vacías para n_occ=22; +50% da 11 vacías — necesario
+  # para que el operador de Fock converja en la banda de conducción.
+  # Sustituir por entero para forzar un valor fijo.
+  nbands: auto
   eigensolver_niter: 3   # pasos Davidson internos por ciclo SCF (default=1 para híbridos)
   convergence:
     energy: 1.0e-6
@@ -68,11 +72,21 @@ hse06:
     density: 1.0e-4
   occupations:
     name: fermi-dirac
-    width: 0.10           # suaviza discontinuidades en densidad bajo Fock oscilante
+    # Semiconductor/aislado: width mínimo evita ocupaciones artificiales en el gap
+    # Para sistema metálico o con degeneración HOMO-LUMO, subir a 0.05
+    width: 0.01
   mixer:
-    beta: 0.05
-    nmaxold: 5            # historia DIIS larga — necesaria para amortiguar oscilaciones Fock
-    weight: 50.0
+    # MSR1 (MixerSum, Pulay DIIS) con beta bajo: las actualizaciones lentas de densidad
+    # previenen la divergencia del potencial de intercambio exacto entre ciclos SCF
+    beta: 0.01
+    nmaxold: 8            # historia DIIS larga (8 vs 5 default) amortigua oscilaciones Fock
+
+  # --- Sistema aislado: molécula, clúster o nanocristal ---
+  # Si el sistema no es periódico, garantizar al menos 8 Å de vacío:
+  #   atoms.center(vacuum=8.0)
+  # Para sistemas polares o cargados, activar corrección dipolar (opcional):
+  #   from gpaw import PoissonSolver
+  #   poissonsolver = PoissonSolver(dipolelayer='z')   # 'xy' | 'z' según orientación
 
 scan:
   xc: SCAN
@@ -133,6 +147,11 @@ optical:
   onset_threshold_cm1: 1.0e4
   scissor_eV: null               # null = auto-detect from HSE06−PBE; float = fixed shift
   alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]
+
+sq_limit:
+  thickness_nm: 500.0            # nominal film thickness for primary calculation
+  T_K: 300.0                     # device temperature
+  thickness_scan_nm: [100, 200, 300, 400, 500, 750, 1000, 2000]  # sweep for optimal d
 
 # Composition-specific parameters (cell constants, bandgap references, PAW datasets).
 # Override with --composition-config on the CLI.
