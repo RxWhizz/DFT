@@ -9,10 +9,13 @@ Steps:
 
 import sys
 import time
+import re
 import numpy as np
 from pathlib import Path
 
 sys.path.insert(0, "src")
+
+from gpaw.mpi import world
 
 SCF_GPW       = Path("calculations/alpha/02_scf/scf.gpw")
 DOS_WFS_GPW   = Path("calculations/alpha/04_dos/dos_wfs.gpw")
@@ -31,6 +34,23 @@ def _validate_ibz(calc, label: str) -> int:
     nibz = int(kd.nibzkpts)
     nbz = int(getattr(kd, "nbzkpts", len(kd.bzk_kc)))
     print(f"  {label}: {nibz} irreducible k-points out of {nbz} total")
+    if nibz > MAX_IBZKPTS:
+        raise RuntimeError(
+            f"{label} has {nibz} irreducible k-points. "
+            "Symmetry reduction did not take effect; refusing the HSE06 NSC run."
+        )
+    return nibz
+
+
+def _validate_ibz_from_log(log_path: Path, label: str) -> int | None:
+    if not log_path.exists():
+        return None
+    text = log_path.read_text(errors="ignore")
+    matches = re.findall(r"(\d+) k-points in the irreducible part", text)
+    if not matches:
+        return None
+    nibz = int(matches[-1])
+    print(f"  {label}: {nibz} irreducible k-points (from GPAW log)")
     if nibz > MAX_IBZKPTS:
         raise RuntimeError(
             f"{label} has {nibz} irreducible k-points. "
@@ -75,11 +95,8 @@ else:
     atoms = calc.get_atoms()
     atoms.get_potential_energy()
     _validate_ibz(calc, "new HSE06 NSC wavefunction mesh")
-    tmp_gpw = NSC_WFS_GPW.with_name(f"{NSC_WFS_GPW.stem}.tmp.gpw")
-    if tmp_gpw.exists():
-        tmp_gpw.unlink()
-    calc.write(str(tmp_gpw), mode="all")
-    tmp_gpw.replace(NSC_WFS_GPW)
+    calc.write(str(NSC_WFS_GPW), mode="all")
+    world.barrier()
     regenerated_wfs = True
     print(f"Saved {NSC_WFS_GPW}  ({NSC_WFS_GPW.stat().st_size / 1e9:.2f} GB)")
     print(f"Step 1 elapsed: {(time.time()-t0)/60:.1f} min")
@@ -96,22 +113,28 @@ else:
     t0 = time.time()
     calc_pbe = GPAW(
         str(NSC_WFS_GPW),
-        symmetry=SYMMETRY_ON,
         txt=str(NSC_TXT),
     )
-    n_ibz = _validate_ibz(calc_pbe, "HSE06 NSC input mesh")
+    n_ibz = _validate_ibz_from_log(NSC_TXT, "HSE06 NSC input mesh")
     eig_pbe, vxc_pbe, vxc_hse = non_self_consistent_eigenvalues(
         calc_pbe, xcname="HSE06"
     )
     eig_hse = eig_pbe - vxc_pbe + vxc_hse
-    if eig_hse.shape[1] != n_ibz:
+    if eig_hse.shape[1] > MAX_IBZKPTS:
+        raise RuntimeError(
+            f"NSC eigenvalue shape has {eig_hse.shape[1]} k-points. "
+            "Symmetry reduction did not take effect."
+        )
+    if n_ibz is not None and eig_hse.shape[1] != n_ibz:
         raise RuntimeError(
             f"NSC eigenvalue shape has {eig_hse.shape[1]} k-points, "
             f"but GPAW reports {n_ibz} irreducible k-points."
         )
-    tmp_eig = NSC_EIG_PATH.with_suffix(".tmp.npy")
-    np.save(str(tmp_eig), eig_hse)
-    tmp_eig.replace(NSC_EIG_PATH)
+    if world.rank == 0:
+        tmp_eig = NSC_EIG_PATH.with_suffix(".tmp.npy")
+        np.save(str(tmp_eig), eig_hse)
+        tmp_eig.replace(NSC_EIG_PATH)
+    world.barrier()
     print(f"Saved {NSC_EIG_PATH}  shape={eig_hse.shape}")
     print(f"Step 2 elapsed: {(time.time()-t0)/60:.1f} min")
 
@@ -123,7 +146,7 @@ print("=" * 60)
 from gpaw import GPAW
 eig_hse = np.load(str(NSC_EIG_PATH))   # shape (n_spin, n_kpts_irr, n_bands)
 
-calc = GPAW(str(NSC_WFS_GPW), symmetry=SYMMETRY_ON, txt=None)
+calc = GPAW(str(NSC_WFS_GPW), txt=None)
 _validate_ibz(calc, "HSE06 DOS postprocess mesh")
 
 # k-point weights (irreducible BZ)

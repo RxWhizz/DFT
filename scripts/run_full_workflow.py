@@ -76,7 +76,8 @@ def main(phase, steps, config, workdir, dry_run, cores, status):
 
         mpirun -n 8 gpaw python run_full_workflow.py --phase alpha --cores 8
 
-    Steps available: relax, scf, bands, dos, soc, hse06
+    Steps available: relax, scf, bands, dos, soc, hse06, optical, sq_limit,
+    oghma_device, score
     """
     if cores > 1:
         logger.info(

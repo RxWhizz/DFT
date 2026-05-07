@@ -50,6 +50,7 @@ STEP_ORDER = [
     "effective_masses",   # parabolic fit from existing bands.gpw — no new GPAW
     "optical",            # RPA dielectric function → ε(ω), α(ω)
     "sq_limit",           # detailed Shockley-Queisser limit from α(ω)
+    "oghma_device",       # optional OghmaNano device-physics handoff (not ML)
     "score",              # composite PV solar score from all collected data
 ]
 STEP_DIRS = {
@@ -75,7 +76,23 @@ STEP_DIRS = {
     "effective_masses": "10_effective_masses",
     "optical": "11_optical",
     "sq_limit": "13_sq_limit",
+    "oghma_device": "14_oghma_device",
     "score": "12_score",
+}
+STEP_DONE_FILES = {
+    "soc": "soc_eigenvalues.npy",
+    "soc_scan": "soc_scan_eigenvalues.npy",
+    "soc_r2scan": "soc_r2scan_eigenvalues.npy",
+    "hse06_scissor": "hse06_scissor.json",
+    "hessian": "hessian.npy",
+    "phonons": "phonon_frequencies.npy",
+    "loto": "born_charges.npy",
+    "formation_energy": "formation_energy.json",
+    "effective_masses": "electronic_analysis.json",
+    "optical": "optical_frequencies.npy",
+    "sq_limit": "sq_limit.json",
+    "oghma_device": "oghma_device_result.json",
+    "score": "solar_score.json",
 }
 
 
@@ -151,9 +168,9 @@ class DFTWorkflow:
         print("-" * 65)
         for step in STEP_ORDER:
             step_dir = self._step_dir(step)
-            gpw = step_dir / f"{step}.gpw"
-            status = "DONE" if gpw.exists() else ("PENDING" if not self._completed[step] else "DONE")
-            print(f"{step:<12} {str(step_dir.name):<20} {status:<12} {gpw.name if gpw.exists() else '-'}")
+            done_file = step_dir / STEP_DONE_FILES.get(step, f"{step}.gpw")
+            status = "DONE" if done_file.exists() else ("PENDING" if not self._completed[step] else "DONE")
+            print(f"{step:<12} {str(step_dir.name):<20} {status:<12} {done_file.name if done_file.exists() else '-'}")
 
     def check_convergence(self, step: str) -> bool:
         """Check whether a completed step is converged by inspecting its log."""
@@ -161,8 +178,8 @@ class DFTWorkflow:
         if step == "relax":
             log = step_dir / "relax.log"
             return self._check_bfgs_converged(log)
-        gpw = step_dir / f"{step}.gpw"
-        return gpw.exists()
+        done_file = step_dir / STEP_DONE_FILES.get(step, f"{step}.gpw")
+        return done_file.exists()
 
     # ------------------------------------------------------------------
     # Step runners
@@ -1320,6 +1337,25 @@ class DFTWorkflow:
             "summary": score.summary,
         }, indent=2))
         logger.info("PV score: %s", score.summary)
+
+    def _run_oghma_device(self, step_dir: Path) -> None:
+        """Prepare optional OghmaNano device-simulation inputs.
+
+        OghmaNano is a GUI-first device-physics solver, not an ML model. By
+        default this step writes a DFT-derived device package and parses an
+        existing `sim_info.dat` if a validated Oghma project has been run.
+        """
+        from .analysis.oghma_device import prepare_oghma_device_step
+
+        cfg = self.factory.config.get("oghma_device", {})
+        result = prepare_oghma_device_step(
+            self.work_dir,
+            step_dir,
+            phase=self.phase,
+            config=cfg,
+            dry_run=self.dry_run,
+        )
+        logger.info("OghmaNano device step: %s", result.to_dict())
 
     def _run_pes(self, step_dir: Path) -> None:
         """PES scan along soft Hessian modes; CI-NEB if a double well is detected."""

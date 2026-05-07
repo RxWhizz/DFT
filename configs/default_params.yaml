@@ -153,6 +153,16 @@ sq_limit:
   T_K: 300.0                     # device temperature
   thickness_scan_nm: [100, 200, 300, 400, 500, 750, 1000, 2000]  # sweep for optimal d
 
+oghma_device:
+  # OghmaNano is a device-physics solver, not an ML model. This step prepares
+  # DFT-derived inputs by default; set execute=true only after validating the
+  # generated project/template in the GUI.
+  executable: null               # null = auto-detect OGHMA_EXECUTABLE, oghma_core, or oghma
+  execute: false
+  timeout_s: 600
+  absorber_thickness_nm: null    # null = use sq_limit.thickness_nm/result
+  formula: CsPbI3
+
 # Composition-specific parameters (cell constants, bandgap references, PAW datasets).
 # Override with --composition-config on the CLI.
 composition_config: configs/compositions/CsPbI3.yaml
