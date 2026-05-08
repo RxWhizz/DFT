@@ -1,7 +1,7 @@
 # Computational Methodology — Results and Discussion
 
 *alpha-CsPbI₃ — DFT/GPAW pipeline*
-*Last updated: 2026-04-29 (PES, formation energy, and effective-mass analyses complete; HSE06 in progress with checkpoint; optical pending)*
+*Last updated: 2026-05-04 (HSE06 k-mesh corrected to 2×2×2; SOC values updated; scissor correction implemented; HSE06 SCF running with nmaxold=2)*
 
 ---
 
@@ -76,7 +76,7 @@ for halide perovskites (e.g. Brivio et al. 2014, Wiktor et al. 2017).
 | bands      | path Γ-X-M-Γ-R-X,M-R, 40 pts | Band structure   |
 | DOS        | 12×12×12 Γ | Dense sampling for DOS         |
 | phonons    | 3×3×3 Γ   | Supercell (scaled from 6×6×6)  |
-| HSE06      | 3×3×3 Γ   | Reduced mesh (O(N³) cost); 4×4×4 was ~11 h/iter |
+| HSE06      | 2×2×2 Γ   | Includes R=(0.5,0.5,0.5); 3×3×3 excluded R-point (wrong gap) |
 
 Electronic occupations: Fermi-Dirac smearing σ = 0.05 eV.
 
@@ -93,7 +93,7 @@ converged.
 | Production SCF, DOS, binaries, PES points | `02_scf/scf.txt`, `04_dos/dos.txt`, `09_formation_energy/binaries/*.txt`, `07_vibrational/pes/scan_mode0/scf_*.txt` | 1e-8 eV/electron | 1e-4 e/electron | 4e-8 eV²/electron | — | 333 |
 | Non-SCF band path | `03_bands/bands.txt` | 5e-4 eV/electron | 1e-4 e/electron | 4e-8 eV²/electron | — | 333 |
 | Phonopy force supercells | `07_vibrational/phonons/phonopy_sc_*.txt` | 1e-8 eV/electron | 1e-5 e/electron | 1e-10 eV²/electron | — | 333 |
-| HSE06 checkpointed run | `06_hse06/hse06.txt` | 1e-6 eV/electron | 1e-4 e/electron | 4e-8 eV²/electron | — | 333 |
+| HSE06 SCF (2×2×2) | `06_hse06/hse06.txt` | 1e-6 eV/electron | 1e-4 e/electron | 1e-4 eV²/electron | — | 500 |
 
 Additional GPAW settings common to the production calculations:
 
@@ -182,17 +182,20 @@ SOC estimated at < 0.05 eV for the gap).
 
 **This work — α-CsPbI₃**:
 
-| Quantity         | Value     | Method       |
-|------------------|-----------|--------------|
-| Eg(PBE, no SOC)  | 1.089 eV  | This work    |
-| Eg(PBE+SOC)      | 0.300 eV  | This work    |
-| χSOC             | −0.789 eV | This work    |
+| Quantity         | Value      | Method       |
+|------------------|------------|--------------|
+| Eg(PBE, no SOC)  | 1.0891 eV  | This work — 6×6×6 SCF, R-point (0.5,0.5,0.5) |
+| Eg(PBE+SOC)      | 0.3517 eV  | This work — perturbative SOC on scf.gpw |
+| χSOC             | −0.7374 eV | This work — Eg(PBE+SOC) − Eg(PBE) |
 
-The χSOC = −0.789 eV is consistent with the known Pb 6p SOC splitting. Literature
+The χSOC = −0.737 eV is consistent with the known Pb 6p SOC splitting. Literature
 values for similar Pb-halide systems range from −0.75 to −1.00 eV depending on the
-X-site anion (I > Br > Cl). This-work value (α-CsPbI₃, iodide) is at the lower end
-of the range, consistent with the lattice constant a₀ = 6.18 Å (larger cell → less
-Pb-I overlap → slightly smaller SOC-induced gap reduction).
+X-site anion (I > Br > Cl). This-work value (α-CsPbI₃, iodide) is in the expected range.
+
+*Note on earlier values*: preliminary entries showed χSOC = −0.789 eV and
+Eg(PBE+SOC) = 0.300 eV; those were based on a Fermi-level approximation
+(median eigenvalue). The corrected values use the actual GPAW Fermi level from
+the `scf.gpw` checkpoint.
 
 ---
 
@@ -206,46 +209,103 @@ Two independent mechanisms cause PBE to underestimate Eg:
 2. **SOC**: Pb 6p band splitting lowers the CBM.
    Correction: χSOC computed explicitly (Section 7), = −0.789 eV for α.
 
-### 8.1 Strategy A — Scissor (current, fallback)
+### 8.1 Strategy A — Scissor (implemented, used as fallback)
 
     Eg_scissor = Eg(PBE) + χSOC + χHSE
+
+**Current result (α-CsPbI₃, 2026-05-04)**:
+
+    Eg(PBE)  = 1.0891 eV  (this work, 6×6×6 SCF)
+    χSOC     = −0.7374 eV  (this work, perturbative SOC)
+    χHSE     = +0.6709 eV  (literature: Eg_HSE06=1.76 eV fallback − Eg_PBE)
+    Eg_scissor = 1.0226 eV  (vs. experimental 1.73 eV; error ~0.71 eV)
+
+The large error vs. experiment arises because: (1) the literature χHSE was computed
+for a setup with Eg(PBE)≈1.3 eV, but our Eg(PBE)=1.089 eV is lower (different
+cell constant), making the fallback value not directly transferable; and (2) our SOC
+correction (−0.737 eV) is at the upper end of the expected range due to the Pb.14
+PAW dataset (semicore 5d in valence). The scissor result is a lower bound on the
+true Eg(HSE06+SOC) for this specific setup.
 
 **Explicit assumptions** (sources of error):
 
 | Assumption | Error estimate | Reducible? |
 |---|---|---|
-| χSOC and χHSE are additive | 0.05–0.15 eV systematic (scissor overestimates) | Yes → Strategy B |
+| χSOC and χHSE are additive | 0.05–0.15 eV systematic | Yes → Strategy B |
+| χHSE from literature (not our setup) | ~0.3–0.5 eV | Yes → converged HSE06 |
 | Rigid-band (dispersion/m* unchanged) | ~15–30% on effective masses | Only with GW+SOC |
-| χ transferable across phases (α→γ→δ) | up to 0.2–0.3 eV for δ | Yes → χ per phase |
 
-### 8.2 Strategy B — HSE06+SOC (recommended, pending)
+### 8.2 Strategy B — HSE06+SOC (recommended, in progress)
 
 SOC applied perturbatively on top of an HSE06 SCF ground state. Eliminates the
-additivity assumption: SOC is evaluated on the HSE06 density (which redistributes
-charge relative to PBE), not the PBE density.
+χHSE transferability assumption by computing the exchange correction directly for
+this system's geometry and k-mesh.
 
-The additivity error δ_add = Eg(HSE06+SOC) − Eg(scissor) will be measured once
-the HSE06 run for α completes (~30–40 h on 7 MPI at 3×3×3; ~2 h/SCF iteration,
-13+ iterations observed before interruption).
+**Implementation note — GPAW hybrid DFT convergence investigation (Apr–May 2026)**:
+
+Achieving a converged HSE06 SCF in GPAW 25.7.0 PW mode for α-CsPbI₃ required
+an extended convergence investigation, summarised below.
+
+| Date | Configuration | k-mesh | Iters | Outcome |
+|---|---|---|---|---|
+| Apr 26–28 | HSE06 SCF, Mixer(β=0.05, n=5), eigst=4e-8 | 4×4×4 | partial | ~11 h/iter, abandoned |
+| Apr 27–29 | HSE06 SCF, Mixer(β=0.10, n=8), eigst=4e-8 | 3×3×3 | 13 | Oscillates: eigst stuck at −1.3 |
+| Apr 29 | Restart from checkpoint iter 75, β=0.05, n=5 | 3×3×3 | 10 more | Same oscillation: −1.43→−1.29→−1.13 |
+| May 4 | Non-SCF HSE06 (maxiter=1) from pbe_3x3x3.gpw | 3×3×3 | 1 | **Wrong k-mesh**: R-point absent |
+| May 4 | PBE@3×3×3 → one-shot HSE06 | 3×3×3 | 1 | Gap 3.27 eV (wrong — R-point not sampled) |
+
+**Critical finding — k-mesh error (2026-05-04)**:
+
+Diagnostic of scf.gpw (6×6×6) revealed that the band gap minimum lies at
+k = (0.5, 0.5, 0.5) (R-point) with Eg = 1.089 eV. The 3×3×3 Γ-centred mesh
+has k-points at {0, 1/3, 2/3} — the R-point is absent. All HSE06 calculations
+on the 3×3×3 mesh were sampling the wrong k-points, giving unphysical gaps of
+3.3–4.5 eV (the gap at (1/3,1/3,1/3) is 3.7 eV, far from the true gap).
+
+Fix: changed to 2×2×2 Γ-centred mesh. The 2×2×2 mesh includes R=(0.5,0.5,0.5)
+as IBZ k-point k3, with the same IBZ count (4 k-points) as 3×3×3.
+
+| Date | Configuration | k-mesh | Iters | Outcome |
+|---|---|---|---|---|
+| May 4 | PBE@2×2×2 converged | 2×2×2 | ~20 | Eg(PBE@2×2×2)=1.016 eV at R ✓ |
+| May 4 | One-shot HSE06 from pbe_2x2x2.gpw (maxiter=1) | 2×2×2 | 1 | Eg=0.914 eV (unreliable: LCAO reinit) |
+| May 4 | Full HSE06 SCF, Mixer(β=0.05, n=5, niter_fix=5) | 2×2×2 | 8 | Same oscillation: −1.37→−0.93 |
+
+**Root cause of SCF oscillation**: the Pulay DIIS with nmaxold=5 accumulates
+inconsistent history from the niter_fixdensity transition (iterations 1–5 with
+frozen density, iterations 6+ with live density). At iteration 6/7 the Fock
+exchange and density update simultaneously, causing the mixer to extrapolate to
+a negative-residual configuration.
+
+**Current approach (2026-05-04, running)**:
+
+    Mixer(beta=0.05, nmaxold=2, weight=50.0)  — shorter DIIS history
+    niter_fixdensity removed                   — no density-freeze transition
+    eigenstates = 1e-4                         — relaxed criterion
+    k-mesh = 2×2×2 (includes R-point)
+
+Expected behaviour: without the nmaxold=5 accumulation of mixed-phase history,
+the DIIS should remain in a consistent basin and converge in ~60–100 iterations
+at ~25 min/iter early → ~5 min/iter late ≈ 10–25 h total.
 
 ### 8.3 Band gap table by phase
 
-| Phase | Eg(PBE) | Eg(PBE+SOC) | χSOC     | Eg(HSE06) | Eg(HSE06+SOC) | Eg(exp)  | Source exp |
-|-------|---------|-------------|----------|-----------|---------------|----------|------------|
-| α     | 1.089   | 0.300       | −0.789   | —         | —             | 1.73 eV  | Sutton et al. ACS Energy Lett. 2018 |
-| γ     | —       | —           | —        | —         | —             | 1.68 eV  | Steele et al. JACS 2019 |
-| δ     | —       | —           | —        | —         | —             | 2.82 eV  | Sutton et al. ACS Energy Lett. 2018 |
+| Phase | Eg(PBE) | Eg(PBE+SOC) | χSOC      | Eg(HSE06) | Eg(scissor) | Eg(exp)  | Source exp |
+|-------|---------|-------------|-----------|-----------|-------------|----------|------------|
+| α     | 1.0891  | 0.3517      | −0.7374   | in progress | 1.02 eV (lit. χHSE) | 1.73 eV  | Sutton et al. ACS Energy Lett. 2018 |
+| γ     | —       | —           | —         | —         | —           | 1.68 eV  | Steele et al. JACS 2019 |
+| δ     | —       | —           | —         | —         | —           | 2.82 eV  | Sutton et al. ACS Energy Lett. 2018 |
 
-### 8.4 Error budget (Strategy A)
+### 8.4 Error budget (Strategy A, current scissor)
 
 | Source | Magnitude | Reducible |
 |---|---|---|
-| Non-additivity χSOC + χHSE | 0.05–0.15 eV (systematic) | Yes (Strategy B) |
+| χHSE from literature (not this setup) | ~0.3–0.5 eV | Yes → converged HSE06 SCF |
+| Non-additivity χSOC + χHSE | 0.05–0.15 eV | Yes → Strategy B |
 | Rigid-band approximation | ~0.05 eV on gap | No (needs GW+SOC) |
-| Phase transferability of χ | up to 0.2–0.3 eV for δ | Yes (χ per phase) |
-| k-mesh HSE06 (3×3×3) | ~0.10 eV | Partially (4×4×4 too costly) |
-| Geometry (PBE cell, no relaxation) | ~0.05–0.10 eV | With PBEsol |
-| **Total (quadrature)** | **~0.15–0.35 eV** | |
+| k-mesh 2×2×2 (coarse but includes R) | ~0.05–0.10 eV | Partially (4×4×4 too costly) |
+| Geometry (fixed cell a₀=6.18 Å) | ~0.05–0.10 eV | With PBEsol |
+| **Total (quadrature)** | **~0.35–0.55 eV vs. exp** | |
 
 ### 8.5 Honest limitations
 
@@ -888,7 +948,7 @@ been run for each candidate.
 | pes | ~1.3 h | 20 single-point SCFs along the softest Hessian mode |
 | formation_energy | ~2 min after cache | CsI and PbI2 binary references cached as .gpw |
 | effective_masses | seconds | post-processing of `03_bands/bands.gpw` |
-| hse06 | ~30–40 h | hybrid SCF, 3×3×3 k-mesh, ~2 h/iter × 15–20 iters |
+| hse06 | ~10–25 h | hybrid SCF, 2×2×2 k-mesh (includes R-point), ~25 min/iter early → ~5 min/iter late |
 | optical | ~1–3 h | RPA linear response |
 
 **PAW datasets**: bundled via `gpaw-data` Python package (version 24.11.0), located at

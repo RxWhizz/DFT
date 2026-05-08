@@ -1,0 +1,18 @@
+{
+  "status": "prepared",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "pce_pct": null,
+  "voc_V": null,
+  "jsc_mA_cm2": null,
+  "ff": null,
+  "runner": null,
+  "manifest_path": "calculations/alpha/14_oghma_device/oghma_manifest.json",
+  "stack_path": "calculations/alpha/14_oghma_device/device_stack.json",
+  "comparison_report_path": "calculations/alpha/14_oghma_device/method_comparison.html",
+  "flags": [
+    "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
+    "GUI_PROJECT_FORMAT_REQUIRES_VALIDATION",
+    "OGHMANANO_RUNNER_NOT_FOUND",
+    "OGHMANANO_EXECUTION_NOT_REQUESTED"
+  ]
+}

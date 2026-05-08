@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DFT/Oghma/AINAGENT PV Comparison</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f7f8fa; color: #17202a; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    p { color: #4c5967; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: white; border: 1px solid #d8dee6; border-radius: 8px; padding: 16px; }
+    .name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .method { font-family: monospace; font-size: 13px; color: #526070; }
+    .metric { display: flex; justify-content: space-between; margin: 12px 0 4px; }
+    .bar { height: 10px; background: #e5e9ef; border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; background: #2374ab; }
+    .flags { margin-top: 12px; font-size: 12px; color: #8a4b08; }
+    pre { overflow: auto; background: #111827; color: #e5e7eb; padding: 16px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>DFT/Oghma/AINAGENT PV Comparison</h1>
+  <p>DFT postprocessing, OghmaNano device physics, and AINAGENT ML are shown together for comparison. OghmaNano is not ML and should not be mixed into strict ML-only scoring.</p>
+  <section class="grid">
+    <article class="card">
+  <div class="name">DFT SQ limit</div>
+  <div class="method">dft_postprocessed_detailed_balance</div>
+  <div class="metric"><span>PCE</span><strong>27.23%</strong></div>
+  <div class="bar"><div class="fill" style="width: 90.8%"></div></div>
+  <div class="metric"><span>Voc</span><span>1.26 V</span></div>
+  <div class="metric"><span>Jsc</span><span>23.9 mA/cm2</span></div>
+  <div class="metric"><span>FF</span><span>0.902</span></div>
+  <div class="flags">Flags: REFERENCE_FROM_13_SQ_LIMIT</div>
+</article>
+<article class="card">
+  <div class="name">OghmaNano</div>
+  <div class="method">device_physics_drift_diffusion_not_ml</div>
+  <div class="metric"><span>PCE</span><strong>missing</strong></div>
+  <div class="bar"><div class="fill" style="width: 0.0%"></div></div>
+  <div class="metric"><span>Voc</span><span>missing</span></div>
+  <div class="metric"><span>Jsc</span><span>missing</span></div>
+  <div class="metric"><span>FF</span><span>missing</span></div>
+  <div class="flags">Flags: OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML, GUI_PROJECT_FORMAT_REQUIRES_VALIDATION, OGHMANANO_RUNNER_NOT_FOUND, OGHMANANO_EXECUTION_NOT_REQUESTED</div>
+</article>
+<article class="card">
+  <div class="name">AINAGENT ML surrogate</div>
+  <div class="method">ml_property_model</div>
+  <div class="metric"><span>PCE</span><strong>missing</strong></div>
+  <div class="bar"><div class="fill" style="width: 0.0%"></div></div>
+  <div class="metric"><span>Voc</span><span>missing</span></div>
+  <div class="metric"><span>Jsc</span><span>missing</span></div>
+  <div class="metric"><span>FF</span><span>missing</span></div>
+  <div class="flags">Flags: IMPORT_AINAGENT_RESULT_JSON_FOR_SIDE_BY_SIDE_COMPARISON</div>
+</article>
+  </section>
+  <h2>Raw Records</h2>
+  <pre>[
+  {
+    &quot;name&quot;: &quot;DFT SQ limit&quot;,
+    &quot;method_type&quot;: &quot;dft_postprocessed_detailed_balance&quot;,
+    &quot;pce_pct&quot;: 27.23103897833974,
+    &quot;voc_V&quot;: 1.2646510014242023,
+    &quot;jsc_mA_cm2&quot;: 23.87864743051411,
+    &quot;ff&quot;: 0.901745110937311,
+    &quot;flags&quot;: [
+      &quot;REFERENCE_FROM_13_SQ_LIMIT&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;OghmaNano&quot;,
+    &quot;method_type&quot;: &quot;device_physics_drift_diffusion_not_ml&quot;,
+    &quot;pce_pct&quot;: null,
+    &quot;voc_V&quot;: null,
+    &quot;jsc_mA_cm2&quot;: null,
+    &quot;ff&quot;: null,
+    &quot;flags&quot;: [
+      &quot;OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML&quot;,
+      &quot;GUI_PROJECT_FORMAT_REQUIRES_VALIDATION&quot;,
+      &quot;OGHMANANO_RUNNER_NOT_FOUND&quot;,
+      &quot;OGHMANANO_EXECUTION_NOT_REQUESTED&quot;
+    ]
+  },
+  {
+    &quot;name&quot;: &quot;AINAGENT ML surrogate&quot;,
+    &quot;method_type&quot;: &quot;ml_property_model&quot;,
+    &quot;pce_pct&quot;: null,
+    &quot;voc_V&quot;: null,
+    &quot;jsc_mA_cm2&quot;: null,
+    &quot;ff&quot;: null,
+    &quot;flags&quot;: [
+      &quot;IMPORT_AINAGENT_RESULT_JSON_FOR_SIDE_BY_SIDE_COMPARISON&quot;
+    ]
+  }
+]</pre>
+</main>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{
+  "simulator": "OghmaNano",
+  "phase": "alpha",
+  "formula": "CsPbI3",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "layers": [
+    {
+      "name": "FTO",
+      "role": "front_contact",
+      "thickness_nm": 500.0
+    },
+    {
+      "name": "SnO2",
+      "role": "ETL",
+      "thickness_nm": 50.0,
+      "bandgap_eV": 3.6
+    },
+    {
+      "name": "CsPbI3",
+      "role": "absorber",
+      "thickness_nm": 500.0,
+      "bandgap_eV": 1.5858004942269563,
+      "dielectric_constant": 6.164805
+    },
+    {
+      "name": "Spiro-OMeTAD",
+      "role": "HTL",
+      "thickness_nm": 200.0,
+      "bandgap_eV": 3.0
+    },
+    {
+      "name": "Au",
+      "role": "back_contact",
+      "thickness_nm": 80.0
+    }
+  ],
+  "dft_inputs": {
+    "bandgap_eV": 1.5858004942269563,
+    "dielectric_constant": 6.164805,
+    "effective_masses": {
+      "m_e_m0": 0.11075530981101663,
+      "m_h_m0": 0.15104305790906267
+    },
+    "sq_limit_reference": {
+      "pce_pct": 27.23103897833974,
+      "jsc_mA_cm2": 23.87864743051411,
+      "voc_V": 1.2646510014242023,
+      "ff": 0.901745110937311
+    }
+  },
+  "source_files": {
+    "solar_score": "calculations/alpha/12_score/solar_score.json",
+    "sq_limit": "calculations/alpha/13_sq_limit/sq_limit.json",
+    "electronic_analysis": "calculations/alpha/10_effective_masses/electronic_analysis.json",
+    "optical_frequencies": "calculations/alpha/11_optical/optical_frequencies.npy",
+    "absorption": "calculations/alpha/11_optical/absorption_cm1.npy"
+  }
+}

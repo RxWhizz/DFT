@@ -9,11 +9,12 @@ import yaml
 from ase import Atoms
 from ase.dft.kpoints import bandpath
 from gpaw import GPAW, Mixer, PW
+from gpaw.mixer import MixerSum
 
 CONFIG_PATH = Path(__file__).parent.parent.parent / "configs" / "default_params.yaml"
 
 # Valid calculation types
-CALC_TYPES = ("relax", "scf", "bands", "dos", "soc", "hse06")
+CALC_TYPES = ("relax", "scf", "bands", "dos", "soc", "hse06", "scan", "r2scan")
 
 
 def _load_config(config_path: str | Path = CONFIG_PATH) -> dict:
@@ -64,10 +65,12 @@ class GPAWCalculatorFactory:
             "dos": self._dos_params,
             "soc": self._soc_params,
             "hse06": self._hse06_params,
+            "scan": self._scan_params,
+            "r2scan": self._r2scan_params,
         }
         kwargs = builders[calc_type]()
         kwargs["txt"] = txt
-        kwargs["parallel"] = {"domain": 1}
+        kwargs.setdefault("parallel", {"domain": 1})
         kwargs.setdefault("setups", self._paw_setups())
 
         if params_override:
@@ -150,15 +153,82 @@ class GPAWCalculatorFactory:
     def _hse06_params(self) -> dict:
         p = self.config["hse06"]
         mixer_cfg = p.get("mixer", {})
-        return {
+        conv_cfg = p.get("convergence", {})
+        occ_cfg = p.get("occupations", {})
+        params: dict = {
             "mode": PW(p.get("ecut", 450)),
-            "xc": "HSE06",  # omega=0.11 Bohr⁻¹ is HSE06 default; dict form rejected by this GPAW version
-            "kpts": {"size": p.get("kpts", [3, 3, 3]), "gamma": True},
-            "convergence": {"energy": p["convergence"].get("energy", 1e-6)},
-            "occupations": {"name": "fermi-dirac", "width": 0.05},
-            "mixer": Mixer(
-                beta=mixer_cfg.get("beta", 0.05),
-                nmaxold=mixer_cfg.get("nmaxold", 5),
+            "xc": "HSE06",
+            "kpts": {"size": p.get("kpts", [2, 2, 2]), "gamma": True},
+            "convergence": {
+                "energy": conv_cfg.get("energy", 1e-6),
+                "eigenstates": conv_cfg.get("eigenstates", 1e-4),
+                "density": conv_cfg.get("density", 1e-4),
+            },
+            # width=0.01 eV: semiconductor/aislado — evita ocupaciones artificiales en gap.
+            # Para metales o sistemas con degeneración HOMO-LUMO usar 0.05–0.10 eV.
+            "occupations": {
+                "name": occ_cfg.get("name", "fermi-dirac"),
+                "width": occ_cfg.get("width", 0.01),
+            },
+            # MixerSum (MSR1): mezcla la densidad total (suma de espines).
+            # beta=0.01 asegura actualizaciones lentas que estabilizan el potencial
+            # de intercambio exacto de Fock entre ciclos SCF en HSE06.
+            # nmaxold=8: historia DIIS larga — amortigua oscilaciones del operador Fock.
+            "mixer": MixerSum(
+                beta=mixer_cfg.get("beta", 0.01),
+                nmaxold=mixer_cfg.get("nmaxold", 8),
                 weight=mixer_cfg.get("weight", 50.0),
             ),
+            # Paralelización: cada rango cubre un slice de k-points; el bucle de
+            # intercambio exacto es embarazosamente paralelo sobre k.
+            "parallel": {"domain": (1, 1, 1)},
+        }
+        # nbands: "auto" → calculado en el workflow como int(n_occ * 1.3)
+        # Un valor entero explícito se usa directamente.
+        # Se necesitan al menos 20-30 % de bandas vacías extra para estabilizar
+        # el operador Fock y evitar fallos del eigensolver en HSE06.
+        nbands_cfg = p.get("nbands")
+        if nbands_cfg is not None and nbands_cfg != "auto":
+            params["nbands"] = int(nbands_cfg)
+        niter = p.get("eigensolver_niter")
+        if niter:
+            params["eigensolver"] = {"name": "dav", "niter": int(niter)}
+        return params
+
+    def _scan_params(self) -> dict:
+        p = self.config["scan"]
+        occ = p.get("occupations", {})
+        conv = p.get("convergence", {})
+        return {
+            "mode": PW(p.get("ecut", 450)),
+            "xc": "SCAN",
+            "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
+            "convergence": {
+                "energy": conv.get("energy", 1e-6),
+                "eigenstates": conv.get("eigenstates", 1e-8),
+                "density": conv.get("density", 1e-6),
+            },
+            "occupations": {
+                "name": occ.get("name", "fermi-dirac"),
+                "width": occ.get("width", 0.05),
+            },
+        }
+
+    def _r2scan_params(self) -> dict:
+        p = self.config["r2scan"]
+        occ = p.get("occupations", {})
+        conv = p.get("convergence", {})
+        return {
+            "mode": PW(p.get("ecut", 450)),
+            "xc": p.get("xc", "MGGA_X_R2SCAN+MGGA_C_R2SCAN"),
+            "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
+            "convergence": {
+                "energy": conv.get("energy", 1e-6),
+                "eigenstates": conv.get("eigenstates", 1e-8),
+                "density": conv.get("density", 1e-6),
+            },
+            "occupations": {
+                "name": occ.get("name", "fermi-dirac"),
+                "width": occ.get("width", 0.05),
+            },
         }

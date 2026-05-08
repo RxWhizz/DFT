@@ -9,7 +9,7 @@ cutoff:
 kpoints:
   bulk_relax: [6, 6, 6]
   supercell_2x2x2: [3, 3, 3]
-  hse06: [3, 3, 3]
+  hse06: [2, 2, 2]
   bands_npoints: 40      # puntos por segmento en path
 
 relax:
@@ -59,13 +59,60 @@ hse06:
   xc: HSE06
   mode: PW
   ecut: 450
-  kpts: [3, 3, 3]        # reducido por costo O(N³); 4x4x4 tardaba ~11h/iter
+  kpts: [2, 2, 2]        # 2x2x2 incluye R=(0.5,0.5,0.5) donde está el gap real de CsPbI3
+  # "auto" calcula nbands = n_occ + int(n_occ * 0.5) desde scf.gpw (50% extra vacías)
+  # int(n_occ*1.3) daba solo 6 vacías para n_occ=22; +50% da 11 vacías — necesario
+  # para que el operador de Fock converja en la banda de conducción.
+  # Sustituir por entero para forzar un valor fijo.
+  nbands: auto
+  eigensolver_niter: 3   # pasos Davidson internos por ciclo SCF (default=1 para híbridos)
   convergence:
     energy: 1.0e-6
+    eigenstates: 1.0e-4   # relajado: 4e-8 default inalcanzable bajo Fock oscilante
+    density: 1.0e-4
+  occupations:
+    name: fermi-dirac
+    # Semiconductor/aislado: width mínimo evita ocupaciones artificiales en el gap
+    # Para sistema metálico o con degeneración HOMO-LUMO, subir a 0.05
+    width: 0.01
   mixer:
-    beta: 0.10            # 0.05→0.10: rompe estancamiento DIIS observado en iters 14-17
-    nmaxold: 8            # 5→8: subespacio más rico para el Pulay
-    weight: 50.0
+    # MSR1 (MixerSum, Pulay DIIS) con beta bajo: las actualizaciones lentas de densidad
+    # previenen la divergencia del potencial de intercambio exacto entre ciclos SCF
+    beta: 0.01
+    nmaxold: 8            # historia DIIS larga (8 vs 5 default) amortigua oscilaciones Fock
+
+  # --- Sistema aislado: molécula, clúster o nanocristal ---
+  # Si el sistema no es periódico, garantizar al menos 8 Å de vacío:
+  #   atoms.center(vacuum=8.0)
+  # Para sistemas polares o cargados, activar corrección dipolar (opcional):
+  #   from gpaw import PoissonSolver
+  #   poissonsolver = PoissonSolver(dipolelayer='z')   # 'xy' | 'z' según orientación
+
+scan:
+  xc: SCAN
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]       # misma malla que SCF — R-point incluido
+  convergence:
+    energy: 1.0e-6
+    eigenstates: 1.0e-8
+    density: 1.0e-6
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+
+r2scan:
+  xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN   # alias GPAW no existe; usar string LibXC directo
+  mode: PW
+  ecut: 450
+  kpts: [6, 6, 6]
+  convergence:
+    energy: 1.0e-6
+    eigenstates: 1.0e-8
+    density: 1.0e-4         # libxc --fhc activo hace la densidad muy lenta; 1e-4 suficiente para gap
+  occupations:
+    name: fermi-dirac
+    width: 0.05
 
 dispersion:
   method: D3             # DFT-D3(BJ) vía GPAW + dftd3 library
@@ -100,6 +147,21 @@ optical:
   onset_threshold_cm1: 1.0e4
   scissor_eV: null               # null = auto-detect from HSE06−PBE; float = fixed shift
   alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]
+
+sq_limit:
+  thickness_nm: 500.0            # nominal film thickness for primary calculation
+  T_K: 300.0                     # device temperature
+  thickness_scan_nm: [100, 200, 300, 400, 500, 750, 1000, 2000]  # sweep for optimal d
+
+oghma_device:
+  # OghmaNano is a device-physics solver, not an ML model. This step prepares
+  # DFT-derived inputs by default; set execute=true only after validating the
+  # generated project/template in the GUI.
+  executable: null               # null = auto-detect OGHMA_EXECUTABLE, oghma_core, or oghma
+  execute: false
+  timeout_s: 600
+  absorber_thickness_nm: null    # null = use sq_limit.thickness_nm/result
+  formula: CsPbI3
 
 # Composition-specific parameters (cell constants, bandgap references, PAW datasets).
 # Override with --composition-config on the CLI.

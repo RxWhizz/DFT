@@ -124,29 +124,43 @@ def compute_optical_spectrum(
 
     omega_w = np.arange(0.0, omega_max_eV + d_omega_eV, d_omega_eV)
 
+    csv_path = step_dir / "dielectric_function.csv"
+
     try:
-        from gpaw.response.df import DielectricFunction
+        if csv_path.exists():
+            # Reuse existing CSV — columns: omega, Re_NLFC, Im_NLFC, Re_LFC, Im_LFC
+            data = np.loadtxt(str(csv_path), delimiter=',')
+            csv_omega = data[:, 0]
+            eps1_w = np.interp(omega_w, csv_omega, data[:, 3]).astype(float)
+            eps2_w = np.interp(omega_w, csv_omega, data[:, 4]).astype(float)
+            flags.append("FROM_CSV")
+            logger.info("Loaded dielectric function from %s", csv_path)
+        else:
+            from gpaw.response.df import DielectricFunction
 
-        df_kwargs: dict = dict(
-            calc=str(scf_gpw),
-            frequencies=omega_w,
-            eta=eta_eV,
-            txt=str(step_dir / "optical.txt"),
-        )
-        if scissor_eV is not None:
-            df_kwargs["eshift"] = float(scissor_eV)
-            flags.append(f"SCISSOR:{scissor_eV:+.3f}eV")
+            df_kwargs: dict = dict(
+                calc=str(scf_gpw),
+                frequencies=omega_w,
+                eta=eta_eV,
+                hilbert=False,    # linear freq array is incompatible with Hilbert integrator
+                intraband=False,  # CsPbI₃ is semiconductor; also avoids upper_half_plane assert
+                txt=str(step_dir / "optical.txt"),
+            )
+            if scissor_eV is not None:
+                df_kwargs["eshift"] = float(scissor_eV)
+                flags.append(f"SCISSOR:{scissor_eV:+.3f}eV")
 
-        df = DielectricFunction(**df_kwargs)
+            df = DielectricFunction(**df_kwargs)
 
-        eps1_w, eps2_w = df.get_dielectric_function(
-            xc="RPA",
-            q_c=[0, 0, 0],
-            filename=str(step_dir / "dielectric_function.csv"),
-        )
-
-        eps1_w = np.asarray(eps1_w).real
-        eps2_w = np.asarray(eps2_w).real
+            # get_dielectric_function returns (eps_NLFC, eps_LFC) — both complex128.
+            # We use the LFC result: ε₁ = Re(ε_LFC), ε₂ = Im(ε_LFC).
+            _eps_NLFC_w, eps_LFC_w = df.get_dielectric_function(
+                xc="RPA",
+                q_c=[0, 0, 0],
+                filename=str(csv_path),
+            )
+            eps1_w = np.asarray(eps_LFC_w).real.astype(float)
+            eps2_w = np.asarray(eps_LFC_w).imag.astype(float)
 
     except Exception as exc:
         flags.append(f"RPA_FAILED:{exc}")

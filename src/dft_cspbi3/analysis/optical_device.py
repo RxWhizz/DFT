@@ -154,7 +154,7 @@ def multilayer_tmm_profile(
     n_x: int = 500,
     onset_eV: Optional[float] = None,
 ) -> DeviceOpticsResult:
-    """Compute G(x) using the Transfer Matrix Method for a multi-layer stack.
+    """Compute G(x) using the coherent 2×2 Transfer Matrix Method.
 
     Each layer is a dict with keys:
         ``alpha``: ndarray [cm⁻¹], shape (N_omega,)
@@ -163,10 +163,10 @@ def multilayer_tmm_profile(
         ``d_cm`` : float, layer thickness in cm
 
     The absorber layer is identified as the one with the largest integrated α.
-    Coherent interference is included via the 2×2 transfer matrix.
+    Coherent interference is included via the 2×2 characteristic matrix method
+    (Hecht/Born & Wolf formulation) with proper phase accumulation.
 
-    Note: this is a simplified TMM — exact for coherent layers, ignores
-    incoherent substrate effects (which require the extended TMM).
+    Note: ignores incoherent substrate effects (extended TMM not implemented).
     """
     flags: list[str] = ["TMM_COHERENT"]
 
@@ -183,27 +183,49 @@ def multilayer_tmm_profile(
     active = omega_w >= onset_eV
     flux_w = _photon_flux_am15g(omega_w) * active
 
+    # ----------------------------------------------------------------
+    # Proper coherent 2×2 TMM (normal incidence, TE=TM)
+    # For each frequency: build M_j per layer, multiply, compute T(ω).
+    #
+    # Phase thickness: δⱼ = (2π/λ) ñⱼ dⱼ = (ω / ħc) × ñⱼ × dⱼ
+    #   ω in eV, ħc = 1.973e-5 eV·cm
+    # Characteristic matrix:
+    #   Mⱼ = [[cos δⱼ,  (i/ηⱼ) sin δⱼ],
+    #          [iηⱼ sin δⱼ,   cos δⱼ   ]]  where ηⱼ = ñⱼ (normal incidence)
+    # Reflection amplitude (η_inc = η_sub = 1, both air):
+    #   r = (m₁₁ + m₁₂ − m₂₁ − m₂₂) / (m₁₁ + m₁₂ + m₂₁ + m₂₂)
+    # Power transmittance: T = 1 − |r|²
+    # ----------------------------------------------------------------
+    _HBAR_C_EV_CM = 1.97326980e-5   # eV·cm
+
+    nw = len(omega_w)
+    # Accumulate system matrix M = M₁ × M₂ × ... × M_n  per frequency
+    M = np.zeros((nw, 2, 2), dtype=complex)
+    M[:, 0, 0] = 1.0
+    M[:, 1, 1] = 1.0   # identity
+
+    for layer in layers:
+        eta = layer["n"] + 1j * layer["k"]          # complex admittance = ñ
+        # Phase thickness: δ = ω/(ħc) × ñ × d   (ω in eV, d in cm)
+        delta = (omega_w / _HBAR_C_EV_CM) * eta * layer["d_cm"]
+        cos_d = np.cos(delta)
+        sin_d = np.sin(delta)
+        # Layer matrix Mⱼ (vectorised over ω)
+        Mj = np.zeros((nw, 2, 2), dtype=complex)
+        Mj[:, 0, 0] = cos_d
+        Mj[:, 0, 1] = (1j / eta) * sin_d
+        Mj[:, 1, 0] = 1j * eta * sin_d
+        Mj[:, 1, 1] = cos_d
+        # Batch matrix multiply M = M × Mⱼ
+        M = np.einsum("...ij,...jk->...ik", M, Mj)
+
+    # Reflection and transmittance (η_inc = η_sub = 1)
+    m11, m12, m21, m22 = M[:, 0, 0], M[:, 0, 1], M[:, 1, 0], M[:, 1, 1]
+    r = (m11 + m12 - m21 - m22) / (m11 + m12 + m21 + m22)
+    trans_w = np.clip(1.0 - np.abs(r) ** 2, 0.0, 1.0).real
+
+    # Beer-Lambert inside the absorber, scaled by TMM entrance transmittance
     x_cm = np.linspace(0.0, thickness_cm, n_x)
-
-    # Per-frequency TMM: compute transmission into absorber front interface
-    # Using Fresnel coefficients for normal incidence (θ=0).
-    # n_inc = 1 (air), interface into first layer.
-    trans_w = np.ones(len(omega_w))
-    n_before = np.ones(len(omega_w))  # air
-
-    for idx, layer in enumerate(layers):
-        n_layer = layer["n"] + 1j * layer["k"]
-        n_before_real = n_before.real
-        n_layer_real = np.abs(n_layer)
-        # Fresnel transmission amplitude (normal incidence)
-        t = 2 * n_before_real / (n_before_real + n_layer_real)
-        trans_w *= np.abs(t) ** 2
-        if idx < abs_idx:
-            # Propagation through this layer (attenuation only, simplified)
-            trans_w *= np.exp(-2 * layer["alpha"] * layer["d_cm"])
-        n_before = n_layer
-
-    # Use Beer-Lambert within absorber, scaled by front-surface transmission
     alpha_col = absorber["alpha"][:, np.newaxis]
     intensity_profile = (flux_w * trans_w)[:, np.newaxis] * np.exp(-alpha_col * x_cm[np.newaxis, :])
     d_omega = np.gradient(omega_w)

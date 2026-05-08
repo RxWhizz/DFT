@@ -77,13 +77,14 @@ def formation_enthalpy(
 # ---------------------------------------------------------------------------
 
 
-def build_CsI_rocksalt() -> Atoms:
-    """Build CsI rock salt (Fm-3m) unit cell. a₀ = 4.567 Å.
+def build_CsI_CsCl() -> Atoms:
+    """Build CsI in the CsCl structure (B2, Pm-3m). a₀ = 4.567 Å, Cs-I = 3.96 Å.
 
-    Cs at (0,0,0), I at (0.5,0.5,0.5) — 2 atoms per f.u.
+    This is the ambient-pressure stable phase of CsI.
+    Cs at (0,0,0), I at (0.5,0.5,0.5) — 2 atoms, 1 f.u.
     """
     from ase.build import bulk
-    return bulk("CsI", crystalstructure="rocksalt", a=4.567)
+    return bulk("CsI", crystalstructure="cesiumchloride", a=4.567)
 
 
 def build_PbI2_cdl2() -> Atoms:
@@ -95,9 +96,12 @@ def build_PbI2_cdl2() -> Atoms:
     a, c = 4.558, 6.986
     z_I = 0.235
 
+    # Hexagonal primitive cell: angle between a1 and a2 is 120°.
+    # Using cos(60°) here was a bug — it gives 60° and puts periodic I images
+    # at only ~2.24 Å from Pb instead of the correct ~3.10 Å.
     cell = np.array([
         [a, 0, 0],
-        [a * np.cos(np.radians(60)), a * np.sin(np.radians(60)), 0],
+        [a * np.cos(np.radians(120)), a * np.sin(np.radians(120)), 0],
         [0, 0, c],
     ])
     # In fractional coords of the hexagonal cell:
@@ -126,9 +130,17 @@ def compute_binary_energies(
 ) -> dict[str, float]:
     """Run SCF single-points for CsI and PbI₂ reference structures.
 
+    Uses the CsI B2 (CsCl-type) structure and PbI₂ CdI₂-type structure,
+    both at their ambient-condition stable polymorphs.
+
+    k-grids are scaled to maintain the same real-space k-point density as
+    the perovskite SCF (typically 6×6×6 for a ~6.3 Å cubic cell):
+      - CsI (B2, a≈4.57 Å, V≈95 Å³):  10×10×10
+      - PbI₂ (hexagonal, V≈126 Å³):    8×8×6
+
     Args:
         work_dir: Directory to write GPAW output files.
-        factory: GPAWCalculatorFactory instance (uses its config for xc/ecut).
+        factory: GPAWCalculatorFactory instance (uses its xc/ecut settings).
 
     Returns:
         Dict with keys "CsI_per_fu" and "PbI2_per_fu" (eV per formula unit).
@@ -138,28 +150,37 @@ def compute_binary_energies(
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    # (builder_fn, n_atoms_per_fu, k-grid sized for volume-matched k-density)
+    configs = [
+        ("CsI",  build_CsI_CsCl,  2, [10, 10, 10]),
+        ("PbI2", build_PbI2_cdl2, 3, [8,  8,  6 ]),
+    ]
+
     energies: dict[str, float] = {}
 
-    for label, builder, n_atoms_per_fu in [
-        ("CsI", build_CsI_rocksalt, 2),
-        ("PbI2", build_PbI2_cdl2, 3),
-    ]:
+    for label, builder, n_atoms_per_fu, kgrid in configs:
         gpw_out = work_dir / f"{label}.gpw"
         txt_out = work_dir / f"{label}.txt"
 
         if gpw_out.exists():
-            calc = GPAW(str(gpw_out))
+            calc = GPAW(str(gpw_out), txt=None)
             e_total = calc.get_potential_energy()
-            atoms = calc.get_atoms()
+            n_atoms = len(calc.get_atoms())
             calc.__del__()
         else:
             atoms = builder()
-            calc = factory.create("scf", txt=str(txt_out))
+            calc = factory.create(
+                "scf",
+                txt=str(txt_out),
+                params_override={"kpts": {"size": kgrid, "gamma": True}},
+            )
             atoms.calc = calc
             e_total = atoms.get_potential_energy()
             calc.write(str(gpw_out))
+            n_atoms = len(atoms)
 
-        energies[f"{label}_per_fu"] = e_total / (len(atoms) / n_atoms_per_fu) if len(atoms) > n_atoms_per_fu else e_total
-        logger.info("%s: E = %.4f eV/f.u.", label, energies[f"{label}_per_fu"])
+        n_fu = n_atoms / n_atoms_per_fu
+        energies[f"{label}_per_fu"] = e_total / n_fu
+        logger.info("%s: E = %.4f eV/f.u. (kgrid %s)", label, energies[f"{label}_per_fu"], kgrid)
 
     return energies

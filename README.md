@@ -137,6 +137,27 @@ python scripts/apply_scissor.py \
     --phase alpha --report
 ```
 
+### Paso opcional: OghmaNano device physics
+
+OghmaNano no es ML; es un simulador físico de dispositivo
+drift-diffusion/óptica. En este repo queda como paso DFT opcional para preparar
+un paquete de dispositivo desde los resultados DFT y para parsear resultados de
+Oghma (`sim_info.dat`) si ya existe una corrida validada.
+
+```bash
+# instalar el runner Ubuntu si tienes sudo
+bash scripts/install_oghma_ubuntu.sh /ruta/a/oghma-8.1.deb
+
+# preparar inputs en calculations/alpha/14_oghma_device/
+python main.py run --phase alpha --steps oghma_device
+```
+
+La automatización no controla la GUI. Si el core `oghma_core` queda disponible,
+el paso puede detectarlo; la ejecución headless solo debe activarse en
+`configs/default_params.yaml` cuando el proyecto/template de Oghma haya sido
+validado. El paso escribe `method_comparison.html` para visualizar DFT/SQ,
+OghmaNano y el espacio reservado para AINAGENT ML lado a lado.
+
 ### Con MPI (paralelización)
 
 ```bash

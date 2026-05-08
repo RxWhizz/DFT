@@ -181,15 +181,16 @@ def classify_gap_type(bands_gpw: str | Path) -> GapTypeResult:
 
 def compute_effective_masses(
     bands_gpw: str | Path,
-    n_fit: int = 5,
+    n_fit: int = 2,
 ) -> EffectiveMassResult:
     """Compute electron and hole effective masses via parabolic fit.
 
     Fits E(k) = E₀ + ħ²k²/(2m*) to the band structure near the CBM and VBM
     using the n_fit k-points on each side of the extremum.
 
-    The curvature is estimated along each of the three reciprocal lattice
-    directions and the harmonic mean is returned as an isotropic approximation.
+    n_fit=2 keeps the fit inside the parabolic regime near R (~0.025 Å⁻¹
+    for the M→R segment spacing of 0.013 Å⁻¹).  Larger values include
+    non-parabolic points and overestimate m*.
 
     Args:
         bands_gpw: Path to a bands-step .gpw file with a k-path calculation.
@@ -288,10 +289,11 @@ def _fit_mass(
     k_fit = k_dist[mask]
     e_fit = e_slice[mask] - e_slice[extremum_k - i_start]
 
-    # Fit E = a*k² + b (ignore linear term — should vanish at extremum)
+    # Fit E = a*k² through origin (intercept forced to zero — valid at the extremum)
+    # Weighted least squares: a = Σ(k²·E) / Σ(k⁴)
     try:
-        coeffs = np.polyfit(k_fit ** 2, e_fit, 1)  # coeffs[0] = ħ²/(2m*)
-        a = coeffs[0]
+        k2 = k_fit ** 2
+        a = float(np.dot(k2, e_fit) / np.dot(k2, k2))
         if abs(a) < 1e-6:
             flags.append(f"FLAT_BAND_{label}")
             return None
@@ -302,6 +304,179 @@ def _fit_mass(
     except Exception as exc:
         flags.append(f"FIT_FAILED_{label}:{exc}")
         return None
+
+
+# ---------------------------------------------------------------------------
+# Fine k-path effective masses (non-SCF)
+# ---------------------------------------------------------------------------
+
+
+def compute_effective_masses_nscf(
+    scf_gpw: str | Path,
+    cbm_kpt_frac: np.ndarray,
+    vbm_kpt_frac: np.ndarray,
+    step_dir: Path,
+    n_fit: int = 5,
+    dk_AA: float = 0.005,
+) -> EffectiveMassResult:
+    """Effective masses from a fine k-path non-SCF calculation around the band extrema.
+
+    Builds a 3-direction k-grid (kx, ky, kz) around the CBM/VBM k-point with
+    spacing dk_AA (Å⁻¹), runs GPAW with fixdensity=True, then fits parabolas.
+
+    Unlike compute_effective_masses(), this does NOT depend on the resolution of
+    the existing band-path calculation — it uses its own fine k-sampling.
+    scf_gpw must exist; wavefunctions in it are not required (fixdensity diagonalises
+    H[ρ] at the new k-points from the stored density).
+
+    Args:
+        scf_gpw:       Converged SCF .gpw file (density must be stored).
+        cbm_kpt_frac:  CBM k-point in fractional coordinates (e.g. [0.5,0.5,0.5]).
+        vbm_kpt_frac:  VBM k-point in fractional coordinates.
+        step_dir:      Directory for output files (fine_kpts.gpw, effmass.txt).
+        n_fit:         Points each side of extremum for parabolic fit.
+        dk_AA:         k-step in Å⁻¹ for the fine grid.
+    """
+    from gpaw import GPAW
+
+    step_dir = Path(step_dir)
+    fine_gpw = step_dir / "effmass_fine.gpw"
+    flags: list[str] = []
+
+    # --- get lattice parameter to convert dk_AA → fractional ----------------
+    calc_gs = GPAW(str(scf_gpw), txt=None)
+    cell = calc_gs.atoms.cell
+    rec = np.linalg.inv(cell.T) * 2 * np.pi   # rows are reciprocal lattice vectors (Å⁻¹)
+    # For a cubic cell, |b| = 2π/a along each direction
+    b_norms = np.linalg.norm(rec, axis=1)
+    dk_frac_per_dir = dk_AA / b_norms          # fractional step per reciprocal direction
+    calc_gs.__del__()
+
+    # --- build fine k-point list around CBM ----------------------------------
+    if not fine_gpw.exists():
+        k0 = np.asarray(cbm_kpt_frac, dtype=float)
+        kpts: list[list[float]] = [k0.tolist()]     # extremum itself
+        for d in range(3):
+            step = np.zeros(3)
+            step[d] = dk_frac_per_dir[d]
+            for n in range(1, n_fit + 2):           # n_fit+1 on each side for safety
+                kpts.append((k0 + n * step).tolist())
+                kpts.append((k0 - n * step).tolist())
+
+        logger.info(
+            "Running fine k-path non-SCF: %d k-points, dk=%.4f Å⁻¹", len(kpts), dk_AA
+        )
+        calc_fine = GPAW(
+            str(scf_gpw),
+            kpts=kpts,
+            fixdensity=True,
+            symmetry="off",
+            txt=str(step_dir / "effmass.txt"),
+        )
+        atoms = calc_fine.get_atoms()
+        atoms.get_potential_energy()
+        calc_fine.write(str(fine_gpw))
+        logger.info("Fine k-path saved: %s", fine_gpw)
+
+    # --- fit effective masses from fine k-path -------------------------------
+    try:
+        calc_fine = GPAW(str(fine_gpw), txt=None)
+        kpts_frac = calc_fine.get_bz_k_points()
+        ne = int(calc_fine.get_number_of_electrons())
+        n_occ = ne // 2
+        nk = len(kpts_frac)
+        cell = calc_fine.atoms.cell
+        rec_fine = np.linalg.inv(cell.T) * 2 * np.pi
+
+        eigs = np.array([calc_fine.get_eigenvalues(kpt=ik, spin=0) for ik in range(nk)])
+        cb = eigs[:, n_occ]
+        vb = eigs[:, n_occ - 1]
+        cbm_k = int(np.argmin(cb))
+        vbm_k = int(np.argmax(vb))
+        calc_fine.__del__()
+
+        m_e = _fit_mass(cb, kpts_frac, rec_fine, cbm_k, n_fit, flags, "CBM")
+        m_h_raw = _fit_mass(-vb, kpts_frac, rec_fine, vbm_k, n_fit, flags, "VBM")
+        m_h = abs(m_h_raw) if m_h_raw is not None else None
+
+        m_reduced = None
+        if m_e is not None and m_h is not None and (m_e + m_h) > 0:
+            m_reduced = (m_e * m_h) / (m_e + m_h)
+
+        result = EffectiveMassResult(m_e=m_e, m_h=m_h, m_reduced=m_reduced,
+                                    n_kpts_fit=n_fit, flags=flags)
+        logger.info("Fine-grid effective masses: %s", result.summary)
+        return result
+
+    except Exception as exc:
+        flags.append(f"FINE_MASS_FAILED:{exc}")
+        logger.warning("Fine k-path mass fit failed: %s", exc)
+        return EffectiveMassResult(m_e=None, m_h=None, m_reduced=None, flags=flags)
+
+
+# ---------------------------------------------------------------------------
+# SOC-corrected effective masses from fine k-path
+# ---------------------------------------------------------------------------
+
+
+def compute_effective_masses_soc(
+    fine_gpw: str | Path,
+    n_fit: int = 5,
+    theta: float = 0.0,
+    phi: float = 0.0,
+) -> EffectiveMassResult:
+    """Effective masses from perturbative SOC applied to the fine k-path .gpw.
+
+    Uses soc_eigenstates() on effmass_fine.gpw (already on a fine k-grid around R).
+    After SOC, the triply-degenerate PBE CBM at R splits; the true light electron
+    mass is extracted from the lowest spinor conduction band.
+
+    Args:
+        fine_gpw: Path to effmass_fine.gpw (fine k-path non-SCF calculation).
+        n_fit:    Points on each side of extremum for parabolic fit.
+        theta:    Polar angle of spin quantisation axis (degrees).
+        phi:      Azimuthal angle of spin quantisation axis (degrees).
+    """
+    from gpaw import GPAW
+    from gpaw.spinorbit import soc_eigenstates
+
+    flags: list[str] = []
+    try:
+        calc = GPAW(str(fine_gpw), txt=None)
+        nb = calc.get_number_of_bands()
+        ne = int(calc.get_number_of_electrons())  # 44 for CsPbI₃ — NOT ne//2
+        kpts_frac = calc.get_bz_k_points()
+        cell = calc.atoms.cell
+        rec = np.linalg.inv(cell.T) * 2 * np.pi
+
+        soc_result = soc_eigenstates(calc, n2=nb, theta=theta, phi=phi)
+        eigs = soc_result.eigenvalues()   # shape (nk, 2*nb)
+        calc.__del__()
+
+        # After SOC doubling: ne electrons fill the ne lowest spinor levels
+        cb = eigs[:, ne]        # first conduction spinor band
+        vb = eigs[:, ne - 1]    # last valence spinor band
+
+        cbm_k = int(np.argmin(cb))
+        vbm_k = int(np.argmax(vb))
+
+        m_e = _fit_mass(cb, kpts_frac, rec, cbm_k, n_fit, flags, "CBM_SOC")
+        m_h_raw = _fit_mass(-vb, kpts_frac, rec, vbm_k, n_fit, flags, "VBM_SOC")
+        m_h = abs(m_h_raw) if m_h_raw is not None else None
+
+        m_reduced = None
+        if m_e is not None and m_h is not None and (m_e + m_h) > 0:
+            m_reduced = (m_e * m_h) / (m_e + m_h)
+
+        result = EffectiveMassResult(m_e=m_e, m_h=m_h, m_reduced=m_reduced,
+                                     n_kpts_fit=n_fit, flags=flags)
+        logger.info("SOC effective masses: %s", result.summary)
+        return result
+
+    except Exception as exc:
+        flags.append(f"SOC_MASS_FAILED:{exc}")
+        logger.warning("SOC effective mass calculation failed: %s", exc)
+        return EffectiveMassResult(m_e=None, m_h=None, m_reduced=None, flags=flags)
 
 
 # ---------------------------------------------------------------------------
