@@ -160,7 +160,7 @@ if len(weights) != n_kpts:
     )
 print(f"  eigenvalues: {n_spin} spin, {n_kpts} irreducible k-pts, {n_bands} bands")
 
-# Fermi level: use centre of HSE06 gap
+# EF
 vbm_hse = -np.inf
 cbm_hse = np.inf
 n_occ = int(calc.get_number_of_electrons()) // 2
@@ -172,7 +172,7 @@ ef_hse = 0.5 * (vbm_hse + cbm_hse)
 gap_hse = cbm_hse - vbm_hse
 print(f"  VBM={vbm_hse:.4f} eV  CBM={cbm_hse:.4f} eV  gap={gap_hse:.4f} eV  Ef={ef_hse:.4f} eV")
 
-# Energy grid
+# Energia
 e_min = eig_hse.min() - 1.0
 e_max = eig_hse.max() + 1.0
 n_pts = 4000
@@ -186,7 +186,7 @@ for s in range(n_spin):
             dos_hse += weights[k] * np.exp(-0.5 * ((energies - eig_hse[s, k, n]) / eta) ** 2)
 dos_hse /= eta * np.sqrt(2 * np.pi)
 
-# Save (energies relative to HSE Fermi level)
+# Guardado
 np.save(str(DOS_HSE_DIR / "dos_hse_energies.npy"), energies - ef_hse)
 np.save(str(DOS_HSE_DIR / "dos_hse_values.npy"), dos_hse)
 np.save(str(DOS_HSE_DIR / "vbm_cbm_hse.npy"), np.array([vbm_hse - ef_hse, cbm_hse - ef_hse]))

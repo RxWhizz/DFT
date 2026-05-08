@@ -2,23 +2,17 @@
   "phase": "alpha",
   "method_type": "device_physics_drift_diffusion_not_ml",
   "status": "prepared",
-  "runner": null,
-  "execute_requested": false,
+  "runner": "/usr/bin/oghma_core",
+  "execute_requested": true,
+  "sim_dir": "calculations/alpha/14_oghma_device/sim",
   "stack_path": "calculations/alpha/14_oghma_device/device_stack.json",
   "expected_oghma_outputs": [
     "sim_info.dat",
     "jv.dat",
     "out.txt"
   ],
-  "notes": [
-    "OghmaNano is GUI-first on Linux but ships a core executable via Wine.",
-    "Use device_stack.json to configure the Oghma project or a validated json.inp template.",
-    "If sim_info.dat is produced later, rerun this step to parse PCE/FF/Voc/Jsc."
-  ],
   "flags": [
     "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
-    "GUI_PROJECT_FORMAT_REQUIRES_VALIDATION",
-    "OGHMANANO_RUNNER_NOT_FOUND",
-    "OGHMANANO_EXECUTION_NOT_REQUESTED"
+    "OGHMA_PROJECT_WRITTEN"
   ]
 }

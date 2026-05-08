@@ -53,6 +53,8 @@
     "sq_limit": "calculations/alpha/13_sq_limit/sq_limit.json",
     "electronic_analysis": "calculations/alpha/10_effective_masses/electronic_analysis.json",
     "optical_frequencies": "calculations/alpha/11_optical/optical_frequencies.npy",
-    "absorption": "calculations/alpha/11_optical/absorption_cm1.npy"
+    "absorption": "calculations/alpha/11_optical/absorption_cm1.npy",
+    "n_omega": "calculations/alpha/11_optical/n_omega.npy",
+    "k_omega": "calculations/alpha/11_optical/k_omega.npy"
   }
 }

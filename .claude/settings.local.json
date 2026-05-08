@@ -51,11 +51,16 @@
       "Bash(.venv/bin/python3 -c \"import phonopy; import spglib; print\\(f'phonopy {phonopy.__version__}, spglib {spglib.__version__}'\\)\")",
       "Read(//home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/agent/**)",
       "Read(//home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(ps -p 61483 -o etime --no-headers)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import pkg_resources; [print\\(d.project_name, d.version\\) for d in pkg_resources.working_set if 'mace' in d.project_name.lower\\(\\) or 'dipole' in d.project_name.lower\\(\\) or 'field' in d.project_name.lower\\(\\)]\")",
+      "Bash(xargs ls -la)"
     ],
     "additionalDirectories": [
       "/home/luis-ochoa/Documents/Vscode/py/hts-perovskite/hts/nodes",
-      "/home/luis-ochoa/Documents/Vscode/py/hts-perovskite/hts/scoring"
+      "/home/luis-ochoa/Documents/Vscode/py/hts-perovskite/hts/scoring",
+      "/home/luis-ochoa/Documents/Vscode/py/AINAGENT-main/atomistic"
     ]
   }
 }

@@ -154,13 +154,20 @@ sq_limit:
   thickness_scan_nm: [100, 200, 300, 400, 500, 750, 1000, 2000]  # sweep for optimal d
 
 oghma_device:
-  # OghmaNano is a device-physics solver, not an ML model. This step prepares
-  # DFT-derived inputs by default; set execute=true only after validating the
-  # generated project/template in the GUI.
-  executable: null               # null = auto-detect OGHMA_EXECUTABLE, oghma_core, or oghma
-  execute: false
+  # OghmaNano drift-diffusion + optics solver (not ML).
+  # sim/sim.json is auto-generated from the DFT outputs + GitHub perovskite template.
+  # sim/materials/CsPbI3/nk.csv is written from DFT RPA n(ω)/k(ω).
+  executable: null               # null = auto-detect: OGHMA_EXECUTABLE env → oghma_core → oghma
+  execute: true                  # run oghma_core automatically (wine64 required)
   timeout_s: 600
-  absorber_thickness_nm: null    # null = use sq_limit.thickness_nm/result
+  use_xvfb: true                 # required by OghmaNano core under Wine, even headless
+  simmode: segment0@jv           # use equilibrium@equilibrium for first stability smoke tests
+  lockfile: 'S:\lock0.dat'
+  fast_mode: true
+  fast_vstep: 0.1                # quick JV smoke test; use 0.02 for production
+  fast_ion_density: 0.0          # disable ion migration for quick smoke tests
+  fast_generation_model: light_constant
+  absorber_thickness_nm: null    # null = use sq_limit.thickness_nm
   formula: CsPbI3
 
 # Composition-specific parameters (cell constants, bandgap references, PAW datasets).
