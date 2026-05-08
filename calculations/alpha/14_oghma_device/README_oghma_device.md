@@ -1,17 +1,21 @@
 # OghmaNano device step
 
-OghmaNano is not ML; it is a device-physics drift-diffusion/optics solver.
+OghmaNano is a drift-diffusion + optics device physics solver (not ML).
 
-This step prepares DFT-derived device inputs in `device_stack.json`.
-Use the GUI to create or validate the Oghma project, then map the absorber
-band gap, thickness, dielectric constant, and optical data from this folder.
+## Files generated
 
-Detected runner:
+- `device_stack.json` — DFT-derived device parameters
+- `sim/sim.json` — OghmaNano project (perovskite template + DFT params)
+- `sim/materials/CsPbI3/nk.csv` — DFT n(ω)/k(ω) optical data
+- `sim/materials/CsPbI3/mat.json` — material metadata
+
+## To run
+
+Either set `execute: true` in `configs/default_params.yaml` under `oghma_device:`
+and rerun the workflow, or run manually:
 
 ```bash
-<install OghmaNano first: bash scripts/install_oghma_ubuntu.sh>
+cd sim && /usr/bin/oghma_core
 ```
 
-If a validated Oghma project writes `sim_info.dat` in this directory,
-rerun the workflow step to parse PCE, Voc, Jsc, and FF into
-`oghma_device_result.json`.
+Output `sim_info.dat` is parsed for PCE, Voc, Jsc, FF on next workflow run.
