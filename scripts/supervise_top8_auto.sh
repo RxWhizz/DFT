@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Start, inspect, and stop the Top 8 automatic workflow in the background.
-#
-# The default start path uses systemd --user so the workflow survives the
-# launching terminal. DFT is started with MPI_N=7 unless the caller overrides it.
+# launching terminal
 
 set -euo pipefail
 

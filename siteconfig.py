@@ -1,4 +1,4 @@
-# GPAW build config: enable LibXC and MPI
+# GPAW construye config
 libraries += ['xc']
 
 compiler = 'mpicc'

@@ -1,22 +1,20 @@
-# DFT CsPbI₃ GPAW — Project Context & Resume Guide
+# Contexto Proyecto DFT CsPbI₃ GPAW
 
-**Date**: 2026-04-24  
-**Phase in progress**: alpha (Pm-3m, 5 atoms, a₀=6.18 Å)
+**Fecha**: 2026-04-24  
+**Fase activa**: alpha (Pm-3m, 5 atomos, a₀=6.18 Å)
 
----
+## Entorno
 
-## Environment
-
-```
-Python 3.12.3  (.venv at project root)
+```text
+Python 3.12.3  (.venv en raiz)
 GPAW 25.7.0
 ASE  3.28.0
 LibXC 5.2.3
 OpenMPI 4.1.6
-Hardware: 8-core Intel Xeon (shared-memory), ~16 GB RAM
+Hardware: Intel Xeon 8 cores, ~16 GB RAM
 ```
 
-Environment variables needed for every run:
+Variables por corrida:
 ```bash
 export GPAW_SETUP_PATH=~/.gpaw/gpaw-setups-24.11.0
 export GPAW_CONFIG=$(pwd)/siteconfig.py
@@ -24,42 +22,38 @@ export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 ```
 
-PAW datasets: `~/.gpaw/gpaw-setups-24.11.0/{Cs,Pb,I}.PBE.gz`  
-siteconfig.py: LibXC + MPI with `compiler = 'mpicc'`
+Datasets PAW: `~/.gpaw/gpaw-setups-24.11.0/{Cs,Pb,I}.PBE.gz`  
+`siteconfig.py`: LibXC + MPI con `compiler = 'mpicc'`
 
----
+## Alpha: pasos
 
-## Completed steps — alpha
-
-| Step | Output | Status |
+| Paso | Salida | Estado |
 |---|---|---|
-| relax | `calculations/alpha/01_relax/relax.gpw` | DONE |
-| scf | `calculations/alpha/02_scf/scf.gpw` | DONE |
-| bands | `calculations/alpha/03_bands/bands.gpw` | DONE |
-| dos | `calculations/alpha/04_dos/dos.gpw` | DONE |
-| soc | `calculations/alpha/05_soc/soc_eigenvalues.npy` | DONE |
-| hessian | `calculations/alpha/07_vibrational/hessian/hessian.npy` | DONE — 0 imaginary modes |
-| **phonons** | `calculations/alpha/07_vibrational/phonons/phonon/` | **20/30 done — RESUME NEEDED** |
+| relax | `calculations/alpha/01_relax/relax.gpw` | HECHO |
+| scf | `calculations/alpha/02_scf/scf.gpw` | HECHO |
+| bands | `calculations/alpha/03_bands/bands.gpw` | HECHO |
+| dos | `calculations/alpha/04_dos/dos.gpw` | HECHO |
+| soc | `calculations/alpha/05_soc/soc_eigenvalues.npy` | HECHO |
+| hessian | `calculations/alpha/07_vibrational/hessian/hessian.npy` | HECHO; 0 modos imaginarios |
+| phonons | `calculations/alpha/07_vibrational/phonons/phonon/` | 20/30 hecho; reanudar |
 
-Key results:
-- Eg(PBE) = 1.089 eV (direct, Γ)
-- Eg(PBE+SOC) = 0.300 eV → χSOC = −0.789 eV
-- Hessian: min λ = +0.017 eV/Å², all positive → Γ-stable
-- Eg(exp, alpha) = 1.73 eV (Sutton et al. ACS Energy Lett. 2018)
+Resultados clave:
+- Eg(PBE) = 1.089 eV, directo Γ.
+- Eg(PBE+SOC) = 0.300 eV → χSOC = −0.789 eV.
+- Hessian: min λ = +0.017 eV/Å² → Γ estable.
+- Eg(exp, alpha) = 1.73 eV. Fuente: Sutton et al. ACS Energy Lett. 2018.
 
----
+## Reanudar phonons
 
-## Phonons: resume procedure
-
-**State**: 20/30 displacements done (atoms 0–3 partial). ASE cache in:  
+Estado: 20/30 desplazamientos completos. Cache ASE:
 `calculations/alpha/07_vibrational/phonons/phonon/`
 
-**IMPORTANT**: Before relaunching, always check for 0-byte JSON files and delete them:
+Antes:
 ```bash
 find calculations/alpha/07_vibrational/phonons/phonon/ -name "*.json" -size 0 -delete
 ```
 
-**Resume command** (from project root):
+Comando:
 ```bash
 cd /home/luis-ochoa/Documents/Vscode/py/dft-cspbi3-gpaw-main
 export GPAW_SETUP_PATH=~/.gpaw/gpaw-setups-24.11.0
@@ -69,140 +63,69 @@ export OPENBLAS_NUM_THREADS=1
 mpirun -n 7 .venv/bin/python3 main.py run --phase alpha --steps phonons --validate --report
 ```
 
-Each of the remaining ~10 displacements takes ~37 min with 7 MPI cores.  
-ETA to complete: ~6 hours from cold start.
+Costo: ~37 min/desplazamiento con 7 MPI cores. Restan ~10 → ~6 h.
 
-Phonon parameters:
-- Supercell: 2×2×2 (40 atoms)
-- k-mesh supercell: 3×3×3 (scaled from 6×6×6 primitive)
-- Δ = 0.05 Å, symmetry=off
-- 30 total displacements = 5 atoms × 3 directions × 2 signs (±)
+Parametros phonon:
+- Supercelda: 2×2×2 (40 atomos).
+- k-mesh supercelda: 3×3×3.
+- Δ = 0.05 Å, symmetry=off.
+- 30 desplazamientos = 5 atomos × 3 direcciones × 2 signos.
 
----
+## Cambios planeados
 
-## Pending code changes (from approved plan)
+1. `src/dft_cspbi3/bandgap_correction.py`
+   - Añadir `e_hse_soc`, `delta_additivity`, `mae_vs_hse_soc`.
+   - Referencias por fase.
+   - `compute_hse_soc_gap(hse_gpw)`.
 
-### Step 2 — `src/dft_cspbi3/bandgap_correction.py`
+2. `configs/default_params.yaml`
+   - `bandgap_reference` por fase.
 
-Add to `ScissorResult` dataclass:
-```python
-e_hse_soc: Optional[float] = None
-delta_additivity: Optional[float] = None   # e_hse_soc − e_corrected
-mae_vs_hse_soc: Optional[float] = None
-chi_soc_source: str = "computed"           # "computed" | "literature"
-chi_hse_source: str = "literature"
-k_mesh_hse: Optional[list] = None
-```
+3. `src/dft_cspbi3/reporting/validation_report.py`
+   - Tabla completa: PBE, PBE+SOC, χSOC, HSE06, χHSE, HSE06+SOC, δ_add, MAE.
 
-Replace flat `REFERENCE` dict with per-phase nested structure:
-```python
-REFERENCE = {
-    "alpha": {
-        "experimental": 1.73,
-        "exp_reference": "Sutton et al. ACS Energy Lett. 2018",
-        "pbe_no_soc": 1.089,   # this work
-        "pbe_soc": 0.300,      # this work
-        "chi_soc_this_work": -0.789,
-    },
-    "gamma": {
-        "experimental": 1.68,
-        "exp_reference": "Steele et al. JACS 2019",
-    },
-    "delta": {
-        "experimental": 2.82,
-        "exp_reference": "Sutton et al. ACS Energy Lett. 2018",
-    },
-}
-```
+4. LO-TO
+   - `compute_born_charges(scf_gpw)` en `validation/phonons.py`.
+   - `_run_loto(step_dir)` en `workflow_manager.py`.
+   - Añadir `loto: 08_loto`.
 
-Add method `compute_hse_soc_gap(hse_gpw)` that calls `get_soc_bandgap(hse_gpw)` and populates `delta_additivity = e_hse_soc - e_corrected`.
+## Calculos pendientes
 
-### Step 3 — `configs/default_params.yaml`
+| Calculo | Comando | Tiempo | Motivo |
+|---|---|---:|---|
+| HSE06 alpha | `mpirun -n 7 ... main.py run --phase alpha --steps hse06` | 3-8 h | χHSE propio |
+| SOC sobre HSE06 | manual `soc_eigenstates(hse06.gpw)` | ~10 min | δ_add |
+| LO-TO alpha | tras `_run_loto` | ~1 h | splitting Γ |
+| gamma | `mpirun -n 7 ... main.py run --phase gamma --steps relax scf bands dos soc` | ~2 dias | comparar fase |
+| delta | igual | ~3 dias | fase wide-gap |
 
-Replace flat `bandgap_reference` section with:
-```yaml
-bandgap_reference:
-  alpha:
-    experimental: 1.73
-    exp_reference: "Sutton et al. ACS Energy Lett. 2018"
-    pbe_no_soc: 1.089
-    pbe_soc: 0.300
-    chi_soc_this_work: -0.789
-  gamma:
-    experimental: 1.68
-    exp_reference: "Steele et al. JACS 2019"
-  delta:
-    experimental: 2.82
-    exp_reference: "Sutton et al. ACS Energy Lett. 2018"
-```
+## Archivos clave
 
-### Step 4 — `src/dft_cspbi3/reporting/validation_report.py`
-
-Section 5 (band gap) must show full table:
-- Eg(PBE), Eg(PBE+SOC), χSOC (source)
-- Eg(HSE06) if available, χHSE (source)
-- Eg(HSE06+SOC) if available ← primary result
-- δ_add (additivity error) if both PBE+scissor and HSE06+SOC present
-- MAE vs experiment + reference
-- Flag ⚠️ if HSE06 not yet done
-
-### Step 5 — LO-TO splitting
-
-New files/changes needed:
-
-**`src/dft_cspbi3/validation/phonons.py`**: add `compute_born_charges(scf_gpw)` using GPAW Berry-phase (finite electric field in 3 directions × 2 signs = 6 SCF calls). Returns `(Z_born: ndarray shape (N,3,3), eps_inf: ndarray shape (3,3))`. Save as `born_charges.npy` + `dielectric_tensor.npy`.
-
-**`src/dft_cspbi3/workflow_manager.py`**: add `_run_loto(step_dir)` that calls `compute_born_charges(scf_gpw)` then re-runs phonon band structure with Gonze-Lee correction: `ph.set_born_charges(Z_av, epsN)` before `ph.get_band_structure()`.
-
-**`STEP_ORDER` and `STEP_DIRS`** in workflow_manager.py: add `"loto": "08_loto"`.
-
-Estimated cost: ~30–60 min for alpha (6 SCF on primitive cell).
-
----
-
-## Planned calculations still to run
-
-| Calculation | Command | Est. time | Purpose |
-|---|---|---|---|
-| HSE06 (alpha) | `mpirun -n 7 ... main.py run --phase alpha --steps hse06` | 3–8 h | Eg(HSE06) for χHSE this-work |
-| SOC on HSE06 | manual `soc_eigenstates(hse06.gpw)` | ~10 min | δ_add = Eg(HSE06+SOC) − Eg(PBE+scissor) |
-| LO-TO (alpha) | after `_run_loto` implemented | ~1 h | LO-TO splitting for Γ-point phonons |
-| gamma phase | `mpirun -n 7 ... main.py run --phase gamma --steps relax scf bands dos soc` | ~2 days | phase comparison |
-| delta phase | same | ~3 days | wide-gap phase, δ comparison |
-
----
-
-## Key files
-
-| File | Role |
+| Archivo | Rol |
 |---|---|
-| `src/dft_cspbi3/workflow_manager.py` | Orchestrates all steps |
-| `src/dft_cspbi3/bandgap_correction.py` | Scissor + HSE+SOC corrections |
-| `src/dft_cspbi3/calculator_factory.py` | GPAW calculator creation |
-| `src/dft_cspbi3/validation/phonons.py` | `compute_phonons()` and future `compute_born_charges()` |
-| `src/dft_cspbi3/reporting/validation_report.py` | Markdown report generation |
-| `configs/default_params.yaml` | All calculation parameters |
-| `calculations/alpha/reports/methodology.md` | Scientific methodology document |
-| `siteconfig.py` | GPAW build config (LibXC + MPI) |
-| `main.py` | CLI entry point |
+| `src/dft_cspbi3/workflow_manager.py` | Orquesta pasos |
+| `src/dft_cspbi3/bandgap_correction.py` | Scissor + HSE+SOC |
+| `src/dft_cspbi3/calculator_factory.py` | Calculadoras GPAW |
+| `src/dft_cspbi3/validation/phonons.py` | Phonons + futuro Born charges |
+| `src/dft_cspbi3/reporting/validation_report.py` | Reporte Markdown |
+| `configs/default_params.yaml` | Parametros |
+| `calculations/alpha/reports/methodology.md` | Metodologia |
+| `siteconfig.py` | Build GPAW |
+| `main.py` | CLI |
 
----
+## Bugs conocidos
 
-## Known issues / bugs fixed
+1. k-mesh supercelda: usar `kpts_sc = [max(1, k // n) for k, n in zip(prim_kpts, supercell)]`.
+2. Desplazamientos finitos: `symmetry: "off"`.
+3. Cache 0 bytes: borrar antes de reanudar.
+4. MPI GPAW: `compiler = 'mpicc'` obligatorio.
 
-1. **k-mesh on supercell**: Fixed in `_run_phonons()` — scale inversely: `kpts_sc = [max(1, k // n) for k, n in zip(prim_kpts, supercell)]`
-2. **symmetry=off required**: All finite-displacement calculations (hessian, phonons) must use `symmetry: "off"` in params_override. Crystal symmetry is broken by atomic displacements.
-3. **0-byte cache files after crash**: Always `find ... -size 0 -delete` before resuming ASE Phonons.
-4. **siteconfig.py MPI**: Must have explicit `compiler = 'mpicc'` — setting only `mpi = True` raises ValueError at GPAW build time.
+## Metodologia
 
----
-
-## Methodology document
-
-`calculations/alpha/reports/methodology.md` — completed sections:
-- Sec 3: PAW datasets (filenames, frozen cores, scalar-relativistic)
-- Sec 7: SOC via `soc_eigenstates()`, χSOC = −0.789 eV
-- Sec 8 (8.0–8.7): full band gap correction rewrite with error budget (0.15–0.35 eV), method comparison table, use-case classification
-- Sec 9.2: phonon methodology with k-mesh rationale, known limitations
-- Sec 9.3: LO-TO splitting — planned, not yet computed
-- Sec 10: exact software versions
+`calculations/alpha/reports/methodology.md` contiene:
+- PAW datasets.
+- SOC y χSOC.
+- Correccion bandgap + presupuesto error.
+- Phonon metodologia.
+- LO-TO planeado.
+- Versiones software.

@@ -1,12 +1,4 @@
-"""CI-NEB workflow for computing transition state barriers between two structures.
-
-Uses ASE's NEB implementation with GPAW calculators. Designed for transitions
-between structures found via PES scan (double-well minima), but works for any
-two Atoms objects with the same cell.
-
-Extended with build_migration_endpoints() for systematic ionic migration paths
-in CsPbI₃: V_I <100>/<110> hops, I_i interstitial migration, V_Cs A-site jumps.
-"""
+"""Workflow CI-NEB para barreras entre estructuras."""
 
 from __future__ import annotations
 
@@ -20,7 +12,7 @@ from ase import Atoms
 
 logger = logging.getLogger(__name__)
 
-# Typical bond lengths for nearest-neighbour search [Å]
+# Typical bond lengths para nearest-neighbour search [Å]
 _BOND_CUTOFFS: dict[str, float] = {
     "I-I":   4.5,
     "Pb-I":  3.5,
@@ -32,12 +24,12 @@ _BOND_CUTOFFS: dict[str, float] = {
 @dataclass
 class NEBResult:
     images: list[Atoms]
-    energies_eV: np.ndarray          # shape (n_total_images,) relative to image 0
-    barrier_forward_meV: float        # E_saddle − E_start
-    barrier_reverse_meV: float        # E_saddle − E_end
+    energies_eV: np.ndarray          # shape (n_total_images,) vs image 0
+    barrier_forward_meV: float
+    barrier_reverse_meV: float
     saddle_image_idx: int
     converged: bool
-    n_images: int                     # total including endpoints
+    n_images: int
     flags: list[str] = field(default_factory=list)
 
 
@@ -51,34 +43,13 @@ def run_cineb(
     k: float = 0.10,
     max_steps: int = 200,
 ) -> NEBResult:
-    """Run CI-NEB between two structures to find the transition state.
-
-    Strategy:
-      1. Build images by linear interpolation.
-      2. Assign independent GPAW calculators to interior images.
-      3. Stage 1 — plain NEB (climb=False) to fmax*3 for initial relaxation.
-      4. Stage 2 — CI-NEB (climb=True) to fmax for saddle-point refinement.
-      5. Collect energies relative to the start image.
-
-    Args:
-        atoms_start: Starting structure (endpoint 1).
-        atoms_end: Ending structure (endpoint 2).
-        factory: GPAWCalculatorFactory instance.
-        work_dir: Directory for GPAW logs and cached data.
-        n_images: Number of interior NEB images (excluding endpoints).
-        fmax: Convergence criterion in eV/Å.
-        k: Spring constant in eV/Å².
-        max_steps: Maximum optimizer steps per stage.
-
-    Returns:
-        NEBResult with optimized images, energies, and barrier heights.
-    """
+    """Ejecuta CI-NEB entre two structures find transition state."""
     from ase.mep.neb import NEB, NEBOptimizer
 
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build image list: endpoints + n_images interior images
+    # Construye image list
     images = [atoms_start.copy()]
     for _ in range(n_images):
         images.append(atoms_start.copy())
@@ -87,7 +58,7 @@ def run_cineb(
     neb = NEB(images, k=k, climb=False)
     neb.interpolate()
 
-    # Assign independent calculators to interior images only
+    # Assign independent calculators interior images only
     for i, image in enumerate(images[1:-1], start=1):
         calc = factory.create(
             "scf",
@@ -107,7 +78,7 @@ def run_cineb(
 
     # Collect energies
     energies = np.array([img.get_potential_energy() for img in images])
-    energies -= energies[0]   # relative to start image
+    energies -= energies[0]
     saddle_idx = int(np.argmax(energies))
 
     barrier_fwd = float(energies[saddle_idx] * 1000)
@@ -134,12 +105,10 @@ def run_cineb(
     )
 
 
-# ---------------------------------------------------------------------------
-# Migration endpoint builder for systematic ionic migration in CsPbI₃
-# ---------------------------------------------------------------------------
+# Migration endpoint builder para systematic ionic migration en CsPbI₃
 
 def _nearest_neighbour_idx(atoms: Atoms, ref_idx: int, elem: str, r_cut: float) -> list[int]:
-    """Return indices of atoms of type `elem` within r_cut of atom ref_idx."""
+    """Devuelve indices atoms type `elem` within r_cut atom ref_idx."""
     pos = atoms.get_positions()
     cell = atoms.get_cell().array
     syms = atoms.get_chemical_symbols()
@@ -165,29 +134,7 @@ def build_migration_endpoints(
     supercell_matrix: tuple[int, int, int] = (2, 2, 2),
     path_type: str = "100",
 ) -> list[tuple[Atoms, Atoms, str]]:
-    """Generate (start, end, label) endpoint pairs for ionic migration NEB.
-
-    Supported defect_type / path_type combinations:
-
-    +----------+----------+----------------------------------------------+
-    | defect   | path     | Description                                  |
-    +----------+----------+----------------------------------------------+
-    | V_I      | 100      | Vacancy hop along <100> between NN I sites   |
-    | V_I      | 110      | Vacancy hop along <110> (diagonal jump)      |
-    | I_i      | 100      | Interstitial I migration between body-centre |
-    |          |          | sites along <100>                            |
-    | V_Cs     | 100      | Cs vacancy hop to nearest A-site             |
-    +----------+----------+----------------------------------------------+
-
-    Args:
-        atoms: Primitive cell Atoms (before building defect supercell).
-        defect_type: "V_I", "I_i", or "V_Cs".
-        supercell_matrix: Supercell expansion to use.
-        path_type: "100" or "110".
-
-    Returns:
-        List of (start_atoms, end_atoms, path_label) ready for run_cineb().
-    """
+    """Genera (start, end, label) endpoint pairs para ionic migration NEB."""
     from .defects import build_defect_supercell
 
     sc = atoms.repeat(supercell_matrix)
@@ -198,19 +145,19 @@ def build_migration_endpoints(
     endpoints: list[tuple[Atoms, Atoms, str]] = []
 
     if defect_type == "V_I":
-        # Find first I atom as vacancy site; find NN I atoms for end points
+        # Find first I atom as vacancy site
         i_indices = [i for i, s in enumerate(syms) if s == "I"]
         if not i_indices:
             raise RuntimeError("No I atoms found in supercell")
 
-        vac_idx = i_indices[0]   # source vacancy
+        vac_idx = i_indices[0]
         r_cut = _BOND_CUTOFFS["I-I"] if path_type == "100" else _BOND_CUTOFFS["I-I"] * 1.5
         neighbours = _nearest_neighbour_idx(sc, vac_idx, "I", r_cut)
 
         if not neighbours:
             raise RuntimeError(f"No I neighbours found for V_I path_type={path_type}")
 
-        # Keep only <100> or <110> direction neighbours
+        # Keep only <100> o <110> direction neighbours
         ref_pos = pos[vac_idx]
         filtered: list[int] = []
         for j in neighbours:
@@ -225,12 +172,12 @@ def build_migration_endpoints(
             elif path_type == "110" and n_nonzero == 2:
                 filtered.append(j)
 
-        for end_idx in filtered[:2]:    # at most 2 inequivalent paths
-            # Start: remove atom at vac_idx
+        for end_idx in filtered[:2]:    # máximo 2 rutas no equivalentes
+            # Start
             start_sc = sc.copy()
             del start_sc[vac_idx]
 
-            # End: remove atom at end_idx (vacancy has hopped there)
+            # End
             end_sc = sc.copy()
             del end_sc[end_idx]
 
@@ -239,7 +186,7 @@ def build_migration_endpoints(
             logger.info("Built migration endpoints: %s", label)
 
     elif defect_type == "I_i":
-        # Two interstitial sites at fractional [0.5,0.5,0.5] and adjacent [1.0,0.5,0.5]
+        # Two interstitial sites en fractional [0.5,0.5,0.5] y adjacent [1.0,0.5,0.5]
         from ase import Atoms as _Atoms
 
         def _frac_to_cart(frac, cell_arr):
@@ -269,7 +216,7 @@ def build_migration_endpoints(
         vac_idx = cs_indices[0]
         neighbours = _nearest_neighbour_idx(sc, vac_idx, "Cs", _BOND_CUTOFFS["Cs-Pb"])
         if not neighbours:
-            # Fallback: next Cs atom
+            # Fallback
             neighbours = [cs_indices[1]]
 
         end_idx = neighbours[0]
@@ -299,13 +246,7 @@ def run_migration_neb(
     n_images: int = 7,
     fmax: float = 0.10,
 ) -> list["NEBResult"]:
-    """Build migration endpoints and run CI-NEB for each path.
-
-    Convenience wrapper combining build_migration_endpoints() + run_cineb().
-
-    Returns:
-        List of NEBResult, one per migration path.
-    """
+    """Construye migration endpoints y ejecuta CI-NEB para each ruta."""
     endpoints = build_migration_endpoints(atoms, defect_type, supercell_matrix, path_type)
     results: list[NEBResult] = []
     for start_sc, end_sc, label in endpoints:

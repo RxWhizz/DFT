@@ -1,4 +1,4 @@
-"""Tests for postprocessing — uses mocks to avoid requiring actual GPAW .gpw files."""
+"""Test técnico."""
 
 import sys
 from pathlib import Path
@@ -10,13 +10,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
 def patch_gpaw_imports(monkeypatch):
-    """Patch gpaw so postprocessing can be imported and tested without GPAW installed."""
+    """Parchea gpaw; importa sin GPAW."""
     gpaw_mock = MagicMock()
     spinorbit_mock = MagicMock()
     ase_dos_mock = MagicMock()
@@ -35,7 +33,7 @@ def _make_mock_calc(
     natoms: int = 5,
     symbols: list | None = None,
 ):
-    """Return a mock GPAW calculator with pre-set return values."""
+    """Devuelve calculadora GPAW mock."""
     symbols = symbols or ["Cs", "Pb", "I", "I", "I"]
     atoms_mock = MagicMock()
     atoms_mock.get_chemical_symbols.return_value = symbols
@@ -48,13 +46,11 @@ def _make_mock_calc(
     calc.get_fermi_level.return_value = fermi
     calc.get_potential_energy.return_value = total_energy
     calc.get_atoms.return_value = atoms_mock
-    calc.get_number_of_electrons.return_value = natoms * 2  # rough mock
+    calc.get_number_of_electrons.return_value = natoms * 2
     return calc
 
 
-# ---------------------------------------------------------------------------
-# Tests for get_bandgap
-# ---------------------------------------------------------------------------
+# Tests para get_bandgap
 
 class TestGetBandgap:
     def test_returns_lumo_minus_homo(self, patch_gpaw_imports):
@@ -85,9 +81,7 @@ class TestGetBandgap:
         assert gap > 0
 
 
-# ---------------------------------------------------------------------------
-# Tests for get_soc_bandgap
-# ---------------------------------------------------------------------------
+# Tests para get_soc_bandgap
 
 class TestGetSOCBandgap:
     def test_soc_gap_from_eigenvalues(self, patch_gpaw_imports):
@@ -95,7 +89,7 @@ class TestGetSOCBandgap:
 
         nkpts, nbands = 8, 10
         e_kn = np.zeros((nkpts, nbands))
-        # Fill: first 4 bands occupied (< 0), last 6 unoccupied (> 0)
+        # Fill
         e_kn[:, :4] = -1.0
         e_kn[:, 4:] = 1.5  # cbm = 1.5, vbm = -1.0, gap = 2.5
 
@@ -108,15 +102,13 @@ class TestGetSOCBandgap:
 
         gap = pp.get_soc_bandgap("dummy.gpw")
         # With 8 electrons → nelectrons = 8, occupied[:8], unoccupied[8:]
-        # e_kn shape (8,10): occupied = e_kn[:, :8], unoccupied = e_kn[:, 8:]
-        # vbm = max of occupied = -1.0, cbm = min of unoccupied = ... depends
-        # This tests that the function runs and returns a float
+        # e_kn shape (8,10)
+        # vbm = max occupied = -1.0, cbm = min unoccupied =
+        # This tests that function runs y returns float
         assert isinstance(gap, float)
 
 
-# ---------------------------------------------------------------------------
-# Tests for get_fermi_level and get_total_energy
-# ---------------------------------------------------------------------------
+# Tests para get_fermi_level y get_total_energy
 
 class TestScalarExtractors:
     def test_fermi_level(self, patch_gpaw_imports):
@@ -148,9 +140,7 @@ class TestScalarExtractors:
         assert pytest.approx(lumo) == 1.4
 
 
-# ---------------------------------------------------------------------------
-# Tests for extract_summary
-# ---------------------------------------------------------------------------
+# Tests para extract_summary
 
 class TestExtractSummary:
     def test_summary_keys(self, patch_gpaw_imports):

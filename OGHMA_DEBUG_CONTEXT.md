@@ -1,4 +1,4 @@
-# OghmaNano Debug Context — Estado al 2026-05-07
+# Contexto debug OghmaNano — Estado 2026-05-07
 
 ## El problema original
 `prepare_oghma_device_step()` en `oghma_device.py` llama a `subprocess.run([runner])` **sin argumentos** → oghma_core arranca en **modo servidor** (espera conexiones GUI por IPC y sale con código 1 tras timeout). Nunca corría simulaciones.
@@ -17,7 +17,7 @@ La GUI usa `server_base.py → server_add_cmd_line_job()` para lanzar workers co
 oghma_core.exe <sim_path> --simmode segment0@jv --lockfile lock0.dat
 ```
 
-## Cómo invocar correctamente (worker mode)
+## Invocacion correcta (modo worker)
 ```bash
 # Necesita Xvfb obligatoriamente (aunque sea headless)
 Xvfb :96 -screen 0 1024x768x24 &
@@ -123,7 +123,7 @@ Para una prueba rápida, simplificar a:
 - `ion_density=0`
 - Modo `equilibrium@equilibrium` primero para verificar estabilidad
 
-## Fix pendiente en oghma_device.py
+## Fix pendiente en `oghma_device.py`
 1. **Líneas 162-172**: cambiar `subprocess.run([runner])` a worker mode con xvfb-run + args
 2. **Método `_wine_env()`**: eliminar `DISPLAY: ""` (xvfb-run lo seteará automáticamente)
 3. **Método `write_oghma_sim_dir()`**: aplicar simplificaciones opcionales al JSON (ion_density=0, Vstep=0.05 para modo fast)
@@ -169,7 +169,7 @@ Tambien se verifico que el template stock instalado `/usr/share/oghma_data/devic
 - Desactivar `Au` cambia el error a `big_box`.
 - Convertir `Au` en capa activa generica evita el error de `Au`, pero aparece validacion de borde `No object at ...`, por la caja global/margen de mundo.
 
-### Actualizacion — 2026-05-08: Decision de migrar a Windows
+### Actualizacion — 2026-05-08: decision migrar a Windows
 
 **El error "Au covering the electrical mesh" persiste sin importar:**
 - `obj_type` de Au (contact / other / active)

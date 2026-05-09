@@ -1,20 +1,4 @@
-"""AIMD screening via Machine-Learning Interatomic Potentials (MACE-MP-0 / TorchSim).
-
-Replaces ab-initio AIMD (~400 h/temperature on 7 cores) with MLIP-driven MD
-(~5 min/temperature on CPU). Used as a fast pre-screening step before QHA-DFT
-validation of thermally stable structures.
-
-Stability criteria (conservative defaults for perovskite screening):
-  RMSD < 0.8 Å     — structure intact (vs. reference at 0 K)
-  Pb-I RDF peak    — first peak must remain at 3.0–3.5 Å (octahedron survives)
-  Pb-I-Pb angle    — mean angle must stay 160–180° (no complete octahedral collapse)
-  No decomp.       — no split RDF suggestive of CsI + PbI₂ separation
-
-Output label: "stable" | "distorted" | "decomposed"
-
-Dependencies (install once):
-  pip install mace-torch torchsim    # CPU-compatible
-"""
+"""AIMD screening via Machine-Learning Interatomic Potentials (MACE-MP-0 / TorchSim)."""
 
 from __future__ import annotations
 
@@ -31,24 +15,24 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MODEL = "mace-mp-0"
 
 # Stability thresholds
-_RMSD_STABLE_ANG   = 0.50   # Å — relaxed criterion (perovskite tilts are expected)
-_RMSD_DISTORTED_ANG = 0.80  # Å — beyond this → "distorted"
-_PBI_RMIN_ANG = 2.5         # Å — min valid Pb-I bond
-_PBI_RMAX_ANG = 3.8         # Å — max valid Pb-I bond (longer = octahedron broken)
+_RMSD_STABLE_ANG   = 0.50   # Å - relaxed criterion (perovskita tilts esperado)
+_RMSD_DISTORTED_ANG = 0.80  # Å - beyond this → "distorted"
+_PBI_RMIN_ANG = 2.5         # Å - min valid Pb-I bond
+_PBI_RMAX_ANG = 3.8         # Å - max valid Pb-I bond (longer = octahedron broken)
 
 
 @dataclass
 class AIMDResult:
-    """MLIP-AIMD stability screening result for one temperature."""
+    """MLIP-AIMD estabilidad screening resultado para one temperature."""
 
     temperature_K: float
     n_steps: int
     timestep_fs: float
-    rmsd_final_Ang: float                # RMSD of last frame vs. initial structure
-    rmsd_mean_Ang: float                 # mean RMSD over trajectory
+    rmsd_final_Ang: float
+    rmsd_mean_Ang: float
     pbi_rdf_peak_Ang: Optional[float]    # first Pb-I RDF peak position [Å]
-    pbi_angle_mean_deg: Optional[float]  # mean Pb-I-Pb angle over trajectory [°]
-    label: str                           # "stable" | "distorted" | "decomposed"
+    pbi_angle_mean_deg: Optional[float]
+    label: str
     flags: list[str] = field(default_factory=list)
     trajectory_path: Optional[str] = None
 
@@ -64,7 +48,7 @@ class AIMDResult:
 
 
 def _compute_rmsd(pos_ref: np.ndarray, pos_traj: np.ndarray) -> np.ndarray:
-    """RMSD of each frame in pos_traj vs. pos_ref.  pos_traj: (N_frames, N_atoms, 3)."""
+    """RMSD each frame en pos_traj vs."""
     diff = pos_traj - pos_ref[np.newaxis, :, :]
     return np.sqrt(np.mean(np.sum(diff**2, axis=2), axis=1))
 
@@ -72,7 +56,7 @@ def _compute_rmsd(pos_ref: np.ndarray, pos_traj: np.ndarray) -> np.ndarray:
 def _rdf_first_peak(positions: np.ndarray, cell: np.ndarray, sym_a: str, sym_b: str,
                     symbols: list[str], r_max: float = 6.0, n_bins: int = 200
                     ) -> Optional[float]:
-    """Estimate position of the first RDF peak between elements sym_a and sym_b."""
+    """Estimate position first RDF peak entre elements sym_a y sym_b."""
     idx_a = [i for i, s in enumerate(symbols) if s == sym_a]
     idx_b = [i for i, s in enumerate(symbols) if s == sym_b]
     if not idx_a or not idx_b:
@@ -98,7 +82,7 @@ def _rdf_first_peak(positions: np.ndarray, cell: np.ndarray, sym_a: str, sym_b: 
 
     if hist.max() == 0:
         return None
-    # Find first prominent peak (above half max)
+    # Find first prominent peak (sobre half max)
     centers = 0.5 * (bins[:-1] + bins[1:])
     threshold = hist.max() * 0.3
     peaks_r = centers[hist > threshold]
@@ -126,26 +110,7 @@ def run_mace_aimd(
     thermostat: str = "nvt_langevin",
     friction: float = 0.01,
 ) -> AIMDResult:
-    """Run NVT AIMD using MACE-MP-0 potential.
-
-    Integrates the ASE-compatible MACE calculator with Langevin dynamics.
-    A 10-step equilibration phase (same T, no data collection) precedes sampling.
-
-    Args:
-        atoms: ASE Atoms object (primitive or supercell; a 2×2×2 supercell
-            is recommended for reliable statistics — build with atoms.repeat(2)).
-        temperature_K: Target temperature [K].
-        work_dir: Directory for trajectory and log files.
-        n_steps: Number of MD steps.
-        timestep_fs: Integration timestep [fs].
-        model: MACE model tag. "mace-mp-0" uses the universal MP-trained potential.
-        save_trajectory: Whether to write trajectory to disk (.traj file).
-        thermostat: "nvt_langevin" (Langevin) or "nvt_nose_hoover" (NHC, needs ASE ≥ 3.23).
-        friction: Langevin friction coefficient [1/fs].
-
-    Returns:
-        AIMDResult with stability label and metrics.
-    """
+    """Ejecuta NVT AIMD usa MACE-MP-0 potential."""
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
     flags: list[str] = []
@@ -196,7 +161,7 @@ def run_mace_aimd(
     logger.info("MACE AIMD: equilibrating at %d K …", temperature_K)
     dyn.run(100)
 
-    # Production run — collect positions for RMSD
+    # Produccion: junta posiciones para RMSD.
     positions_history: list[np.ndarray] = []
 
     def _collect():
@@ -218,10 +183,10 @@ def run_mace_aimd(
     else:
         rmsd_final = rmsd_mean = 0.0
 
-    # RDF of last frame
+    # RDF last frame
     rdf_peak = _rdf_first_peak(atoms.get_positions(), cell, "Pb", "I", symbols)
 
-    # Pb-I-Pb angle (simplified: use positions of last frame)
+    # Pb-I-Pb angle (simplified
     pbi_angle = _mean_pbi_angle(atoms.get_positions(), symbols, cell)
 
     label = _label_from_metrics(rmsd_final, rdf_peak)
@@ -241,7 +206,7 @@ def run_mace_aimd(
     )
     logger.info("%s", result.summary)
 
-    # Save summary
+    # Guarda resumen
     summary_lines = [
         f"T_K = {temperature_K}",
         f"n_steps = {n_steps}",
@@ -260,7 +225,7 @@ def run_mace_aimd(
 
 def _mean_pbi_angle(positions: np.ndarray, symbols: list[str], cell: np.ndarray,
                     r_cut: float = 4.0) -> Optional[float]:
-    """Compute mean Pb-I-Pb angle [°] in last frame using nearest-neighbour search."""
+    """Calcula mean Pb-I-Pb angle [°] en last frame usa nearest-neighbour search."""
     idx_pb = [i for i, s in enumerate(symbols) if s == "Pb"]
     idx_i  = [i for i, s in enumerate(symbols) if s == "I"]
     if len(idx_pb) < 2 or len(idx_i) < 1:
@@ -270,7 +235,7 @@ def _mean_pbi_angle(positions: np.ndarray, symbols: list[str], cell: np.ndarray,
     lx, ly, lz = cell[0, 0], cell[1, 1], cell[2, 2]
 
     for ii in idx_i:
-        # Find Pb atoms bonded to this I
+        # Find Pb atoms bonded this I
         bonded_pb = []
         for ip in idx_pb:
             dr = positions[ip] - positions[ii]
@@ -298,22 +263,7 @@ def screen_thermal_stability(
     timestep_fs: float = 2.0,
     model: str = _DEFAULT_MODEL,
 ) -> dict[float, AIMDResult]:
-    """Run MLIP-AIMD screening at multiple temperatures.
-
-    Returns a dict mapping temperature → AIMDResult. Stops early if "decomposed"
-    is detected at a given temperature (hotter temperatures are skipped).
-
-    Args:
-        atoms: ASE Atoms (use a 2×2×2 supercell for better statistics).
-        work_dir: Parent directory; sub-dirs {T}K/ are created automatically.
-        temperatures_K: Temperatures to screen [K].
-        n_steps: MD steps per temperature.
-        timestep_fs: Integration timestep [fs].
-        model: MACE model identifier.
-
-    Returns:
-        dict {T_K: AIMDResult}
-    """
+    """Ejecuta MLIP-AIMD screening en multiple temperatures."""
     results: dict[float, AIMDResult] = {}
     for T in sorted(temperatures_K):
         sub_dir = Path(work_dir) / f"{int(T)}K"

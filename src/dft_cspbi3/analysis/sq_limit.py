@@ -1,14 +1,4 @@
-"""Shockley-Queisser detailed balance PV efficiency from DFT optical data.
-
-Würfel formulation:
-  A(E, d) = 1 − exp(−α(E) × d)
-  J_sc = q × ∫ φ_AM1.5G(E) × A(E, d) dE               [mA/cm²]
-  J₀   = q × (2π n² / h³c²) × ∫ E² × A(E,d) × exp(−E/kT) dE
-  V_oc = (kT/q) × ln(J_sc / J₀ + 1)
-  u_oc = q V_oc / (k_B T)
-  FF   = (u_oc − ln(u_oc + 0.72)) / (u_oc + 1)   [Green 1982]
-  PCE  = J_sc × V_oc × FF / P_in   (P_in = 100 mW/cm²)
-"""
+"""Límite Shockley-Queisser desde datos ópticos DFT."""
 
 from __future__ import annotations
 
@@ -24,16 +14,16 @@ from .optical_device import beer_lambert_profile
 logger = logging.getLogger(__name__)
 
 # Physical constants
-_Q_C        = 1.602176634e-19   # C
+_Q_C        = 1.602176634e-19
 _KB_EV      = 8.617333262e-5    # eV/K
 _H_EV_S     = 4.135667696e-15   # eV·s
-_C_CM_S     = 2.99792458e10     # cm/s
-_PIN_MW_CM2 = 100.0             # mW/cm²  (AM1.5G)
+_C_CM_S     = 2.99792458e10
+_PIN_MW_CM2 = 100.0             # mW/cm² (AM1.5G)
 
-# ASTM G173-03 AM1.5G spectral irradiance in the wavelength domain.
-# Source: ASTM G173-03 Table 1 (global tilt, selected wavelengths).
-# Units: wavelength [nm], spectral irradiance [W/m²/nm].
-# Converted to photon flux [photons/cm²/s/eV] on demand via _am15g_photon_flux().
+# ASTM G173-03 AM1.5G spectral irradiance en wavelength domain
+# Source
+# Units
+# Converted photon flux [photons/cm²/s/eV] en demand via _am15g_photon_flux()
 _ASTM_NM = np.array([
     280, 300, 320, 340, 360, 380, 400, 420, 440, 460, 480, 500,
     520, 540, 560, 580, 600, 620, 640, 660, 680, 700, 720, 740,
@@ -51,23 +41,17 @@ _ASTM_WM2_NM = np.array([
 
 
 def _am15g_photon_flux(omega_w: np.ndarray) -> np.ndarray:
-    """Interpolate ASTM G173-03 AM1.5G photon flux onto omega_w [eV] grid.
-
-    Converts the wavelength-domain spectral irradiance I(λ) [W/m²/nm] to
-    photon flux φ(E) [photons/cm²/s/eV]:
-      I_eV(E) = I_nm(λ) × |dλ/dE| = I_nm(λ) × λ² / 1240  [W/m²/eV]
-      φ(E) = I_eV(E) / (E × q)  × 1e-4  [photons/cm²/s/eV]
-    """
-    _HC_EV_NM = 1239.84  # eV·nm  (h × c)
-    # Convert wavelength table to energy [eV]
+    """Interpolate ASTM G173-03 AM1.5G photon flux onto omega_w [eV] grid."""
+    _HC_EV_NM = 1239.84  # eV·nm (h × c)
+    # Convert wavelength tabla energía [eV]
     e_tbl = _HC_EV_NM / _ASTM_NM            # eV, increasing λ → decreasing E
-    # Convert irradiance W/m²/nm → W/m²/eV: multiply by |dλ/dE| = λ²/hc = λ²/(hc)
+    # Convert irradiance W/m²/nm → W/m²/eV
     i_ev_tbl = _ASTM_WM2_NM * _ASTM_NM**2 / _HC_EV_NM   # W/m²/eV
-    # Sort by increasing energy for interpolation
+    # Sort by increasing energía para interpolation
     sort_idx = np.argsort(e_tbl)
     e_sorted = e_tbl[sort_idx]
     i_sorted = i_ev_tbl[sort_idx]
-    # Photon flux [photons/cm²/s/eV]: I_eV / (E × q) × 1e-4 [m²/cm²]
+    # Photon flux [photons/cm²/s/eV]
     e_safe = np.where(e_sorted > 0, e_sorted, 1.0)
     phi_sorted = i_sorted / (e_safe * _Q_C) * 1e-4
     return np.interp(omega_w, e_sorted, phi_sorted, left=0.0, right=0.0)
@@ -78,7 +62,7 @@ def _sq_metrics(
     j0_A: float,
     T_K: float,
 ) -> tuple[float, float, float, float]:
-    """Return (voc_V, ff, pce_pct, u_oc) from J_sc and J₀ [A/cm²]."""
+    """Devuelve (voc_V, ff, pce_pct, u_oc) desde J_sc y J₀ [A/cm²]."""
     kT = _KB_EV * T_K
     if j0_A <= 0 or jsc_A <= 0:
         return 0.0, 0.0, 0.0, 0.0
@@ -88,15 +72,15 @@ def _sq_metrics(
         ff = 0.0
     else:
         ff = (u_oc - np.log(u_oc + 0.72)) / (u_oc + 1.0)
-    # PCE [%]: J_sc [mA/cm²] × V_oc [V] × FF / P_in [mW/cm²] × 100
-    # Since mA × V = mW, dividing by P_in [mW/cm²] gives fraction; ×100 → percent
+    # PCE [%]
+    # Since mA × V = mW, dividing by P_in [mW/cm²] gives fraction
     pce_pct = jsc_A * 1e3 * voc_V * ff / _PIN_MW_CM2 * 100.0
     return float(voc_V), float(ff), float(pce_pct), float(u_oc)
 
 
 @dataclass
 class SQResult:
-    """Detailed Shockley-Queisser result for a given film thickness."""
+    """Detailed Shockley-Queisser resultado para dado film thickness."""
 
     thickness_nm: float
     jsc_mA_cm2: float
@@ -104,11 +88,11 @@ class SQResult:
     voc_V: float
     ff: float
     pce_pct: float
-    jsc_sq_ideal: float         # SQ J_sc for infinite-thickness step absorber [mA/cm²]
-    pce_sq_ideal: float         # SQ PCE for infinite-thickness [%]
+    jsc_sq_ideal: float         # SQ J_sc para infinite-thickness step absorber [mA/cm²]
+    pce_sq_ideal: float
     generation_x: np.ndarray    # G(z) [photons/cm³/s], shape (n_x,)
-    x_cm: np.ndarray            # depth axis [cm]
-    thickness_scan: Optional[list]  # [(d_nm, jsc_mA_cm2, pce_pct), ...] or None
+    x_cm: np.ndarray
+    thickness_scan: Optional[list]  # [(d_nm, jsc_mA_cm2, pce_pct),...] o None
     flags: list[str] = field(default_factory=list)
 
     @property
@@ -131,21 +115,7 @@ def compute_sq_limit(
     thickness_scan_nm: Optional[list] = None,
     onset_eV_override: Optional[float] = None,
 ) -> SQResult:
-    """Compute detailed-balance SQ efficiency from DFT α(ω).
-
-    Args:
-        opt_result: OpticalResult from load_optical_result().
-        thickness_nm: Film thickness for primary calculation [nm].
-        T_K: Device temperature [K].
-        n_x: Depth grid points for G(z) profile.
-        thickness_scan_nm: Optional list of thicknesses for efficiency sweep.
-        onset_eV_override: If given, zero out absorptance below this energy.
-            Use this to apply the HSE06-corrected bandgap when the optical data
-            was computed at the PBE level (avoids artificially large J_sc/J₀).
-
-    Returns:
-        SQResult with J_sc, J₀, V_oc, FF, PCE, G(z), and optional thickness scan.
-    """
+    """Calcula detailed-balance SQ efficiency desde DFT α(ω)."""
     flags: list[str] = []
     omega_w = opt_result.frequencies_eV
     alpha_w = opt_result.absorption_cm1
@@ -154,11 +124,11 @@ def compute_sq_limit(
         flags.append(f"ONSET_OVERRIDE:{onset_eV_override:.3f}eV")
 
     kT = _KB_EV * T_K
-    # h³c² [eV³·s·cm²]:  h [eV·s]³ × c [cm/s]²  →  units: eV³·s³ × cm²/s² = eV³·s·cm²
+    # h³c² [eV³·s·cm²]
     h3c2 = _H_EV_S**3 * _C_CM_S**2
     prefactor_j0 = 2.0 * np.pi / h3c2   # 1/(eV³·s·cm²)
 
-    # n² = ε∞ for Würfel J₀ (low-frequency dielectric constant)
+    # n² = ε∞ para Würfel J₀ (low-frequency dielectric constant)
     n_sq = float(opt_result.eps_inf) if opt_result.eps_inf is not None else 6.0
     if n_sq <= 0:
         n_sq = 1.0
@@ -166,18 +136,18 @@ def compute_sq_limit(
 
     phi_w = _am15g_photon_flux(omega_w)
 
-    # Effective onset: use override if given (HSE06-corrected gap), else from data
+    # Effective onset
     eff_onset = onset_eV_override if onset_eV_override is not None else opt_result.absorption_onset_eV
     onset_mask = (omega_w >= eff_onset) if eff_onset is not None else np.ones(len(omega_w), bool)
 
-    # ---- Primary calculation ------------------------------------------------
+    # Primary cálculo
     thickness_cm = thickness_nm * 1e-7
     absorptance_w = (1.0 - np.exp(-alpha_w * thickness_cm)) * onset_mask
 
     # J_sc [A/cm²]
     jsc_A = _Q_C * float(np.trapezoid(phi_w * absorptance_w, omega_w))
 
-    # J₀ [A/cm²] — guard exp overflow: E/kT up to 6/0.026 ≈ 230
+    # J₀ [A/cm²] - guard exp overflow
     exp_term = np.exp(-np.clip(omega_w / kT, 0.0, 700.0))
     j0_A = (_Q_C * prefactor_j0 * n_sq
             * float(np.trapezoid(omega_w**2 * absorptance_w * exp_term, omega_w)))
@@ -192,14 +162,14 @@ def compute_sq_limit(
         thickness_nm, jsc_mA, j0_mA, voc_V, ff, pce_pct,
     )
 
-    # ---- G(z) generation profile -------------------------------------------
+    # G(z) generación profile
     dev = beer_lambert_profile(
         omega_w, alpha_w, thickness_cm,
         n_x=n_x,
         onset_eV=eff_onset,
     )
 
-    # ---- Classical SQ ideal (step function at Eg, infinite thickness) -------
+    # Classical SQ ideal (step function en Eg, infinite thickness)
     Eg = onset_eV_override if onset_eV_override is not None else opt_result.absorption_onset_eV
     if Eg is None:
         fallback_mask = alpha_w > 1e3
@@ -221,7 +191,7 @@ def compute_sq_limit(
         Eg, jsc_ideal_A * 1e3, voc_ideal, ff_ideal, pce_ideal,
     )
 
-    # ---- Thickness scan -----------------------------------------------------
+    # Thickness scan
     scan_list = None
     if thickness_scan_nm:
         scan_list = []

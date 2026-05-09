@@ -1,12 +1,4 @@
-"""Automated report generation for the DFT-CsPbI3 pipeline.
-
-Modules
--------
-validation_report    — validation_report.md: parameters, convergence, SCF, physical checks.
-vibrational_analysis — vibrational_analysis.md: Hessian eigenvalues, phonon frequencies.
-methodology          — methodology.md: theoretical framework (Kohn-Sham, BO, PAW, SOC).
-assumptions          — assumptions.md: hypotheses, approximations, validity range.
-"""
+"""Automatizado reporte generación para DFT-CsPbI3 pipeline."""
 
 from .validation_report import ValidationData, generate_validation_report
 from .vibrational_analysis import generate_vibrational_report

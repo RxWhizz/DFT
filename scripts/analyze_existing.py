@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Offline post-analysis using all existing calculation data for α-CsPbI₃.
-
-Runs entirely from saved files — no new GPAW calculations, no MPI needed.
-Execute with:
-    .venv/bin/python3 scripts/analyze_existing.py
-
-Outputs are written to calculations/alpha/reports/post_analysis/.
-"""
+"""Offline post-analysis usa all existente cálculo data para α-CsPbI₃."""
 
 from __future__ import annotations
 
@@ -28,9 +21,7 @@ from dft_cspbi3.analysis.electronic import classify_gap_type
 from dft_cspbi3.postprocessing import get_dos, get_fermi_level
 from dft_cspbi3.plotting import get_pdos_colors
 
-# ---------------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------------
 CALC_DIR    = ROOT / "calculations" / "alpha"
 OUT_DIR     = CALC_DIR / "reports" / "post_analysis"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -45,28 +36,26 @@ SOC_NPY     = CALC_DIR / "05_soc"    / "soc_eigenvalues.npy"
 
 EV_A2_TO_SI = 1.602176634e-19 / (1e-10)**2   # eV/Å² → N/m = 16.02 N/m per eV/Å²
 AMU_TO_KG   = 1.66053906660e-27
-C_CM_S      = 2.99792458e10                   # cm/s
+C_CM_S      = 2.99792458e10
 
 
 def sep(title: str) -> None:
     print(f"\n{'='*60}\n  {title}\n{'='*60}")
 
 
-# ===========================================================================
-# 1. HARMONIC PES + DYNAMICAL MATRIX FREQUENCIES
-# ===========================================================================
+# 1
 sep("1. PES HARMÓNICO + FRECUENCIAS (Γ-punto)")
 
-# --- Dynamical matrix frequencies ---
+# Dynamical matrix frequencies
 from gpaw import GPAW as _GPAW
 _calc_r = _GPAW(str(RELAX_GPW), txt=None)
 atoms_ref = _calc_r.get_atoms()
-masses_amu = atoms_ref.get_masses()   # per atom, length N
+masses_amu = atoms_ref.get_masses()
 N_atoms = len(atoms_ref)
 M_dof = np.repeat(masses_amu, 3) * AMU_TO_KG   # (3N,) kg
 
 H = np.load(str(HESSIAN_NPY))                   # (3N, 3N) eV/Å²
-H_SI = H * EV_A2_TO_SI                          # N/m
+H_SI = H * EV_A2_TO_SI
 
 # Dynamical matrix D_ij = H_ij / sqrt(M_i M_j)
 M_mat = np.sqrt(np.outer(M_dof, M_dof))
@@ -80,7 +69,7 @@ for i, nu in enumerate(freqs_cm1):
     tag = "  (acoustic)" if i < 3 else ""
     print(f"  mode {i:2d}: {nu:+8.2f} cm⁻¹{tag}")
 
-# --- Hessian eigenvalues (curvature, NOT mass-weighted) ---
+# Hessiano eigenvalues (curvature, NOT mass-weighted)
 soft_modes = detect_soft_modes(HESSIAN_NPY, threshold=0.15)
 print(f"\n{len(soft_modes)} soft Hessian modes (λ < 0.15 eV/Å²):")
 pes_summary = []
@@ -91,7 +80,7 @@ for idx, lam, _ in soft_modes:
                          "eigenvalue_eV_Ang2": round(lam, 5),
                          "freq_cm1": round(float(nu_dm), 2)})
 
-# --- Harmonic PES plots ---
+# Harmonic PES plots
 A = 0.6; N_q = 300
 fig_pes, ax_pes = plt.subplots(figsize=(7, 5))
 cmap = plt.cm.viridis(np.linspace(0.15, 0.85, len(soft_modes)))
@@ -113,18 +102,16 @@ for ext in ("png", "pdf"):
 plt.close(fig_pes)
 print("Saved: pes_harmonic.{png,pdf}")
 
-# ===========================================================================
-# 2. BAND STRUCTURE + SOC OVERLAY
-# ===========================================================================
+# 2
 sep("2. ESTRUCTURA DE BANDAS + SOC")
 
 _calc_b = _GPAW(str(BANDS_GPW), txt=None)
 bs = _calc_b.band_structure()
-ef_bands = bs.reference    # Fermi/VBM reference in absolute eV
+ef_bands = bs.reference    # Fermi/VBM reference en absolute eV
 
 n_el  = _calc_b.get_number_of_electrons()
 n_occ = int(round(n_el / 2))
-E_rel = bs.energies[0] - ef_bands   # (nkpts, nbands) relative to EF
+E_rel = bs.energies[0] - ef_bands
 
 vb = E_rel[:, :n_occ]
 cb = E_rel[:, n_occ:]
@@ -134,31 +121,31 @@ gap_pbe = cbm - vbm
 cbm_k = int(np.argmin(cb.min(axis=1)))
 vbm_k = int(np.argmax(vb.max(axis=1)))
 
-# Identify which high-symmetry point the gap is at
+# Identify which high-symmetry point gap en
 kpts_frac = _calc_b.get_bz_k_points()
 k_at_gap = kpts_frac[cbm_k]
 print(f"n_occ = {n_occ}  (n_el = {int(n_el)})")
 print(f"Gap PBE = {gap_pbe:.4f} eV")
 print(f"VBM at k={vbm_k}  frac={kpts_frac[vbm_k].round(3)}")
 print(f"CBM at k={cbm_k}  frac={kpts_frac[cbm_k].round(3)}")
-# Identify the high-symmetry label
+# Identify high-symmetry label
 _sc_pts = {"G":(0,0,0), "X":(0,.5,0), "M":(.5,.5,0), "R":(.5,.5,.5)}
 for lab, coord in _sc_pts.items():
     if np.allclose(k_at_gap % 1, np.array(coord) % 1, atol=0.05):
         print(f"  → Gap is DIRECT at {lab} point (frac={coord})")
         break
 
-# NOTE: original report said "directo en Γ" — rechecked: gap is at R(½,½,½)
+# NOTE
 print("  Note: original report stated Γ; re-examination shows R=(½,½,½).")
 
-# SOC overlay (mesh, not k-path — overlay as cloud)
+# SOC overlay (mesh, no k-ruta - overlay as cloud)
 soc_abs = np.load(str(SOC_NPY))      # (216, 52) absolute eV
 ef_scf  = float(get_fermi_level(SCF_GPW))
-soc_rel = soc_abs - ef_bands         # relative to same ref as bands
-# Select only occupied/unoccupied near gap to keep plot clean
-soc_near = soc_rel[:, n_occ-5:n_occ+5]   # 5 bands each side
+soc_rel = soc_abs - ef_bands
+# Select only occupied/unoccupied cerca gap keep grafica clean
+soc_near = soc_rel[:, n_occ-5:n_occ+5]   # 5 bands each lado
 
-# Gap from SOC mesh
+# Gap desde SOC mesh
 above = soc_abs[soc_abs > ef_scf]
 below = soc_abs[soc_abs <= ef_scf]
 gap_soc = float(above.min()) - float(below.max()) if above.size and below.size else np.nan
@@ -166,7 +153,7 @@ chi_soc = gap_soc - gap_pbe if not np.isnan(gap_soc) else np.nan
 print(f"Gap PBE+SOC (mesh approx) = {gap_soc:.4f} eV")
 print(f"χ_SOC = {chi_soc:.4f} eV")
 
-# Band structure plot
+# Banda estructura grafica
 nk = E_rel.shape[0]
 kx = np.linspace(0, 1, nk)
 ewin = (-3.5, 3.5)
@@ -190,7 +177,7 @@ ax_bs.annotate(f"Eg(PBE)={gap_pbe:.3f} eV\nEg(SOC)≈{gap_soc:.3f} eV",
                fontsize=10, color="black", va="center",
                bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7))
 
-# Add k-labels if available
+# Add k-labels si disponible
 if hasattr(bs, "path") and bs.path is not None:
     try:
         xcoords, labels, _ = bs.path.get_linear_kpoint_axis()
@@ -213,9 +200,7 @@ for ext in ("png", "pdf"):
 plt.close(fig_bs)
 print("Saved: band_structure_soc.{png,pdf}")
 
-# ===========================================================================
-# 3. DOS + PDOS
-# ===========================================================================
+# 3
 sep("3. DOS + PDOS")
 
 dos_data = get_dos(DOS_GPW, npts=2000, width=0.05)
@@ -227,11 +212,11 @@ en       = en_raw - ef_dos   # shift so EF = 0
 print(f"Elements in PDOS: {list(pdos.keys())}")
 print(f"DOS E_F = {ef_dos:.4f} eV → set to 0")
 
-# DOS gap: use known PBE gap from band structure
-gap_dos = gap_pbe   # use band structure value (more reliable than threshold)
+# DOS gap
+gap_dos = gap_pbe
 print(f"Gap (from band structure) = {gap_dos:.4f} eV")
 
-# Find total DOS max in valence region for reference
+# Find total DOS max en valence region para reference
 max_dos_val = total[en < -0.1].max() if (en < -0.1).any() else total.max()
 
 colors = get_pdos_colors(list(pdos.keys()))
@@ -254,14 +239,12 @@ for ext in ("png", "pdf"):
 plt.close(fig_dos)
 print("Saved: dos_pdos.{png,pdf}")
 
-# ===========================================================================
-# 4. EFFECTIVE MASSES (reliability warning)
-# ===========================================================================
+# 4
 sep("4. MASAS EFECTIVAS (estimación)")
 
-# With only 40 k-points on X-R-M-Γ-R and the gap at R (boundary between
-# X-R and R-M segments), the parabolic fit mixes two different k-directions.
-# The values below are unreliable; a dedicated fine-mesh calculation is needed.
+# With only 40 k-points en X-R-M-Γ-R y gap en R (boundary entre
+# X-R y R-M segments), parabolic fit mixes two different k-directions
+# valores bajo unreliable
 try:
     from dft_cspbi3.analysis.electronic import compute_effective_masses
     em = compute_effective_masses(BANDS_GPW, n_fit=4)
@@ -279,9 +262,7 @@ except Exception as exc:
     em_note = str(exc)
     print(f"  Skipped: {exc}")
 
-# ===========================================================================
-# 5. PHONON DISPERSION
-# ===========================================================================
+# 5
 sep("5. DISPERSIÓN DE FONONES (datos existentes)")
 
 phonon_freqs = np.load(str(PHONON_NPY))   # (60, 15) cm⁻¹
@@ -327,9 +308,7 @@ for ext in ("png", "pdf"):
 plt.close(fig_ph)
 print("Saved: phonon_dispersion.{png,pdf}")
 
-# ===========================================================================
-# 6. FRECUENCIAS Γ — comparación Hessiano vs Fonones
-# ===========================================================================
+# 6
 sep("6. FRECUENCIAS Γ — Hessiano vs Fonones (q=0)")
 
 phon_gamma = sorted(phonon_freqs[0].tolist())
@@ -339,9 +318,7 @@ for i, (h, p) in enumerate(zip(hess_gamma, phon_gamma)):
     flag = "  ← acústico" if i < 3 else ""
     print(f"  {i:3d}   {h:+12.2f}       {p:+12.2f}{flag}")
 
-# ===========================================================================
-# 7. RESUMEN JSON
-# ===========================================================================
+# 7
 sep("7. RESUMEN")
 
 summary = {

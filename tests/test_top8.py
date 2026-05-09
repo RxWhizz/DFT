@@ -1,4 +1,4 @@
-"""Tests for the PBE Top 8 comparison scaffolding."""
+"""Tests para base comparativa PBE Top 8."""
 
 import csv
 import sys

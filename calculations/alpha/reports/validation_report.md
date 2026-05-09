@@ -1,49 +1,70 @@
-# DFT Validation Report — alpha-CsPbI3
+# Reporte validacion DFT — alpha-CsPbI3
 
-*Generated: 2026-04-29 17:16:08*
+*Generado: 2026-05-09 13:41:42*
 
-## 1. System
+## 1. Sistema
 
-| Property | Value |
+| Propiedad | Valor |
 |----------|-------|
-| Phase | alpha |
+| Fase | alpha |
 | Formula | CsPbI3 |
-| N atoms | 5 |
-| Volume | nan Å³ |
+| N atomos | 5 |
+| Volumen | nan Å³ |
 
-## 2. DFT Parameters
+## 2. Parametros DFT
 
-| Parameter | Value |
+| Parametro | Valor |
 |-----------|-------|
-| XC functional | PBE |
-| Plane-wave cutoff | 450 eV |
+| Funcional XC | PBEsol |
+| Corte ondas planas | 450 eV |
 | k-point mesh | 6×6×6 |
-| PAW method | GPAW (libxc) |
-| Boundary conditions | Periodic (3D) |
+| Metodo PAW | GPAW (libxc) |
+| Condiciones borde | Periodicas (3D) |
 
-## 3. SCF Convergence
+## 3. Convergencia SCF
 
-*SCF validation not performed.*
+| Revision | Resultado |
+|-------|--------|
+| Flag convergencia | ✅ Convergido |
+| Iteraciones | 12 |
+| Final |ΔE| | 0.00e+00 eV |
+| Oscilacion | ✅ estable |
 
-## 4. Physical Consistency
+## 4. Consistencia fisica
 
-| Property | Value |
+| Revision | Valor | Estado |
+|-------|-------|--------|
+| Energia total | -14.053696 eV | ✅ negativa |
+| Nivel Fermi | 3.6576 eV | ✅ |
+| N electrones | 44.0 | ✅ |
+| Σ ocupaciones | 44.000 | ✅ consistente |
+
+## 5. Estructura electronica y correccion bandgap
+
+| Propiedad | Valor |
 |----------|-------|
-| Total energy | nan eV |
-| Fermi level | nan eV |
+| Clasificacion | semiconductor |
+| Eg(PBE) | 1.0891 eV |
+| Eg(PBE+SOC) | 0.2999 eV |
+| χSOC | -0.7892 eV (calculado) |
 
-## 5. Electronic Structure & Band Gap Corrections
+## 6. Pruebas convergencia
 
-| Property | Value |
-|----------|-------|
-| Classification | unknown |
+*Prueba convergencia Ecut no ejecutada.*
 
-## 6. Convergence Tests
+*Prueba convergencia k-point no ejecutada.*
 
-*Ecut convergence test not performed.*
+## 7. Acoplamiento spin-orbita (SOC)
 
-*k-point convergence test not performed.*
+| Revision | Resultado |
+|-------|--------|
+| SOC aplicado | ✅ Aplicado |
+| Gap sin SOC | 1.0891 eV |
+| Gap con SOC | 0.2999 eV |
+| χSOC | -0.7892 eV | ✅ Plausible |
+| Desdoblamiento spin | ✅ Detectado |
+| Magnetizacion espuria | ✅ Ninguna |
 
-## 8. Overall Validity
+## 8. Validez global
 
-**STATUS: ✅ VALID**
+**ESTADO / STATUS: ✅ VALID**

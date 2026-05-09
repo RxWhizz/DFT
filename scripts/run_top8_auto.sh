@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Automatic Top 8 runner for the DFT PBE scaffold, followed by the AI join/run.
-#
-# Defaults are foreground and resumable. Each material gets its own log, the
-# comparison CSV is refreshed after every material, and failures are recorded
-# without hiding the next candidate.
+# Runner automatico Top 8: DFT PBE + union AI.
+# Default: primer plano, reanudable.
+# CSV se refresca tras cada material; fallos se registran.
+# Sigue con siguiente candidato si STOP_ON_ERROR=0.
 
 set -uo pipefail
 
@@ -15,7 +14,7 @@ if [[ ! -x "$PYTHON" ]]; then
   PYTHON="$(command -v python3 || true)"
 fi
 if [[ -z "$PYTHON" ]]; then
-  echo "ERROR: No python interpreter found. Set PYTHON=/path/to/python." >&2
+  echo "ERROR: no hay interprete Python. Define PYTHON=/path/to/python." >&2
   exit 127
 fi
 
@@ -121,14 +120,14 @@ record_status() {
   printf '%s,%s,%s,%s,%s\n' "$(date -Is)" "$phase" "$status" "$exit_code" "$log_file" >> "$STATUS_CSV"
 }
 
-log "Top 8 automatic run started"
+log "Corrida automatica Top 8 iniciada"
 log "DFT_ROOT=$DFT_ROOT"
 log "AI_ROOT=$AI_ROOT"
 log "WORKDIR=$WORKDIR"
 log "DFT_STEPS=$DFT_STEPS"
 log "MPI_N=$MPI_N SCORE_MPI_N=$SCORE_MPI_N DRY_RUN=$DRY_RUN RUN_DFT=$RUN_DFT RUN_AI=$RUN_AI"
 
-log "Preparing DFT Top 8 workspace"
+log "Preparando workspace DFT Top 8"
 "$PYTHON" "$DFT_ROOT/scripts/setup_top8_pbe.py" \
   --workdir "$WORKDIR" \
   --structures-dir "$STRUCTURES_DIR" >>"$MASTER_LOG" 2>&1
@@ -142,7 +141,7 @@ if [[ "$RUN_DFT" == "1" ]]; then
 
     if [[ "${#NON_SCORE_STEPS_ARRAY[@]}" -gt 0 ]]; then
       non_score_steps="$(join_steps "${NON_SCORE_STEPS_ARRAY[@]}")"
-      log "Starting DFT PBE phase=$phase steps=$non_score_steps log=$phase_log"
+      log "Inicia DFT PBE phase=$phase steps=$non_score_steps log=$phase_log"
       args=(
         "$DFT_ROOT/main.py" run
         --phase "$phase"
@@ -158,13 +157,13 @@ if [[ "$RUN_DFT" == "1" ]]; then
       run_python_module "$phase_log" "${args[@]}"
       code=$?
     else
-      log "No MPI DFT steps requested for phase=$phase before score"
+      log "Sin pasos DFT MPI para phase=$phase antes de score"
     fi
 
     if [[ "$code" -eq 0 && "$SCORE_REQUESTED" == "1" ]]; then
       score_log="$LOG_DIR/dft_${phase}_score_$(date +%Y%m%d_%H%M%S).log"
       status_log="$score_log"
-      log "Starting serial DFT score phase=$phase log=$score_log"
+      log "Inicia score DFT serial phase=$phase log=$score_log"
       score_args=(
         "$DFT_ROOT/main.py" run
         --phase "$phase"
@@ -181,33 +180,33 @@ if [[ "$RUN_DFT" == "1" ]]; then
     fi
 
     if [[ "$code" -eq 0 ]]; then
-      log "DFT phase=$phase finished"
+      log "DFT phase=$phase terminado"
       if [[ "$DRY_RUN" == "1" ]]; then
         record_status "$phase" "dft_dry_run_done" "$code" "$status_log"
       else
         record_status "$phase" "dft_done" "$code" "$status_log"
       fi
     else
-      log "DFT phase=$phase failed exit_code=$code"
+      log "DFT phase=$phase fallo exit_code=$code"
       record_status "$phase" "dft_failed" "$code" "$status_log"
       if [[ "$STOP_ON_ERROR" == "1" ]]; then
         refresh_dft_csv || true
         exit "$code"
       fi
     fi
-    refresh_dft_csv || log "WARNING: DFT CSV refresh failed after $phase"
+    refresh_dft_csv || log "ALERTA: fallo refresco CSV DFT tras $phase"
   done
 else
-  log "RUN_DFT=0: skipping DFT execution"
-  refresh_dft_csv || log "WARNING: DFT CSV refresh failed"
+  log "RUN_DFT=0: omite ejecucion DFT"
+  refresh_dft_csv || log "ALERTA: fallo refresco CSV DFT"
 fi
 
 if [[ "$RUN_AI" == "1" ]]; then
   if [[ ! -d "$AI_ROOT" ]]; then
-    log "WARNING: AI_ROOT not found: $AI_ROOT"
+    log "ALERTA: AI_ROOT no existe: $AI_ROOT"
   else
     ai_log="$LOG_DIR/ai_top8_$(date +%Y%m%d_%H%M%S).log"
-    log "Starting AI Top 8 run log=$ai_log"
+    log "Inicia corrida AI Top 8 log=$ai_log"
     ai_args=(
       "$AI_ROOT/scripts/run_top8_ai.py"
       --artifacts-dir "$AI_ROOT/atomistic_runs/top8"
@@ -228,14 +227,14 @@ if [[ "$RUN_AI" == "1" ]]; then
     (cd "$AI_ROOT" && run_cmd "$ai_log" "$PYTHON" "${ai_args[@]}")
     code=$?
     if [[ "$code" -eq 0 ]]; then
-      log "AI Top 8 finished"
+      log "AI Top 8 terminado"
       if [[ "$DRY_RUN" == "1" ]]; then
         record_status "AI_TOP8" "ai_dry_run_done" "$code" "$ai_log"
       else
         record_status "AI_TOP8" "ai_done" "$code" "$ai_log"
       fi
     else
-      log "AI Top 8 failed exit_code=$code"
+      log "AI Top 8 fallo exit_code=$code"
       record_status "AI_TOP8" "ai_failed" "$code" "$ai_log"
       if [[ "$STOP_ON_ERROR" == "1" ]]; then
         exit "$code"
@@ -243,9 +242,9 @@ if [[ "$RUN_AI" == "1" ]]; then
     fi
   fi
 else
-  log "RUN_AI=0: skipping AI execution"
+  log "RUN_AI=0: omite ejecucion AI"
 fi
 
-log "Top 8 automatic run finished"
+log "Corrida automatica Top 8 terminada"
 log "Status CSV: $STATUS_CSV"
-log "Master log: $MASTER_LOG"
+log "Log maestro: $MASTER_LOG"

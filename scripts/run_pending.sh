@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Executes the three pending GPAW steps in the optimal order:
-#   loto → phonons (Δ=0.02, LO-TO corrected) → hse06
-# Run from the project root: bash scripts/run_pending.sh
+# Executes three pendiente GPAW steps en optimal orden:
+# loto → fonones (Δ=0.02, LO-TO corrected) → hse06
+# Ejecuta desde project root: bash scripts/run_pending.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,19 +17,19 @@ N=7
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 
-# ── Step 1: LOTO (Born charges + dielectric tensor) ─────────────────────────
+# ── Step 1
 log "=== LOTO: Born charges ==="
 mpirun -n $N "$PYTHON" main.py run --phase alpha --steps loto
 log "LOTO done."
 
-# ── Step 2: Phonons Δ=0.02 Å (LO-TO correction applied automatically) ───────
+# ── Step 2
 log "=== Phonons: clearing Δ=0.05 cache, running Δ=0.02 ==="
 rm -rf calculations/alpha/07_vibrational/phonons/phonon/
 rm -f  calculations/alpha/07_vibrational/phonons/phonon_frequencies.npy
 mpirun -n $N "$PYTHON" main.py run --phase alpha --steps phonons
 log "Phonons done."
 
-# ── Step 3: HSE06 ────────────────────────────────────────────────────────────
+# ── Step 3
 log "=== HSE06 ==="
 mpirun -n $N "$PYTHON" main.py run --phase alpha --steps hse06
 log "HSE06 done."

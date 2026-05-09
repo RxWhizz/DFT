@@ -1,24 +1,4 @@
-"""Hessian matrix computation via finite differences using GPAW.
-
-The Hessian is the matrix of second derivatives of the total energy with
-respect to atomic positions:
-
-    H_{ij} = ∂²E / (∂R_i ∂R_j)
-
-Using the central-difference approximation on forces (F = -∂E/∂R):
-
-    H_{ij} ≈ -(F_i(R + Δê_j) - F_i(R - Δê_j)) / (2Δ)
-
-where i and j run over all 3N Cartesian degrees of freedom.
-
-After computing H, we diagonalise it to determine whether the current
-geometry is a true energy minimum (all eigenvalues ≥ 0) or a saddle point
-(one or more negative eigenvalues).
-
-Prerequisite: forces on the relaxed structure must satisfy fmax < threshold
-before the Hessian is meaningful. If they do not, the structure must be
-re-relaxed first.
-"""
+"""Hessiano por diferencias finitas con GPAW."""
 
 from __future__ import annotations
 
@@ -32,37 +12,35 @@ from ase import Atoms
 
 logger = logging.getLogger(__name__)
 
-# Three translational zero-modes are expected for a periodic system
+# Three translational zero-modes esperado para periodic system
 _N_TRANS_MODES = 3
 
-# Eigenvalue threshold for classifying a mode as "zero" (translational)
+# Eigenvalue umbral para classifying mode as "zero" (translational)
 _ZERO_EIGVAL_THRESHOLD = 0.05  # eV/Å²
 
 
-# ---------------------------------------------------------------------------
 # Data class
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class HessianResult:
-    """Full result of a finite-difference Hessian calculation."""
+    """Resultado Hessiano finito."""
 
     hessian: np.ndarray                 # shape (3N, 3N), eV/Å²
     eigenvalues: np.ndarray             # shape (3N,), sorted ascending, eV/Å²
     eigenvectors: np.ndarray            # shape (3N, 3N)
     dynamical_matrix: np.ndarray        # mass-weighted H, shape (3N, 3N)
     n_atoms: int
-    fmax_initial_eV_Ang: float          # max force before displacements
-    delta_Ang: float                    # finite-difference step
-    n_negative: int                     # eigenvalues below −_ZERO_EIGVAL_THRESHOLD
-    n_zero: int                         # eigenvalues within ±_ZERO_EIGVAL_THRESHOLD
-    forces_converged: bool              # initial fmax < threshold
+    fmax_initial_eV_Ang: float
+    delta_Ang: float
+    n_negative: int
+    n_zero: int
+    forces_converged: bool
     flags: list[str] = field(default_factory=list)
 
     @property
     def stable(self) -> bool:
-        """True when the only non-positive eigenvalues are the translational modes."""
+        """True si solo modos traslacionales no positivos."""
         return self.n_negative == 0
 
     @property
@@ -78,29 +56,17 @@ class HessianResult:
         )
 
 
-# ---------------------------------------------------------------------------
-# Prerequisite check
-# ---------------------------------------------------------------------------
+# Prerequisite revisa
 
 
 def check_forces(atoms: Atoms, threshold_eV_Ang: float = 0.05) -> tuple[bool, float]:
-    """Return (converged, fmax) for the current force on *atoms*.
-
-    Args:
-        atoms: ASE Atoms with an attached GPAW calculator.
-        threshold_eV_Ang: Force convergence criterion in eV/Å.
-
-    Returns:
-        (True if fmax < threshold, fmax value in eV/Å)
-    """
+    """Devuelve (converged, fmax)."""
     forces = atoms.get_forces()
     fmax = float(np.max(np.abs(forces)))
     return fmax < threshold_eV_Ang, fmax
 
 
-# ---------------------------------------------------------------------------
 # Core computation
-# ---------------------------------------------------------------------------
 
 
 def compute_hessian(
@@ -110,26 +76,7 @@ def compute_hessian(
     work_dir: Optional[Path] = None,
     force_threshold_eV_Ang: float = 0.05,
 ) -> HessianResult:
-    """Compute the 3N×3N Hessian matrix via central finite differences.
-
-    For each of the 3N Cartesian degrees of freedom j, two GPAW calculations
-    are performed (±Δ displacement) and the column H[:,j] is assembled as:
-
-        H[:,j] = -(F(R + Δê_j) - F(R - Δê_j)) / (2Δ)
-
-    Forces from already-computed displacements are cached to .npy files under
-    *work_dir* so the calculation can be resumed if interrupted.
-
-    Args:
-        atoms: Relaxed ASE Atoms object. Must have a GPAW calculator attached.
-        calc: GPAW calculator instance (will be set as atoms.calc).
-        delta: Finite-difference step in Å. 0.01 Å is a good default.
-        work_dir: Directory for force-cache .npy files. None → no caching.
-        force_threshold_eV_Ang: Maximum allowed initial force (prerequisite).
-
-    Returns:
-        HessianResult with the full Hessian, eigenvalues, and stability flags.
-    """
+    """Calcula Hessiano 3N×3N por diferencias centrales."""
     atoms = atoms.copy()
     atoms.calc = calc
 
@@ -139,7 +86,7 @@ def compute_hessian(
 
     flags: list[str] = []
 
-    # --- Prerequisite: check initial forces ---
+    # Prerequisite
     forces0 = atoms.get_forces()
     fmax_initial = float(np.max(np.abs(forces0)))
     forces_ok = fmax_initial < force_threshold_eV_Ang
@@ -157,7 +104,7 @@ def compute_hessian(
     N = len(atoms)
     ndof = 3 * N
     H = np.zeros((ndof, ndof))
-    masses = atoms.get_masses()   # shape (N,)
+    masses = atoms.get_masses()
 
     pos0 = atoms.get_positions().copy()
 
@@ -168,7 +115,7 @@ def compute_hessian(
         atom_j = j // 3
         xyz_j = j % 3
 
-        # Cache file names
+        # Cache archivo names
         tag = f"F_{atom_j}_{xyz_j}"
         cache_p = (work_dir / f"{tag}_plus.npy") if work_dir else None
         cache_m = (work_dir / f"{tag}_minus.npy") if work_dir else None
@@ -178,19 +125,19 @@ def compute_hessian(
             f_minus = np.load(str(cache_m))
             logger.debug("Loaded cached forces for dof %d", j)
         else:
-            # Forward displacement
+            # Adelante displacement
             pos = pos0.copy()
             pos[atom_j, xyz_j] += delta
             atoms.set_positions(pos)
             f_plus = atoms.get_forces().flatten()
 
-            # Backward displacement
+            # Atrás displacement
             pos = pos0.copy()
             pos[atom_j, xyz_j] -= delta
             atoms.set_positions(pos)
             f_minus = atoms.get_forces().flatten()
 
-            # Restore equilibrium geometry
+            # Restaura equilibrium geometry
             atoms.set_positions(pos0)
 
             if cache_p is not None:
@@ -199,19 +146,19 @@ def compute_hessian(
 
         H[:, j] = -(f_plus - f_minus) / (2.0 * delta)
 
-    # Symmetrise to enforce H = Hᵀ (removes finite-difference asymmetry)
+    # Symmetrise enforce H = Hᵀ (removes finite-difference asymmetry)
     H = (H + H.T) / 2.0
 
-    # --- Diagonalise ---
+    # Diagonalise
     eigenvalues, eigenvectors = np.linalg.eigh(H)
 
-    # --- Mass-weighted dynamical matrix ---
-    # m_i: mass in amu for DOF i (atom i//3)
+    # Mass-weighted dynamical matrix
+    # m_i
     m_arr = np.repeat(masses, 3)          # shape (3N,)
     m_outer = np.outer(np.sqrt(m_arr), np.sqrt(m_arr))
-    D = H / m_outer                       # units: eV/(Å² · amu)
+    D = H / m_outer                       # units
 
-    # --- Classify eigenvalues ---
+    # Clasifica eigenvalues
     n_negative = int(np.sum(eigenvalues < -_ZERO_EIGVAL_THRESHOLD))
     n_zero = int(np.sum(np.abs(eigenvalues) <= _ZERO_EIGVAL_THRESHOLD))
 
@@ -238,9 +185,7 @@ def compute_hessian(
     )
 
 
-# ---------------------------------------------------------------------------
-# Hessian from cached forces (resume without re-running GPAW)
-# ---------------------------------------------------------------------------
+# Hessiano desde cached fuerzas (resume sin re-corriendo GPAW)
 
 
 def load_hessian_from_cache(
@@ -248,10 +193,7 @@ def load_hessian_from_cache(
     work_dir: Path,
     delta: float = 0.01,
 ) -> Optional[HessianResult]:
-    """Reconstruct HessianResult from previously cached force .npy files.
-
-    Returns None if the cache is incomplete.
-    """
+    """Reconstruct HessianResult desde previously cached fuerza.npy archivos."""
     N = len(atoms)
     ndof = 3 * N
     H = np.zeros((ndof, ndof))

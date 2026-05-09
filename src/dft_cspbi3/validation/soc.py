@@ -1,14 +1,4 @@
-"""Validation of spin-orbit coupling (SOC) application in GPAW.
-
-SOC is applied perturbatively via spinorbit_eigenvalues() on a pre-converged
-collinear SCF .gpw file. This module verifies that:
-
-  1. The SOC eigenvalue arrays have the correct shape.
-  2. The energy gap shifts by a physically reasonable amount for Pb-based systems.
-     For CsPbI3, χSOC = Eg(SOC) - Eg(PBE) ≈ -0.84 eV (SOC *reduces* the gap).
-  3. No spurious spin magnetisation was introduced.
-  4. SOC splitting is detectable (non-zero variance in spin projections).
-"""
+"""Valida aplicación SOC en GPAW."""
 
 from __future__ import annotations
 
@@ -21,20 +11,18 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Physical plausibility bounds for CsPbI3-class systems (Pb 6p SOC)
-_CHI_SOC_MIN = -1.5  # eV  — upper bound on SOC reduction
-_CHI_SOC_MAX = 0.0   # eV  — SOC should always reduce gap in Pb systems
-_SPLIT_MIN_EV = 0.05 # eV  — minimum detectable band splitting
+# Physical plausibility bounds para CsPbI3-class systems (Pb 6p SOC)
+_CHI_SOC_MIN = -1.5  # eV - upper bound en SOC reduction
+_CHI_SOC_MAX = 0.0   # eV - SOC debe always reduce gap en Pb systems
+_SPLIT_MIN_EV = 0.05 # eV - minimum detectable banda splitting
 
 
-# ---------------------------------------------------------------------------
 # Data class
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class SOCReport:
-    """Results from SOC validation."""
+    """Resultados desde SOC validación."""
 
     soc_applied: bool
     gap_no_soc_eV: Optional[float]
@@ -58,9 +46,7 @@ class SOCReport:
         )
 
 
-# ---------------------------------------------------------------------------
-# Main validation function
-# ---------------------------------------------------------------------------
+# Main validación function
 
 
 def validate_soc(
@@ -69,22 +55,12 @@ def validate_soc(
     soc_spin_npy: str | Path,
     chi_soc_bounds: tuple[float, float] = (_CHI_SOC_MIN, _CHI_SOC_MAX),
 ) -> SOCReport:
-    """Validate the perturbative SOC calculation stored as .npy arrays.
-
-    Args:
-        scf_gpw: Path to the pre-SOC SCF .gpw file.
-        soc_eig_npy: Path to soc_eigenvalues.npy (shape: [nkpts, 2*nbands]).
-        soc_spin_npy: Path to soc_spin_projections.npy (shape: [nkpts, 2*nbands]).
-        chi_soc_bounds: (min, max) physically plausible range for χSOC in eV.
-
-    Returns:
-        SOCReport with full diagnostics.
-    """
+    """Validate perturbative SOC cálculo stored as.npy arrays."""
     flags: list[str] = []
     soc_eig_npy = Path(soc_eig_npy)
     soc_spin_npy = Path(soc_spin_npy)
 
-    # --- 1. Check files exist ---
+    # 1
     if not soc_eig_npy.exists():
         return SOCReport(
             soc_applied=False,
@@ -99,13 +75,13 @@ def validate_soc(
             flags=[f"FILE_NOT_FOUND:{soc_eig_npy}"],
         )
 
-    # --- 2. Load SOC eigenvalues ---
+    # 2
     e_kn = np.load(str(soc_eig_npy))       # (nkpts, 2*nbands)
     s_kn = np.load(str(soc_spin_npy)) if soc_spin_npy.exists() else None
 
     nkpts, n_bands_soc = e_kn.shape
 
-    # --- 3. Load reference SCF calculation ---
+    # 3
     from gpaw import GPAW
 
     calc = GPAW(str(scf_gpw))
@@ -120,9 +96,9 @@ def validate_soc(
         flags.append(f"PBE_GAP_FAILED:{exc}")
         gap_no_soc = None
 
-    # --- 4. Compute SOC gap from e_kn ---
-    # SOC doubles the bands: the first n_elec columns are occupied
-    # (2 spin states per original band → n_elec = 2 * n_original_occupied)
+    # 4
+    # SOC doubles bands
+    # (2 spin states per original banda → n_elec = 2 * n_original_occupied)
     try:
         occupied = e_kn[:, :n_elec]
         unoccupied = e_kn[:, n_elec:]
@@ -133,7 +109,7 @@ def validate_soc(
         flags.append(f"SOC_GAP_FAILED:{exc}")
         gap_soc = None
 
-    # --- 5. Compute χSOC ---
+    # 5
     chi_soc: Optional[float] = None
     chi_plausible = False
     if gap_soc is not None and gap_no_soc is not None:
@@ -145,8 +121,8 @@ def validate_soc(
                 f"CHI_SOC_OUT_OF_RANGE:{chi_soc:.3f}eV (expected [{lo},{hi}])"
             )
 
-    # --- 6. Detect band splitting ---
-    # Spin projections s_kn should have non-zero variance if SOC is active
+    # 6
+    # Spin projections s_kn debe have non-zero variance si SOC active
     splitting_detected = False
     if s_kn is not None:
         spin_variance = float(np.var(s_kn))
@@ -154,11 +130,11 @@ def validate_soc(
         if not splitting_detected:
             flags.append("SOC_NO_SPIN_SPLITTING_DETECTED")
     else:
-        # Fallback: check that SOC eigenvalues differ from collinear ones
+        # Fallback
         try:
             pbe_eigs = calc.get_eigenvalues(kpt=0)
             soc_k0 = e_kn[0, :]
-            # SOC should produce ≥ 2× more bands at each k-point
+            # SOC debe produce ≥ 2× more bands en each k-point
             if len(soc_k0) >= 2 * len(pbe_eigs):
                 splitting_detected = True
             else:
@@ -166,8 +142,8 @@ def validate_soc(
         except Exception:
             flags.append("SPLITTING_CHECK_SKIPPED")
 
-    # --- 7. Spurious magnetisation check ---
-    # For a non-spin-polarised collinear calculation, <Sz> should be ~0
+    # 7
+    # For non-spin-polarised collinear cálculo, <Sz> debe be ~0
     spurious_mag = False
     try:
         mag = float(calc.get_magnetic_moment())
@@ -192,6 +168,6 @@ def validate_soc(
 
 
 def soc_was_applied(soc_dir: str | Path) -> bool:
-    """Return True if SOC output files exist in the given step directory."""
+    """Devuelve True si SOC salida archivos exist en dado step directorio."""
     soc_dir = Path(soc_dir)
     return (soc_dir / "soc_eigenvalues.npy").exists()

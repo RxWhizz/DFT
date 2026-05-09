@@ -1,4 +1,4 @@
-"""Extract band gaps, DOS, and band structures from GPAW checkpoint files."""
+"""Extrae gaps, DOS y bandas desde checkpoints GPAW."""
 
 from __future__ import annotations
 
@@ -12,15 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_bandgap(gpw_file: str | Path, soc: bool = False) -> float:
-    """Return the fundamental band gap (eV) from a GPAW .gpw file.
-
-    Args:
-        gpw_file: Path to GPAW checkpoint file.
-        soc: If True, apply perturbative SOC first.
-
-    Returns:
-        Band gap in eV (LUMO − HOMO at their respective k-points).
-    """
+    """Devuelve gap fundamental desde.gpw."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -35,14 +27,7 @@ def get_bandgap(gpw_file: str | Path, soc: bool = False) -> float:
 
 
 def get_soc_bandgap(gpw_file: str | Path) -> float:
-    """Return the band gap with perturbative SOC correction.
-
-    Uses gpaw.spinorbit.spinorbit_eigenvalues() to apply SOC to the
-    collinear eigenvalues stored in a .gpw file.
-
-    Returns:
-        SOC-corrected band gap in eV.
-    """
+    """Devuelve banda gap con perturbative SOC correction."""
     from gpaw import GPAW
     from gpaw.spinorbit import soc_eigenstates
 
@@ -50,10 +35,10 @@ def get_soc_bandgap(gpw_file: str | Path) -> float:
     result = soc_eigenstates(str(gpw_file))
     e_kn = result.eigenvalues()
 
-    # e_kn shape: (nkpts, nbands) — energies relative to Fermi level
+    # e_kn shape
     ef = calc.get_fermi_level()
     nelectrons = int(round(calc.get_number_of_electrons()))
-    nvalence = nelectrons // 2  # spin-degenerate; SOC doubles bands
+    nvalence = nelectrons // 2  # spin-degenerate
 
     # SOC bands sorted per k-point
     occupied = e_kn[:, :nelectrons]
@@ -71,11 +56,7 @@ def get_dos(
     npts: int = 2000,
     width: float = 0.05,
 ) -> dict:
-    """Compute total and projected DOS from a GPAW .gpw file.
-
-    Returns:
-        Dict with keys 'energies', 'total', and per-element PDOS arrays.
-    """
+    """Calcula DOS total + proyectada desde.gpw."""
     from ase.dft.dos import DOS
     from gpaw import GPAW
 
@@ -92,7 +73,7 @@ def get_dos(
     pdos: dict[str, np.ndarray] = {}
     for sym in unique_symbols:
         indices = [i for i, s in enumerate(symbols) if s == sym]
-        # Sum PDOS over all atoms of this element (spin=0 for non-spin-polarised)
+        # Sum PDOS over all atoms this element (spin=0 para non-spin-polarised)
         atom_dos = np.zeros(npts)
         for idx in indices:
             try:
@@ -109,10 +90,7 @@ def get_dos(
 
 
 def get_band_structure(gpw_file: str | Path):
-    """Return an ASE BandStructure object from a bands .gpw checkpoint.
-
-    The returned object can be passed directly to plotting.plot_band_structure().
-    """
+    """Devuelve ASE BandStructure object desde bands.gpw checkpoint."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -121,7 +99,7 @@ def get_band_structure(gpw_file: str | Path):
 
 
 def get_homo_lumo(gpw_file: str | Path) -> tuple[float, float]:
-    """Return (HOMO, LUMO) energies in eV."""
+    """Devuelve (HOMO, LUMO) energies en eV."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -130,7 +108,7 @@ def get_homo_lumo(gpw_file: str | Path) -> tuple[float, float]:
 
 
 def get_fermi_level(gpw_file: str | Path) -> float:
-    """Return the Fermi level in eV."""
+    """Devuelve Fermi level en eV."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -138,7 +116,7 @@ def get_fermi_level(gpw_file: str | Path) -> float:
 
 
 def get_total_energy(gpw_file: str | Path) -> float:
-    """Return the total DFT energy in eV."""
+    """Devuelve total DFT energía en eV."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -146,7 +124,7 @@ def get_total_energy(gpw_file: str | Path) -> float:
 
 
 def extract_summary(gpw_file: str | Path, soc: bool = False) -> dict:
-    """Extract a summary dictionary of key properties from a .gpw file."""
+    """Extrae resumen dictionary key properties desde.gpw archivo."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))

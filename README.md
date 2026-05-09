@@ -1,7 +1,7 @@
-# dft-cspbi3-gpaw
+# REPO PARTE DFT
 
-Automated DFT simulation package for CsPbI₃ halide perovskite polymorphs (α, γ, δ)
-using **GPAW** as the DFT backend and **ASE** for structure manipulation.
+Paquete DFT automatizado para polimorfos CsPbI₃ (α, γ, δ).
+Backend: **GPAW**. Estructuras: **ASE**.
 
 ## Por qué GPAW sobre VASP
 
@@ -111,7 +111,7 @@ cd gpaw-repo/dft-cspbi3-gpaw
 pip install -e ".[dev]"
 ```
 
-## Quickstart — α-CsPbI₃ en 5 comandos
+## Inicio rápido — α-CsPbI₃ en 5 comandos
 
 ```bash
 # 1. Verificar que la estructura α tiene 5 átomos y a₀ ≈ 6.18 Å
@@ -202,7 +202,7 @@ Los logs quedan en `calculations/top8_pbe/logs/` y el resumen de ejecucion en
 El supervisor guarda el unit activo en `calculations/top8_pbe/top8_auto.unit`;
 para detenerlo usa `scripts/supervise_top8_auto.sh stop`.
 
-### Paso opcional: OghmaNano device physics
+### Paso opcional: fisica dispositivo OghmaNano
 
 OghmaNano no es ML; es un simulador físico de dispositivo
 drift-diffusion/óptica. En este repo queda como paso DFT opcional para preparar
@@ -294,7 +294,7 @@ pueden separar y corregir independientemente:
 | HSE06 (sin SOC) | 1.76 | +0.03 eV (casi exacto) | ~30× |
 | HSE06 + SOC | 1.55 | −0.18 eV | ~60× |
 | **Scissor (PBE+D3 + χSOC + χHSE)** | **~1.52** | **~−0.2 eV** | **~5×** |
-| Experimental (α, 5K) | 1.73 | — | — |
+| Experimento (α, 5K) | 1.73 | — | — |
 
 **Estrategia scissor (Eg = E_PBE+D3 + χSOC + χHSE):**
 - χSOC = Eg(PBE+SOC) − Eg(PBE) ≈ −0.84 eV — SOC reduce dramáticamente Eg en Pb
@@ -381,7 +381,7 @@ Los tests de `test_calculator_factory.py` y `test_postprocessing.py` usan
 ruff check src/ tests/
 ruff format src/ tests/
 
-# Type checking
+# Chequeo tipos
 mypy src/dft_cspbi3/
 
 # Instalar dependencias de desarrollo
@@ -390,7 +390,7 @@ pip install -e ".[dev]"
 
 ## Citar
 
-Si usas este código, por favor cita las herramientas subyacentes:
+Si usas este código, cita herramientas base:
 
 - GPAW: J. J. Mortensen et al., *J. Chem. Phys.* **160**, 092503 (2024)
 - ASE: Ask Hjorth Larsen et al., *J. Phys.: Condens. Matter* **29**, 273002 (2017)

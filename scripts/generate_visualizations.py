@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Generate publication-style plots from saved CsPbI3 GPAW/NumPy outputs.
-
-This script is intentionally offline: it reads existing .gpw/.gpaw, .cif,
-.traj, and .npy files and does not launch new DFT calculations.
-
-Examples:
-    python scripts/generate_visualizations.py
-    python scripts/generate_visualizations.py --phase alpha
-    python scripts/generate_visualizations.py --skip-gpaw
-"""
+"""Genera gráficas listas para publicar desde salidas GPAW/NumPy."""
 
 from __future__ import annotations
 
@@ -21,6 +12,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import combinations
+from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -63,11 +55,48 @@ AUTO_COLORS = [
     "#f781bf",
     "#999999",
 ]
+STRUCTURE_COLORS = {
+    "Cs": "#c79a24",
+    "Pb": "#4c78a8",
+    "Sn": "#b85c38",
+    "I": "#6f3fa0",
+    "Br": "#9a4b22",
+    "Cl": "#2ca25f",
+    "C": "#2f2f2f",
+    "N": "#2b6cb0",
+    "H": "#f2f2f2",
+}
+STRUCTURE_SIZES = {
+    "Cs": 190,
+    "Pb": 155,
+    "Sn": 145,
+    "I": 100,
+    "Br": 92,
+    "Cl": 78,
+    "C": 62,
+    "N": 66,
+    "H": 30,
+}
+STRUCTURE_RADII = {
+    "Cs": 0.55,
+    "Pb": 0.45,
+    "Sn": 0.42,
+    "I": 0.35,
+    "Br": 0.32,
+    "Cl": 0.28,
+    "C": 0.25,
+    "N": 0.24,
+    "H": 0.16,
+}
+B_SITE_ELEMENTS = {"Pb", "Sn", "Ge"}
+HALIDE_ELEMENTS = {"I", "Br", "Cl"}
+A_SITE_ELEMENTS = {"Cs", "Rb", "K"}
+ORGANIC_ELEMENTS = {"C", "N", "H"}
 
 
 @dataclass(frozen=True)
 class PhasePaths:
-    """Known files for one calculation phase."""
+    """Rutas fase cálculo."""
 
     calc_dir: Path
     out_dir: Path
@@ -153,6 +182,28 @@ def get_pdos_colors(elements: list[str]) -> dict[str, str]:
     return colors
 
 
+def get_structure_style(symbols: list[str]) -> tuple[dict[str, str], dict[str, int], dict[str, float]]:
+    """Devuelve colores, tamaños y radios ASE."""
+    unique = list(dict.fromkeys(symbols))
+    colors: dict[str, str] = {}
+    sizes: dict[str, int] = {}
+    radii: dict[str, float] = {}
+    fallback = [color for color in AUTO_COLORS if color not in STRUCTURE_COLORS.values()]
+    for element in unique:
+        colors[element] = STRUCTURE_COLORS.get(element, fallback.pop(0) if fallback else "#888888")
+        sizes[element] = STRUCTURE_SIZES.get(element, 84)
+        radii[element] = STRUCTURE_RADII.get(element, 0.32)
+    return colors, sizes, radii
+
+
+def ordered_symbols(symbols: list[str] | np.ndarray) -> list[str]:
+    priority = ["Cs", "Rb", "K", "C", "N", "H", "Pb", "Sn", "Ge", "I", "Br", "Cl"]
+    present = set(str(symbol) for symbol in symbols)
+    ordered = [symbol for symbol in priority if symbol in present]
+    ordered.extend(sorted(present - set(ordered)))
+    return ordered
+
+
 def draw_cell_wireframe(
     ax: Any,
     cell: np.ndarray,
@@ -164,7 +215,7 @@ def draw_cell_wireframe(
     outer_alpha: float = 0.78,
     grid_alpha: float = 0.38,
 ) -> np.ndarray:
-    """Draw a light subcell grid and a dark outer cell box."""
+    """Dibuja rejilla suave + celda externa."""
     repeats_array = np.array(repeats, dtype=float)
     vectors = cell / repeats_array[:, None]
     nx, ny, nz = repeats
@@ -213,7 +264,7 @@ def draw_cell_wireframe(
 
 
 def style_structure_axis(ax: Any) -> None:
-    """Use a clean publication-style 3D axis for structure figures."""
+    """Eje 3D limpio para figuras."""
     ax.set_axis_off()
     ax.grid(False)
     ax.set_facecolor("white")
@@ -248,27 +299,61 @@ def draw_pb_i_bonds(
     lw: float = 3.0,
     alpha: float = 0.82,
 ) -> dict[int, list[int]]:
-    """Draw Pb-I bonds and return the Pb-neighbor map."""
-    pb_indices = np.where(symbols == "Pb")[0]
-    i_indices = np.where(symbols == "I")[0]
+    """Dibuja enlaces B-X; devuelve vecinos B."""
+    b_indices = np.array([idx for idx, sym in enumerate(symbols) if sym in B_SITE_ELEMENTS])
+    x_indices = np.array([idx for idx, sym in enumerate(symbols) if sym in HALIDE_ELEMENTS])
     neighbor_map: dict[int, list[int]] = {}
-    for pb_idx in pb_indices:
-        distances = np.linalg.norm(pos[i_indices] - pos[pb_idx], axis=1)
-        close = i_indices[distances <= cutoff]
+    if len(b_indices) == 0 or len(x_indices) == 0:
+        return neighbor_map
+    for b_idx in b_indices:
+        distances = np.linalg.norm(pos[x_indices] - pos[b_idx], axis=1)
+        close = x_indices[distances <= cutoff]
         if len(close) == 0:
             continue
-        neighbor_map[int(pb_idx)] = [int(idx) for idx in close]
-        for i_idx in close:
+        neighbor_map[int(b_idx)] = [int(idx) for idx in close]
+        for x_idx in close:
             ax.plot(
-                [pos[pb_idx, 0], pos[i_idx, 0]],
-                [pos[pb_idx, 1], pos[i_idx, 1]],
-                [pos[pb_idx, 2], pos[i_idx, 2]],
+                [pos[b_idx, 0], pos[x_idx, 0]],
+                [pos[b_idx, 1], pos[x_idx, 1]],
+                [pos[b_idx, 2], pos[x_idx, 2]],
                 color="#7a7a7a",
                 lw=lw,
                 alpha=alpha,
                 solid_capstyle="round",
             )
     return neighbor_map
+
+
+def draw_molecular_bonds(
+    ax: Any,
+    pos: np.ndarray,
+    symbols: np.ndarray,
+    lw: float = 1.5,
+    alpha: float = 0.65,
+) -> None:
+    """Dibuja enlaces internos MA/FA."""
+    covalent_cutoffs = {
+        frozenset(("C", "N")): 1.55,
+        frozenset(("C", "H")): 1.25,
+        frozenset(("N", "H")): 1.20,
+    }
+    organic_indices = [idx for idx, sym in enumerate(symbols) if sym in ORGANIC_ELEMENTS]
+    for left, right in combinations(organic_indices, 2):
+        pair = frozenset((str(symbols[left]), str(symbols[right])))
+        cutoff = covalent_cutoffs.get(pair)
+        if cutoff is None:
+            continue
+        if np.linalg.norm(pos[left] - pos[right]) > cutoff:
+            continue
+        ax.plot(
+            [pos[left, 0], pos[right, 0]],
+            [pos[left, 1], pos[right, 1]],
+            [pos[left, 2], pos[right, 2]],
+            color="#5f6368",
+            lw=lw,
+            alpha=alpha,
+            solid_capstyle="round",
+        )
 
 
 def plot_ball_stick_structure(
@@ -294,6 +379,13 @@ def plot_ball_stick_structure(
         lw=3.8 if max_repeat == 1 else 2.2,
         alpha=0.84,
     )
+    draw_molecular_bonds(
+        ax,
+        pos,
+        symbols,
+        lw=1.6 if max_repeat == 1 else 0.9,
+        alpha=0.70,
+    )
     corners = draw_cell_wireframe(
         ax,
         atoms.cell.array,
@@ -306,7 +398,7 @@ def plot_ball_stick_structure(
         grid_alpha=0.34,
     )
 
-    for sym in ("Cs", "I", "Pb"):
+    for sym in ordered_symbols(symbols):
         mask = symbols == sym
         if not mask.any():
             continue
@@ -330,7 +422,7 @@ def plot_ball_stick_structure(
 
 
 def add_species_legend(ax: Any, colors: dict[str, str], symbols: list[str]) -> None:
-    """Add a species color legend to a 3D axis."""
+    """Agrega leyenda especies."""
     from matplotlib.lines import Line2D
 
     present = dict.fromkeys(s for s in symbols if s in colors)
@@ -359,7 +451,7 @@ def plot_cell_3d(
     add_species_legend(ax, colors, list(atoms.get_chemical_symbols()))
     cell = atoms.cell.lengths()
     fig.suptitle(
-        dated_title(f"Cell 3D {label}") + f"\na={cell[0]:.2f}, b={cell[1]:.2f}, c={cell[2]:.2f} Å",
+        dated_title(f"Celda 3D {label}") + f"\na={cell[0]:.2f}, b={cell[1]:.2f}, c={cell[2]:.2f} Å",
         fontsize=9, y=0.99,
     )
     save_figure(fig, paths.out_dir, f"cell_3d_{label}", outputs)
@@ -374,7 +466,7 @@ def plot_octahedra_3d(
     label: str = "relaxed",
     cutoff: float = 3.75,
 ) -> None:
-    """Plot a repeated cell with Pb-I bonds to reveal PbI6 octahedra."""
+    """Grafica celda repetida; muestra BX6."""
     atoms = base_atoms.repeat((repeat, repeat, repeat))
     pos = atoms.get_positions()
     symbols = np.array(atoms.get_chemical_symbols())
@@ -390,6 +482,13 @@ def plot_octahedra_3d(
         cutoff=cutoff,
         lw=2.2 if repeat == 2 else 1.35,
         alpha=0.86,
+    )
+    draw_molecular_bonds(
+        ax,
+        pos,
+        symbols,
+        lw=0.85 if repeat == 2 else 0.48,
+        alpha=0.52,
     )
     corners = draw_cell_wireframe(
         ax,
@@ -417,25 +516,21 @@ def plot_octahedra_3d(
                         alpha=0.28,
                     )
 
-    scatter_style = {
-        "Cs": {"size": 70 if repeat == 2 else 36, "alpha": 0.86},
-        "I": {"size": 62 if repeat == 2 else 34, "alpha": 0.95},
-        "Pb": {"size": 96 if repeat == 2 else 54, "alpha": 0.96},
-    }
-    for sym in ("Cs", "I", "Pb"):
+    for sym in ordered_symbols(symbols):
         mask = symbols == sym
         if not mask.any():
             continue
-        style = scatter_style[sym]
+        base_size = STRUCTURE_SIZES.get(sym, 84)
+        alpha = 0.82 if sym in A_SITE_ELEMENTS | ORGANIC_ELEMENTS else 0.96
         ax.scatter(
             pos[mask, 0],
             pos[mask, 1],
             pos[mask, 2],
-            s=style["size"],
+            s=base_size * (0.42 if repeat == 2 else 0.24),
             c=colors.get(sym, "#999999"),
             edgecolor="#303030",
             linewidth=0.25 if repeat == 2 else 0.12,
-            alpha=style["alpha"],
+            alpha=alpha,
             depthshade=True,
         )
 
@@ -443,10 +538,10 @@ def plot_octahedra_3d(
     set_structure_limits(ax, np.vstack([pos, corners]), pad=1.06)
     ax.view_init(elev=18, azim=36)
     ax.text2D(0.00, 0.98, "(a)", transform=ax.transAxes, fontsize=16, color="black")
-    ax.text2D(0.01, 0.03, f"Pb–I ≤ {cutoff} Å, N={len(pos)}", transform=ax.transAxes, fontsize=8,
+    ax.text2D(0.01, 0.03, f"B-X <= {cutoff} A, N={len(pos)}", transform=ax.transAxes, fontsize=8,
               color="#444444")
     add_species_legend(ax, colors, list(symbols))
-    fig.suptitle(dated_title(f"PbI6 octahedra {repeat}x{repeat}x{repeat}"), fontsize=9, y=0.99)
+    fig.suptitle(dated_title(f"Octaedros BX6 {label} {repeat}x{repeat}x{repeat}"), fontsize=9, y=0.99)
     save_figure(fig, paths.out_dir, f"octahedra_{label}_{repeat}x{repeat}x{repeat}", outputs)
 
 
@@ -458,14 +553,15 @@ def plot_structure_panels(
     scatter_sizes: dict[str, int],
     repeat: int = 2,
 ) -> None:
-    """Plot multiple supplied structures side by side as publication panels."""
+    """Grafica estructuras como paneles."""
     if len(structures) < 2:
         return
     panel_letters = "abcdefghijklmnopqrstuvwxyz"
-    ncols = len(structures)
-    fig = plt.figure(figsize=(5.0 * ncols, 4.4), facecolor="white")
+    ncols = min(4, len(structures))
+    nrows = ceil(len(structures) / ncols)
+    fig = plt.figure(figsize=(5.0 * ncols, 4.4 * nrows), facecolor="white")
     for index, (label, atoms) in enumerate(structures):
-        ax = fig.add_subplot(1, ncols, index + 1, projection="3d")
+        ax = fig.add_subplot(nrows, ncols, index + 1, projection="3d")
         repeated = atoms.repeat((repeat, repeat, repeat))
         plot_ball_stick_structure(
             ax,
@@ -475,7 +571,8 @@ def plot_structure_panels(
             repeats=(repeat, repeat, repeat),
             panel_label=f"({panel_letters[index]})",
         )
-    fig.subplots_adjust(left=0.0, right=1.0, top=1.0, bottom=0.0, wspace=0.0)
+        ax.set_title(label, fontsize=11, pad=0)
+    fig.subplots_adjust(left=0.0, right=1.0, top=0.98, bottom=0.0, wspace=0.0, hspace=0.02)
     labels = "_".join(label for label, _atoms in structures)
     save_figure(fig, paths.out_dir, f"structure_panels_{labels}_{repeat}x{repeat}x{repeat}", outputs)
 
@@ -495,7 +592,7 @@ def load_atoms(path: Path):
 
 def safe_label(label: str) -> str:
     label = label.strip().replace(" ", "_")
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", label).strip("_") or "structure"
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", label).strip("_") or "estructura"
 
 
 def parse_int_list(value: str) -> tuple[int, ...]:
@@ -503,7 +600,7 @@ def parse_int_list(value: str) -> tuple[int, ...]:
         return ()
     repeats = tuple(int(item.strip()) for item in value.split(",") if item.strip())
     if any(repeat < 1 for repeat in repeats):
-        raise argparse.ArgumentTypeError("repeat values must be positive integers")
+        raise argparse.ArgumentTypeError("repeticiones deben ser enteros positivos")
     return repeats
 
 
@@ -511,7 +608,7 @@ def load_structure_builder_phase(phase: str) -> Any:
     module_path = SRC / "dft_cspbi3" / "structure_builder.py"
     spec = importlib.util.spec_from_file_location("_visualizer_structure_builder", module_path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load StructureBuilder from {module_path}")
+        raise ImportError(f"No pude cargar StructureBuilder desde {module_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     builder = module.StructureBuilder
@@ -522,7 +619,7 @@ def load_structure_builder_phase(phase: str) -> Any:
 
 
 def load_structure_spec(spec: str) -> tuple[str, Any]:
-    """Load one structure from LABEL=PATH, PATH, builder:PHASE, or a known phase."""
+    """Carga estructura desde LABEL=PATH, PATH, builder:FASE o fase."""
     if "=" in spec:
         raw_label, raw_source = spec.split("=", 1)
         label = safe_label(raw_label)
@@ -566,7 +663,7 @@ def load_structure_inputs(
         try:
             loaded.append(load_structure_spec(spec))
         except Exception as exc:
-            note(messages, f"Skipped structure input {spec}: {exc}")
+            note(messages, f"Estructura omitida {spec}: {exc}")
     return loaded
 
 
@@ -597,17 +694,20 @@ def plot_cell_views(
                 try:
                     loaded.append((label, load_atoms(path)))
                 except Exception as exc:
-                    note(messages, f"Skipped structure {path}: {exc}")
+                    note(messages, f"Estructura omitida {path}: {exc}")
 
     if not loaded:
-        note(messages, "No structure files found for cell plots.")
+        note(messages, "Sin archivos estructura para gráficas celda.")
         return
 
     from ase.visualize.plot import plot_atoms
 
-    radii = {"Cs": 0.55, "Pb": 0.45, "I": 0.35}
-    colors = {"Cs": "#6f6f6f", "Pb": "#d62828", "I": "#2176ae"}
-    scatter_sizes = {"Cs": 170, "Pb": 145, "I": 85}
+    all_symbols = [
+        symbol
+        for _label, atoms in loaded
+        for symbol in atoms.get_chemical_symbols()
+    ]
+    colors, scatter_sizes, radii = get_structure_style(all_symbols)
 
     view_labels = ("ab", "ac", "bc")
     rotations = ("0x,0y,0z", "90x,0y,0z", "0x,90y,0z")
@@ -625,21 +725,21 @@ def plot_cell_views(
                 colors=atom_colors,
                 show_unit_cell=2,
             )
-            ax.set_title(f"{view_labels[index]} view", fontsize=11)
+            ax.set_title(f"vista {view_labels[index]}", fontsize=11)
             ax.text(0.01, 0.97, f"({chr(ord('a') + index)})", transform=ax.transAxes,
                     fontsize=13, va="top")
             ax.set_axis_off()
 
-        # species legend on the right axes
+        # species legend en right axes
         from matplotlib.patches import Patch
-        present = dict.fromkeys(s for s in atoms.get_chemical_symbols() if s in colors)
+        present = dict.fromkeys(s for s in ordered_symbols(atoms.get_chemical_symbols()) if s in colors)
         handles = [Patch(facecolor=colors[s], edgecolor="#303030", linewidth=0.6, label=s)
                    for s in present]
         axes[-1].legend(handles=handles, loc="lower right", fontsize=9, framealpha=0.85)
 
         cell = atoms.cell.lengths()
         fig.suptitle(
-            dated_title(f"CsPbI3 cell — {label}") +
+            dated_title(f"Celda estructura - {label}") +
             f"\na={cell[0]:.2f}, b={cell[1]:.2f}, c={cell[2]:.2f} Å",
             fontsize=10, y=1.01,
         )
@@ -686,7 +786,7 @@ def plot_cell_views(
 
 def plot_dos_from_gpw(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
     if not paths.dos_gpw.exists():
-        note(messages, "No DOS checkpoint found.")
+        note(messages, "Sin checkpoint DOS.")
         return
 
     try:
@@ -713,13 +813,13 @@ def plot_dos_from_gpw(paths: PhasePaths, outputs: list[str], messages: list[str]
                 pdos[sym] = np.zeros_like(contrib)
             pdos[sym] += contrib
     except Exception as exc:
-        note(messages, f"Skipped DOS plot from {paths.dos_gpw}: {exc}")
+        note(messages, f"DOS omitido desde {paths.dos_gpw}: {exc}")
         return
 
     colors = get_pdos_colors(list(pdos))
 
     fig, ax = plt.subplots(figsize=(6.5, 5))
-    ax.plot(energies, total, color="black", lw=1.5, label="Total DOS")
+    ax.plot(energies, total, color="black", lw=1.5, label="DOS total")
     for sym, values in pdos.items():
         color = colors.get(sym, "#777777")
         ax.fill_between(energies, 0, values, color=color, alpha=0.32)
@@ -727,8 +827,8 @@ def plot_dos_from_gpw(paths: PhasePaths, outputs: list[str], messages: list[str]
     ax.axvline(0, color="black", lw=1.0, ls="--", alpha=0.6, label="$E_F$")
     ax.set_xlim(-6, 4)
     ax.set_ylim(bottom=0)
-    ax.set_xlabel("Energy - $E_F$ (eV)")
-    ax.set_ylabel("DOS (states/eV/cell)")
+    ax.set_xlabel("Energía - $E_F$ (eV)")
+    ax.set_ylabel("DOS (estados/eV/celda)")
     ax.set_title(dated_title("DOS"))
     ax.legend(framealpha=0.85)
     save_figure(fig, paths.out_dir, "dos_pdos_from_gpw", outputs)
@@ -736,7 +836,7 @@ def plot_dos_from_gpw(paths: PhasePaths, outputs: list[str], messages: list[str]
 
 def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
     if not paths.bands_gpw.exists():
-        note(messages, "No band-structure checkpoint found.")
+        note(messages, "Sin checkpoint bandas.")
         return
 
     try:
@@ -745,7 +845,7 @@ def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages
         calc = GPAW(str(paths.bands_gpw), txt=None)
         bs = calc.band_structure()
     except Exception as exc:
-        note(messages, f"Skipped band plot from {paths.bands_gpw}: {exc}")
+        note(messages, f"Bandas omitidas desde {paths.bands_gpw}: {exc}")
         return
 
     energies = np.array(bs.energies, dtype=float)
@@ -763,7 +863,7 @@ def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages
         try:
             soc = np.load(paths.soc_eigs)
             n_el = int(round(calc.get_number_of_electrons()))
-            # SOC spinors hold 1 electron each (not 2) → HOMO at index n_el-1
+            # SOC spinors hold 1 electron each (no 2) → HOMO en index n_el-1
             n_occ = max(n_el, 1)
             near = soc[:, max(n_occ - 5, 0) : n_occ + 5] - calc.get_fermi_level()
             kx_soc = np.linspace(0, 1, near.shape[0])
@@ -775,10 +875,10 @@ def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages
                     lw=0.6,
                     alpha=0.45,
                     ls="--",
-                    label="SOC saved eigs" if band == 0 else "",
+                    label="eigs SOC guardados" if band == 0 else "",
                 )
         except Exception as exc:
-            note(messages, f"Could not overlay SOC eigenvalues: {exc}")
+            note(messages, f"No pude superponer eigs SOC: {exc}")
 
     try:
         _, xcoords, labels = bs.path.get_linear_kpoint_axis()
@@ -790,13 +890,13 @@ def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages
         for xc in xcoords:
             ax.axvline(xc, color="black", lw=0.5, alpha=0.35)
     except Exception:
-        ax.set_xlabel("k-path")
+        ax.set_xlabel("ruta k")
 
     ax.axhline(0, color="black", lw=0.8, ls="--", alpha=0.5)
     ax.set_xlim(0, 1)
     ax.set_ylim(-4, 4)
-    ax.set_ylabel("Energy - reference (eV)")
-    ax.set_title(dated_title("CsPbI3 band structure from saved GPAW checkpoint"))
+    ax.set_ylabel("Energía - referencia (eV)")
+    ax.set_title(dated_title("Bandas CsPbI3 desde checkpoint GPAW"))
     if paths.soc_eigs.exists():
         ax.legend(loc="upper right")
     save_figure(fig, paths.out_dir, "band_structure_from_gpw", outputs)
@@ -805,17 +905,17 @@ def plot_band_structure_from_gpw(paths: PhasePaths, outputs: list[str], messages
 def plot_phonons(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
     source = paths.phonon_freqs_phonopy if paths.phonon_freqs_phonopy.exists() else paths.phonon_freqs
     if not source.exists():
-        note(messages, "No phonon frequency .npy file found.")
+        note(messages, "Sin .npy frecuencias fonón.")
         return
 
     try:
         freqs = np.load(source)
     except Exception as exc:
-        note(messages, f"Skipped phonon plot from {source}: {exc}")
+        note(messages, f"Fonones omitidos desde {source}: {exc}")
         return
 
     if freqs.ndim != 2:
-        note(messages, f"Skipped phonon plot: expected 2D array, got {freqs.shape}.")
+        note(messages, f"Fonones omitidos: esperaba arreglo 2D, llegó {freqs.shape}.")
         return
 
     fig, ax = plt.subplots(figsize=(7, 5))
@@ -825,9 +925,9 @@ def plot_phonons(paths: PhasePaths, outputs: list[str], messages: list[str]) -> 
         color = "#d62828" if values.min() < -10 else "#1f77b4"
         ax.plot(x, values, color=color, lw=0.9, alpha=0.75)
     ax.axhline(0, color="black", lw=0.8, ls="--", alpha=0.5)
-    ax.set_xlabel("q-point index")
-    ax.set_ylabel("Frequency (cm$^{-1}$)")
-    ax.set_title(dated_title(f"Phonon dispersion from {source.name}"))
+    ax.set_xlabel("índice punto q")
+    ax.set_ylabel("Frecuencia (cm$^{-1}$)")
+    ax.set_title(dated_title(f"Dispersión fonónica desde {source.name}"))
     save_figure(fig, paths.out_dir, "phonon_dispersion_from_npy", outputs)
 
     if paths.phonon_dos_phonopy.exists():
@@ -836,16 +936,16 @@ def plot_phonons(paths: PhasePaths, outputs: list[str], messages: list[str]) -> 
             fig, ax = plt.subplots(figsize=(6, 4.5))
             if phonon_dos.ndim == 2 and phonon_dos.shape[1] >= 2:
                 ax.plot(phonon_dos[:, 0], phonon_dos[:, 1], color="#1f77b4", lw=1.4)
-                ax.set_xlabel("Frequency (cm$^{-1}$)")
-                ax.set_ylabel("Phonon DOS")
+                ax.set_xlabel("Frecuencia (cm$^{-1}$)")
+                ax.set_ylabel("DOS fonónica")
             else:
                 ax.hist(freqs.ravel(), bins=60, color="#1f77b4", alpha=0.8)
-                ax.set_xlabel("Frequency (cm$^{-1}$)")
-                ax.set_ylabel("Count")
-            ax.set_title(dated_title("Phonon density of states"))
+                ax.set_xlabel("Frecuencia (cm$^{-1}$)")
+                ax.set_ylabel("Conteo")
+            ax.set_title(dated_title("Densidad estados fonónica"))
             save_figure(fig, paths.out_dir, "phonon_dos_from_npy", outputs)
         except Exception as exc:
-            note(messages, f"Could not plot phonon DOS: {exc}")
+            note(messages, f"No pude graficar DOS fonónica: {exc}")
 
 
 def plot_hessian(
@@ -855,21 +955,21 @@ def plot_hessian(
     skip_gpaw: bool = False,
 ) -> None:
     if not paths.hessian.exists():
-        note(messages, "No Hessian .npy file found.")
+        note(messages, "Sin .npy Hessiano.")
         return
 
     try:
         hessian = np.load(paths.hessian)
     except Exception as exc:
-        note(messages, f"Skipped Hessian plots from {paths.hessian}: {exc}")
+        note(messages, f"Hessiano omitido desde {paths.hessian}: {exc}")
         return
 
     fig, ax = plt.subplots(figsize=(6, 5))
     vmax = np.nanpercentile(np.abs(hessian), 98)
     im = ax.imshow(hessian, cmap="coolwarm", vmin=-vmax, vmax=vmax)
-    ax.set_title(dated_title("Mass-unweighted Hessian"))
-    ax.set_xlabel("Cartesian DOF")
-    ax.set_ylabel("Cartesian DOF")
+    ax.set_title(dated_title("Hessiano sin ponderar por masa"))
+    ax.set_xlabel("GDL cartesiano")
+    ax.set_ylabel("GDL cartesiano")
     fig.colorbar(im, ax=ax, label="eV/A$^2$")
     save_figure(fig, paths.out_dir, "hessian_matrix", outputs)
 
@@ -879,9 +979,9 @@ def plot_hessian(
     colors = np.where(eigs < 0, "#d62828", "#1f77b4")
     ax.bar(idx, eigs, color=colors, alpha=0.85)
     ax.axhline(0, color="black", lw=0.8)
-    ax.set_xlabel("Mode index")
-    ax.set_ylabel("Eigenvalue (eV/A$^2$)")
-    ax.set_title(dated_title("Hessian eigenvalue spectrum"))
+    ax.set_xlabel("índice modo")
+    ax.set_ylabel("Autovalor (eV/A$^2$)")
+    ax.set_title(dated_title("Espectro autovalores Hessiano"))
     save_figure(fig, paths.out_dir, "hessian_eigenvalues", outputs)
 
     try:
@@ -896,39 +996,39 @@ def plot_hessian(
         fig, ax = plt.subplots(figsize=(6, 4.5))
         ax.bar(np.arange(len(freqs)), freqs, color=np.where(freqs < 0, "#d62828", "#1f77b4"))
         ax.axhline(0, color="black", lw=0.8)
-        ax.set_xlabel("Mode index")
-        ax.set_ylabel("Frequency (cm$^{-1}$)")
-        ax.set_title(dated_title("Gamma frequencies from mass-weighted Hessian"))
+        ax.set_xlabel("índice modo")
+        ax.set_ylabel("Frecuencia (cm$^{-1}$)")
+        ax.set_title(dated_title("Frecuencias Gamma desde Hessiano ponderado"))
         save_figure(fig, paths.out_dir, "hessian_gamma_frequencies", outputs)
     except Exception as exc:
-        note(messages, f"Could not compute mass-weighted Hessian frequencies: {exc}")
+        note(messages, f"No pude calcular frecuencias Hessiano ponderado: {exc}")
 
 
 def plot_pes(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
     if not (paths.pes_displacements.exists() and paths.pes_energies.exists()):
-        note(messages, "No PES displacement/energy pair found.")
+        note(messages, "Sin par desplazamiento/energía PES.")
         return
 
     try:
         x = np.load(paths.pes_displacements)
         y = np.load(paths.pes_energies)
     except Exception as exc:
-        note(messages, f"Skipped PES plot: {exc}")
+        note(messages, f"PES omitido: {exc}")
         return
 
     x = np.ravel(x)
     y = np.ravel(y)
     if len(x) != len(y):
-        note(messages, f"Skipped PES plot: x/y lengths differ ({len(x)} vs {len(y)}).")
+        note(messages, f"PES omitido: longitudes x/y difieren ({len(x)} vs {len(y)}).")
         return
 
     fig, ax = plt.subplots(figsize=(6, 4.5))
     order = np.argsort(x)
     y_mev = (y[order] - np.nanmin(y)) * 1000
     ax.plot(x[order], y_mev, "o-", color="#1f77b4", lw=1.4, ms=4)
-    ax.set_xlabel("Mode displacement (A)")
-    ax.set_ylabel("Delta E (meV)")
-    ax.set_title(dated_title("Potential-energy scan from saved NPY data"))
+    ax.set_xlabel("Desplazamiento modo (A)")
+    ax.set_ylabel("ΔE (meV)")
+    ax.set_title(dated_title("Barrido energía potencial desde NPY"))
     save_figure(fig, paths.out_dir, "pes_scan_from_npy", outputs)
 
 
@@ -938,13 +1038,13 @@ def plot_soc_arrays(paths: PhasePaths, outputs: list[str], messages: list[str]) 
             eigs = np.load(paths.soc_eigs)
             fig, ax = plt.subplots(figsize=(6.5, 4.5))
             im = ax.imshow(eigs.T, aspect="auto", origin="lower", cmap="viridis")
-            ax.set_xlabel("k-point index")
-            ax.set_ylabel("Band index")
-            ax.set_title(dated_title("Saved SOC eigenvalues"))
-            fig.colorbar(im, ax=ax, label="Energy (eV)")
+            ax.set_xlabel("índice punto k")
+            ax.set_ylabel("índice banda")
+            ax.set_title(dated_title("Autovalores SOC guardados"))
+            fig.colorbar(im, ax=ax, label="Energía (eV)")
             save_figure(fig, paths.out_dir, "soc_eigenvalues_map", outputs)
         except Exception as exc:
-            note(messages, f"Could not plot SOC eigenvalues: {exc}")
+            note(messages, f"No pude graficar autovalores SOC: {exc}")
 
     if paths.soc_spin.exists():
         try:
@@ -954,9 +1054,9 @@ def plot_soc_arrays(paths: PhasePaths, outputs: list[str], messages: list[str]) 
             if squeezed.ndim == 2:
                 fig, ax = plt.subplots(figsize=(6.5, 4.5))
                 im = ax.imshow(squeezed.T, aspect="auto", origin="lower", cmap="coolwarm")
-                ax.set_xlabel("k-point index")
-                ax.set_ylabel("Band/spin index")
-                ax.set_title(dated_title("Saved SOC spin projections"))
+                ax.set_xlabel("índice punto k")
+                ax.set_ylabel("índice banda/espín")
+                ax.set_title(dated_title("Proyecciones espín SOC guardadas"))
                 fig.colorbar(im, ax=ax)
             elif squeezed.ndim == 3 and squeezed.shape[0] == 3:
                 spin_components = squeezed
@@ -979,15 +1079,15 @@ def plot_soc_arrays(paths: PhasePaths, outputs: list[str], messages: list[str]) 
                         vmax=vmax,
                     )
                     ax.set_title(labels[comp])
-                    ax.set_xlabel("k-point index")
-                axes[0].set_ylabel("Band index")
+                    ax.set_xlabel("índice punto k")
+                axes[0].set_ylabel("índice banda")
                 fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.85)
-                fig.suptitle(dated_title("Saved SOC spin projections"))
+                fig.suptitle(dated_title("Proyecciones espín SOC guardadas"))
             elif squeezed.ndim != 2:
-                raise ValueError(f"unsupported shape {spins.shape}")
+                raise ValueError(f"shape no soportado {spins.shape}")
             save_figure(fig, paths.out_dir, "soc_spin_projection_map", outputs)
         except Exception as exc:
-            note(messages, f"Could not plot SOC spin projections: {exc}")
+            note(messages, f"No pude graficar proyecciones espín SOC: {exc}")
 
 
 def plot_tensor_arrays(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
@@ -1004,7 +1104,7 @@ def plot_tensor_arrays(paths: PhasePaths, outputs: list[str], messages: list[str
         try:
             array = np.load(path)
         except Exception as exc:
-            note(messages, f"Could not read {path}: {exc}")
+            note(messages, f"No pude leer {path}: {exc}")
             continue
 
         if array.ndim == 2:
@@ -1018,14 +1118,14 @@ def plot_tensor_arrays(paths: PhasePaths, outputs: list[str], messages: list[str
             vmax = np.nanpercentile(np.abs(array), 98)
             for axis, ax in enumerate(axes):
                 im = ax.imshow(array[:, axis, :], cmap="coolwarm", vmin=-vmax, vmax=vmax)
-                ax.set_title(f"Cartesian row {axis}")
-                ax.set_xlabel("Cartesian col")
-                ax.set_ylabel("Atom")
+                ax.set_title(f"fila cartesiana {axis}")
+                ax.set_xlabel("col cartesiana")
+                ax.set_ylabel("átomo")
             fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.85)
             fig.suptitle(dated_title(stem.replace("_", " ")))
             save_figure(fig, paths.out_dir, stem, outputs)
         else:
-            note(messages, f"Skipped {path}: unsupported shape {array.shape}.")
+            note(messages, f"Omitido {path}: shape no soportado {array.shape}.")
 
 
 def write_manifest(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
@@ -1042,57 +1142,57 @@ def write_manifest(paths: PhasePaths, outputs: list[str], messages: list[str]) -
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate CsPbI3 visualizations from saved .npy and GPAW checkpoints."
+        description="Genera visualizaciones CsPbI3 desde .npy y checkpoints GPAW."
     )
-    parser.add_argument("--phase", default="alpha", help="Phase folder under calculations/.")
+    parser.add_argument("--phase", default="alpha", help="Carpeta fase bajo calculations/.")
     parser.add_argument(
         "--calc-dir",
         type=Path,
         default=None,
-        help="Calculation directory. Overrides --phase when provided.",
+        help="Directorio cálculo. Sobrescribe --phase si existe.",
     )
     parser.add_argument(
         "--out-dir",
         type=Path,
         default=None,
-        help="Output directory. Defaults to ./imagenes.",
+        help="Directorio salida. Default: ./imagenes.",
     )
     parser.add_argument(
         "--skip-gpaw",
         action="store_true",
-        help="Skip plots that require importing GPAW or reading .gpw/.gpaw files.",
+        help="Omite gráficas con import GPAW o lectura .gpw/.gpaw.",
     )
     parser.add_argument(
         "--structure",
         action="append",
         default=[],
         help=(
-            "Extra structure to visualize. Accepts PATH, LABEL=PATH, or a known "
-            "phase name. Use builder:PHASE to regenerate with StructureBuilder. May be repeated."
+            "Estructura extra. Acepta PATH, LABEL=PATH o fase conocida. "
+            "Usa builder:FASE para regenerar con StructureBuilder. Repetible."
         ),
     )
     parser.add_argument(
         "--structure-phase",
         action="append",
         default=[],
-        help="Known StructureBuilder phase to visualize, e.g. gamma or beta. May be repeated.",
+        help="Fase StructureBuilder a visualizar, ej. gamma o beta. Repetible.",
     )
     parser.add_argument(
         "--structures-only",
         action="store_true",
-        help="Only generate structure/cell/octahedra plots.",
+        help="Solo gráficas estructura/celda/octaedros.",
     )
     parser.add_argument(
         "--supercell-repeats",
         type=parse_int_list,
         default=(3, 6),
-        help="Comma-separated repeats for 3D supercell plots. Use '' to disable.",
+        help="Repeticiones separadas por coma para superceldas 3D. Usa '' para desactivar.",
     )
     parser.add_argument(
         "--octahedra-repeats",
         type=parse_int_list,
         default=(2, 3),
-        help="Comma-separated repeats for PbI6 octahedra plots. Use '' to disable.",
+        help="Repeticiones separadas por coma para octaedros BX6. Usa '' para desactivar.",
     )
     return parser.parse_args()
 
@@ -1107,8 +1207,8 @@ def main() -> int:
     structure_inputs = load_structure_inputs(args.structure, args.structure_phase, messages)
 
     paths.out_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Calculation data: {paths.calc_dir}")
-    print(f"Writing plots to:  {paths.out_dir}")
+    print(f"Datos cálculo: {paths.calc_dir}")
+    print(f"Escribiendo gráficas en: {paths.out_dir}")
 
     plot_cell_views(
         paths,
@@ -1120,10 +1220,10 @@ def main() -> int:
         octahedra_repeats=args.octahedra_repeats,
     )
     if args.structures_only:
-        note(messages, "Skipped non-structure plots by request.")
+        note(messages, "Gráficas no estructurales omitidas.")
     else:
         if args.skip_gpaw:
-            note(messages, "Skipped GPAW-dependent DOS and band plots by request.")
+            note(messages, "DOS/bandas dependientes de GPAW omitidas.")
         else:
             plot_dos_from_gpw(paths, outputs, messages)
             plot_band_structure_from_gpw(paths, outputs, messages)
@@ -1134,11 +1234,11 @@ def main() -> int:
         plot_tensor_arrays(paths, outputs, messages)
     write_manifest(paths, outputs, messages)
 
-    print("\nGenerated files:")
+    print("\nArchivos generados:")
     for path in outputs:
         print(f"  {path}")
     if messages:
-        print("\nNotes:")
+        print("\nNotas:")
         for message in messages:
             print(f"  - {message}")
     return 0

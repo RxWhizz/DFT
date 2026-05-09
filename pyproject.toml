@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "dft-cspbi3-gpaw"
 version = "0.1.0"
-description = "Automated DFT simulations of CsPbI3 halide perovskite using GPAW"
+description = "Simulaciones DFT automatizadas de perovskita haluro CsPbI3 con GPAW"
 readme = "README.md"
 license = { text = "GPL-3.0" }
 requires-python = ">=3.11"

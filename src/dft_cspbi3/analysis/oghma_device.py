@@ -1,9 +1,4 @@
-"""OghmaNano device package generation for the DFT workflow.
-
-OghmaNano is not an ML model. It is a deterministic optoelectronic device
-solver, so this module keeps it as an optional DFT/device-analysis step rather
-than part of the ML-only AINAGENT scoring path.
-"""
+"""Nota técnica."""
 
 from __future__ import annotations
 
@@ -21,35 +16,35 @@ from typing import Any, Optional
 import numpy as np
 
 
-# Work functions used when patching metal contact shapes (eV, literature)
+# Work functions usado when patching metal contact shapes (eV, literature)
 _METAL_WORK_FUNCTION: dict[str, float] = {"au": 5.1, "ag": 4.7, "al": 4.2}
 
-# ── CsPbI₃ transport parameters (literature, PBE+SOC level) ─────────────────
-# Ref: Giorgi & Yamashita, J. Mater. Chem. A 2015; Liu et al. ACS Energy Lett. 2017
+# ── CsPbI₃ transport parámetros (literature, PBE+SOC level) ─────────────────
+# Ref
 _CSPBI3_TRANSPORT = {
-    "mue_y":            2e-3,     # electron mobility [m²/Vs]; ~20 cm²/Vs experimental
+    "mue_y":            2e-3,     # electron mobility [m²/Vs]
     "muh_y":            2e-3,     # hole mobility [m²/Vs]
-    "Nc":               1e26,     # effective DOS conduction band [m⁻³]
-    "Nv":               1e26,     # effective DOS valence band [m⁻³]
+    "Nc":               1e26,     # effective DOS conduction banda [m⁻³]
+    "Nv":               1e26,     # effective DOS valence banda [m⁻³]
     "free_to_free_recombination": 1e-15,
-    "srh_tau_n":        1e-7,     # SRH electron lifetime [s]; ~100 ns
-    "srh_tau_p":        1e-7,     # SRH hole lifetime [s]
+    "srh_tau_n":        1e-7,     # SRH electron lifetime [s]
+    "srh_tau_p":        1e-7,
     "ss_srh_enabled":   True,
-    "ion_density":      1e22,     # mobile ion density [m⁻³]
+    "ion_density":      1e22,     # mobile ion densidad [m⁻³]
     "ion_mobility":     1e-13,
-    "epsilonr":         6.2,      # overridden with DFT value at runtime
-    "Eg":               1.59,     # overridden with DFT value at runtime
-    "Xi":               3.8,      # electron affinity [eV]; CsPbI₃
+    "epsilonr":         6.2,      # overridden con DFT value en runtime
+    "Eg":               1.59,     # overridden con DFT value en runtime
+    "Xi":               3.8,      # electron affinity [eV]
 }
 
-# Optical n/k data source wavelength range used for OghmaNano material file
+# Optical n/k data fuente wavelength range usado para OghmaNano material archivo
 _NM_MIN = 200.0
 _NM_MAX = 1200.0
 
 
 @dataclass
 class OghmaDeviceResult:
-    """Summary of the OghmaNano DFT handoff step."""
+    """Resumen OghmaNano DFT handoff step."""
 
     status: str
     method_type: str = "device_physics_drift_diffusion_not_ml"
@@ -91,13 +86,7 @@ def prepare_oghma_device_step(
     config: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> OghmaDeviceResult:
-    """Prepare and optionally run an OghmaNano device simulation.
-
-    1. Build device_stack.json from DFT outputs.
-    2. Write a valid OghmaNano sim directory (sim.json + nk material file).
-    3. Launch oghma_core if execute=true and a runner is found.
-    4. Parse sim_info.dat if it exists.
-    """
+    """Prepara y optionally ejecuta OghmaNano dispositivo simulation."""
     phase_dir = Path(phase_dir)
     step_dir = Path(step_dir)
     step_dir.mkdir(parents=True, exist_ok=True)
@@ -113,7 +102,7 @@ def prepare_oghma_device_step(
 
     flags: list[str] = ["OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML"]
 
-    # ── write OghmaNano project ───────────────────────────────────────────────
+    # ── escribe OghmaNano project ───────────────────────────────────────────────
     try:
         write_oghma_sim_dir(sim_dir, stack, phase_dir, config=cfg)
         flags.append("OGHMA_PROJECT_WRITTEN")
@@ -143,7 +132,7 @@ def prepare_oghma_device_step(
     manifest_path.write_text(json.dumps(manifest, indent=2))
     _write_readme(step_dir, runner=runner)
 
-    # ── parse pre-existing sim_info.dat ──────────────────────────────────────
+    # ── parsea pre-existente sim_info.dat ──────────────────────────────────────
     parsed = parse_oghma_sim_info(sim_info_path)
     if parsed:
         out = OghmaDeviceResult(
@@ -162,7 +151,7 @@ def prepare_oghma_device_step(
         result_path.write_text(json.dumps(out.to_dict(), indent=2))
         return out
 
-    # ── run oghma_core ────────────────────────────────────────────────────────
+    # ── ejecuta oghma_core ────────────────────────────────────────────────────────
     if execute and runner and "OGHMA_PROJECT_WRITTEN" in flags:
         ensure_oghma_local_links(materials_overlay=sim_dir / "materials")
         ensure_wine_drive_links(sim_dir)
@@ -232,19 +221,7 @@ def write_oghma_sim_dir(
     *,
     config: dict[str, Any] | None = None,
 ) -> None:
-    """Write a valid OghmaNano simulation directory from DFT-derived inputs.
-
-    Creates:
-      sim_dir/
-        sim.json/json.inp — full OghmaNano project (perovskite template + DFT params)
-        materials/
-          data.json       — local material database index
-          CsPbI3/
-            data.json     — material metadata in OghmaNano format
-            n.csv         — DFT n(lambda), wavelength in meters
-            alpha.csv     — DFT alpha(lambda), wavelength in meters, alpha in m^-1
-            nk.csv        — convenience copy for inspection: wavelength_nm, n, k
-    """
+    """Escribe valid OghmaNano simulation directorio desde DFT-derivado inputs."""
     sim_dir.mkdir(parents=True, exist_ok=True)
     cfg = config or {}
     dft = stack.get("dft_inputs", {})
@@ -257,7 +234,7 @@ def write_oghma_sim_dir(
     m_e = (dft.get("effective_masses") or {}).get("m_e_m0") or 0.11
     m_h = (dft.get("effective_masses") or {}).get("m_h_m0") or 0.15
 
-    # ── fetch perovskite template ─────────────────────────────────────────────
+    # ── fetch perovskita template ─────────────────────────────────────────────
     sim_json = _get_perovskite_template()
 
     # ── patch simulation mode ─────────────────────────────────────────────────
@@ -272,9 +249,9 @@ def write_oghma_sim_dir(
         name = seg_val.get("name", "").lower()
         dos = seg_val.get("shape_dos", {})
         if name in {"au", "ag", "al"}:
-            # Metal contacts: obj_type="contact" with dd_enabled=True.
-            # Setting dd_enabled=False causes the light-solver to throw
-            # "shape covering electrical mesh with no electrical parameters".
+            # Metal contacts
+            # Setting dd_enabled=False causes light-solver throw
+            # "shape covering electrical mesh con no electrical parámetros"
             seg_val["obj_type"] = "contact"
             dos.setdefault("dd_enabled", "True")
             seg_val["shape_dos"] = dos
@@ -291,12 +268,12 @@ def write_oghma_sim_dir(
             dos["mue_z"] = dos["mue_y"]
             dos["muh_x"] = dos["muh_y"]
             dos["muh_z"] = dos["muh_y"]
-            # Apply literature transport defaults
+            # Aplica literature transport defaults
             for k, v in _CSPBI3_TRANSPORT.items():
                 if k not in ("Eg", "epsilonr", "mue_y", "muh_y"):
                     dos.setdefault(k, v)
             seg_val["shape_dos"] = dos
-            # Point to DFT nk material
+            # Point DFT nk material
             seg_val["optical_material"] = "CsPbI3"
     _reposition_epitaxy_layers(epi)
     _normalize_contact_shapes(epi)
@@ -314,19 +291,19 @@ def write_oghma_sim_dir(
         )
         if gen_model == "light_constant":
             _disable_light_source_shapes(sim_json)
-            # Use flat optical model to bypass TMM light pointer array construction
-            # (full TMM triggers an Au shape check that fails under Wine/headless).
+            # Usa flat óptico model bypass TMM light pointer array construction
+            # (completo TMM triggers Au shape revisa that fails under Wine/headless)
             sim_json.setdefault("optical", {}).setdefault("light", {})["light_model"] = "flat"
     _ensure_oghma_runtime_defaults(
         sim_json,
         newton_name=cfg.get("newton_name", "newton_simple" if fast_mode else None),
     )
 
-    # ── write sim.json ────────────────────────────────────────────────────────
+    # ── escribe sim.json ────────────────────────────────────────────────────────
     (sim_dir / "sim.json").write_text(json.dumps(sim_json, indent=2))
     (sim_dir / "json.inp").write_text(json.dumps(sim_json, indent=2))
 
-    # ── write DFT nk material ─────────────────────────────────────────────────
+    # ── escribe DFT nk material ─────────────────────────────────────────────────
     materials_dir = sim_dir / "materials"
     materials_dir.mkdir(parents=True, exist_ok=True)
     _write_materials_index_json(materials_dir / "data.json")
@@ -342,7 +319,7 @@ def write_oghma_sim_dir(
 
 
 def _get_perovskite_template() -> dict[str, Any]:
-    """Return the OghmaNano perovskite template (cached after first download)."""
+    """Devuelve OghmaNano perovskita template (cached after first download)."""
     cache = Path("/tmp/_oghma_perovskite_template.json")
     if cache.exists():
         return json.loads(cache.read_text())
@@ -357,12 +334,12 @@ def _get_perovskite_template() -> dict[str, Any]:
         )
         return json.loads(cache.read_text())
     except Exception:
-        # Return a minimal working template if download fails
+        # Devuelve minimal working template si download fails
         return _minimal_perovskite_template()
 
 
 def _minimal_perovskite_template() -> dict[str, Any]:
-    """Minimal OghmaNano perovskite template for offline use."""
+    """Minimal OghmaNano perovskita template para offline use."""
     return {
         "sim": {"simmode": "segment0@jv", "version": "8.0"},
         "sims": {
@@ -402,7 +379,7 @@ def _minimal_perovskite_template() -> dict[str, Any]:
 
 
 def _load_optical_rows(phase_dir: Path) -> list[tuple[float, float, float]]:
-    """Return optical rows as (wavelength_nm, n, k)."""
+    """Devuelve filas ópticas (λ,n,k)."""
     opt_dir = phase_dir / "11_optical"
     freq_path = opt_dir / "optical_frequencies.npy"
     n_path = opt_dir / "n_omega.npy"
@@ -411,23 +388,23 @@ def _load_optical_rows(phase_dir: Path) -> list[tuple[float, float, float]]:
     if not (freq_path.exists() and n_path.exists() and k_path.exists()):
         return _cauchy_nk_rows()
 
-    freq_eV = np.load(str(freq_path))   # energies in eV (0 to 6 eV, 241 pts)
+    freq_eV = np.load(str(freq_path))   # energies en eV (0 6 eV, 241 pts)
     n_arr = np.load(str(n_path))
     k_arr = np.load(str(k_path))
 
-    # Convert eV → nm (skip ω=0 to avoid inf)
+    # Convert eV → nm (skip ω=0 evita inf)
     mask = freq_eV > 0.1
     wl_nm = 1239.84 / freq_eV[mask]    # E(eV) = hc/λ, hc=1239.84 eV·nm
     n_sel = n_arr[mask]
     k_sel = k_arr[mask]
 
-    # OghmaNano expects ascending wavelength → flip (DFT is ascending E)
+    # OghmaNano expects ascending wavelength → flip (DFT ascending E)
     idx = np.argsort(wl_nm)
     wl_nm = wl_nm[idx]
     n_sel = n_sel[idx]
     k_sel = k_sel[idx]
 
-    # Restrict to visible–NIR range useful for PV (200–1200 nm)
+    # Restrict visible-NIR range useful para PV (200-1200 nm)
     mask2 = (wl_nm >= _NM_MIN) & (wl_nm <= _NM_MAX)
     wl_nm = wl_nm[mask2]
     n_sel = n_sel[mask2]
@@ -437,7 +414,7 @@ def _load_optical_rows(phase_dir: Path) -> list[tuple[float, float, float]]:
 
 
 def _write_nk_csv(path: Path, rows: list[tuple[float, float, float]]) -> None:
-    """Export n(lambda), k(lambda) for human inspection: wavelength_nm, n, k."""
+    """Export n(lambda), k(lambda) para human inspection."""
     lines = ["#wavelength_nm n k\n"]
     for wl, n, k in rows:
         lines.append(f"{wl:.4f} {n:.6f} {k:.6f}\n")
@@ -445,18 +422,18 @@ def _write_nk_csv(path: Path, rows: list[tuple[float, float, float]]) -> None:
 
 
 def _cauchy_nk_rows() -> list[tuple[float, float, float]]:
-    """Analytical Cauchy n(lambda) + Urbach k(lambda) for CsPbI3 offline fallback."""
-    wl = np.linspace(300, 1000, 200)  # nm
-    # Cauchy: n ~= 2.25 + 0.02/lambda^2(um)
+    """Analytical Cauchy n(lambda) + Urbach k(lambda) para CsPbI3 offline fallback."""
+    wl = np.linspace(300, 1000, 200)
+    # Cauchy
     n = 2.25 + 0.02 / (wl * 1e-3) ** 2
-    # Urbach tail: k exponential above Eg=1.59 eV (lambda < 780 nm)
+    # Urbach tail
     E = 1239.84 / wl
     k = np.where(E > 1.59, 0.5 * np.exp((E - 1.59) / 0.1), 0.0)
     return [(float(w), float(ni), float(ki)) for w, ni, ki in zip(wl, n, k)]
 
 
 def _write_oghma_n_csv(path: Path, rows: list[tuple[float, float, float]]) -> None:
-    """Write OghmaNano n.csv: wavelength in meters, refractive index."""
+    """Escribe OghmaNano n.csv."""
     lines = [
         '#oghma_csv {"title":"","type":"xy","y_label":"Wavelength",'
         '"data_label":"Refractive index","y_units":"nm","y_mul":1000000000.0,'
@@ -469,7 +446,7 @@ def _write_oghma_n_csv(path: Path, rows: list[tuple[float, float, float]]) -> No
 
 
 def _write_oghma_alpha_csv(path: Path, rows: list[tuple[float, float, float]]) -> None:
-    """Write OghmaNano alpha.csv: wavelength in meters, absorption in m^-1."""
+    """Escribe OghmaNano alpha.csv."""
     lines = [
         '#oghma_csv {"title":"","type":"xy","y_label":"Wavelength",'
         '"data_label":"Absorption","y_units":"nm","y_mul":1000000000.0,'
@@ -484,7 +461,7 @@ def _write_oghma_alpha_csv(path: Path, rows: list[tuple[float, float, float]]) -
 
 
 def _write_materials_index_json(path: Path) -> None:
-    """Write the local material database index that OghmaNano probes first."""
+    """Escribe local material database index that OghmaNano probes first."""
     template = Path("/usr/share/oghma_data/materials/data.json")
     if template.exists():
         path.write_text(template.read_text())
@@ -536,7 +513,7 @@ def _normalize_contact_shapes(epi: dict[str, Any]) -> None:
 
 
 def _patch_electrical_mesh_y(epi: dict[str, Any], data: dict[str, Any]) -> None:
-    """Match Oghma's 1D drift-diffusion mesh to the active-layer thickness."""
+    """Match Oghma's 1D drift-diffusion mesh active-layer thickness."""
     active_thickness = 0.0
     for key, value in epi.items():
         if key.startswith("segment") and isinstance(value, dict) and value.get("obj_type") == "active":
@@ -557,10 +534,10 @@ def _patch_electrical_mesh_y(epi: dict[str, Any], data: dict[str, Any]) -> None:
             value["len"] = active_thickness
             break
 
-    # Patch the optical mesh to cover the full device stack (active + contacts).
-    # The stock template has opt_len = total_device_height and el_len = active_thickness.
-    # Using auto=True for the optical mesh lets oghma self-compute it; we supply a
-    # hint (total_thickness) so it knows the full extent including the metal contacts.
+    # Patch óptico mesh cover completo dispositivo stack (active + contacts)
+    # stock template has opt_len = total_device_height y el_len = active_thickness
+    # Usa auto=True para óptico mesh lets oghma self-calcula it
+    # hint (total_thickness) so it knows completo extent including metal contacts
     total_thickness = 0.0
     for value in epi.values():
         if isinstance(value, dict) and value.get("obj_type") in {"active", "contact", "other"}:
@@ -582,7 +559,7 @@ def _patch_electrical_mesh_y(epi: dict[str, Any], data: dict[str, Any]) -> None:
 
 
 def _enable_shape_electrical_blocks(data: Any) -> None:
-    """Add v8 electrical-enable flags to legacy template shape blocks."""
+    """Add v8 electrical-enable flags legacy template shape blocks."""
     if isinstance(data, dict):
         shape_electrical = data.get("shape_electrical")
         if isinstance(shape_electrical, dict):
@@ -629,7 +606,7 @@ def _default_contact_dos() -> dict[str, Any]:
 
 
 def _disable_light_source_shapes(data: dict[str, Any]) -> None:
-    """Disable geometric light-source boxes when using constant generation."""
+    """Disable geometric light-fuente boxes when usa constant generación."""
     lights = (
         data.get("optical", {})
         .get("light_sources", {})
@@ -643,7 +620,7 @@ def _disable_light_source_shapes(data: dict[str, Any]) -> None:
 
 
 def _write_mat_json(path: Path, bandgap_eV: float, eps_r: float) -> None:
-    """Write OghmaNano material metadata file."""
+    """Escribe OghmaNano material metadata archivo."""
     mat = {
         "item_type": "material",
         "color_r": 0.72,
@@ -667,24 +644,17 @@ def _write_mat_json(path: Path, bandgap_eV: float, eps_r: float) -> None:
 
 
 def _mobility_from_mass(m_star: float) -> float:
-    """Convert effective mass (m*/m₀) to approximate mobility [m²/Vs].
-
-    Uses μ = eτ/m* with τ≈10 fs (acoustic phonon scattering limit for halide perovskites).
-    Returns in m²/Vs; OghmaNano uses SI units.
-    """
-    e = 1.602e-19    # C
-    tau = 1e-14      # s  (10 fs acoustic phonon)
-    m0 = 9.109e-31   # kg
+    """Convert effective mass (m*/m₀) approximate mobility [m²/Vs]."""
+    e = 1.602e-19
+    tau = 1e-14      # s (10 fs acoustic fonón)
+    m0 = 9.109e-31
     mu = e * tau / (m_star * m0)   # m²/Vs
-    # Clamp to physically reasonable range (0.1 – 100 cm²/Vs = 1e-5 – 1e-2 m²/Vs)
+    # Clamp physically reasonable range (0.1 - 100 cm²/Vs = 1e-5 - 1e-2 m²/Vs)
     return float(max(1e-5, min(1e-2, mu)))
 
 
 def _wine_env() -> dict[str, str]:
-    """Return env vars needed for wine64 run.
-
-    DISPLAY is intentionally not set here; xvfb-run owns it.
-    """
+    """Devuelve env vars needed para wine64 ejecuta."""
     return {
         "WINEPREFIX":  str(Path.home() / ".wine64"),
         "WINEARCH":    "win64",
@@ -693,11 +663,7 @@ def _wine_env() -> dict[str, str]:
 
 
 def build_oghma_worker_command(runner: str, config: dict[str, Any] | None = None) -> list[str]:
-    """Build the OghmaNano worker-mode command.
-
-    OghmaNano without arguments starts server mode. Worker mode requires a
-    simulation root, ``--simmode`` and ``--lockfile``.
-    """
+    """Construye OghmaNano worker-mode command."""
     cfg = config or {}
     simmode = str(cfg.get("simmode", "segment0@jv"))
     lockfile = str(cfg.get("lockfile", r"S:\lock0.dat"))
@@ -734,7 +700,7 @@ def ensure_oghma_local_links(
     *,
     materials_overlay: str | Path | None = None,
 ) -> Path:
-    """Create OghmaNano data-directory symlinks expected by the Wine core."""
+    """Crea symlinks datos para Wine."""
     root = Path(root) if root is not None else Path.home() / "oghma_local"
     root.mkdir(parents=True, exist_ok=True)
 
@@ -752,7 +718,7 @@ def ensure_oghma_local_links(
 
 
 def _ensure_materials_overlay(dest: Path, overlay: str | Path | None = None) -> None:
-    """Expose system materials plus workflow-generated materials in oghma_local."""
+    """Nota técnica."""
     system_materials = Path("/usr/share/oghma_data/materials")
     if dest.is_symlink():
         dest.unlink()
@@ -772,7 +738,7 @@ def _ensure_materials_overlay(dest: Path, overlay: str | Path | None = None) -> 
 
 
 def ensure_wine_drive_links(sim_dir: str | Path, wineprefix: str | Path | None = None) -> None:
-    """Map Wine S: to the active simulation dir and O: to Oghma core."""
+    """Map Wine S."""
     wineprefix = Path(wineprefix) if wineprefix is not None else Path.home() / ".wine64"
     dosdevices = wineprefix / "dosdevices"
     dosdevices.mkdir(parents=True, exist_ok=True)
@@ -796,7 +762,7 @@ def _apply_fast_oghma_settings(
     ion_density: float,
     generation_model: str | None,
 ) -> None:
-    """Reduce runtime for smoke tests by simplifying JV and ion settings."""
+    """Reduce runtime para smoke tests by simplifying JV y ion settings."""
     if isinstance(data, dict):
         for key, value in list(data.items()):
             key_lower = str(key).lower()
@@ -828,7 +794,7 @@ def _apply_fast_oghma_settings(
 
 
 def _ensure_oghma_runtime_defaults(data: dict[str, Any], *, newton_name: str | None = None) -> None:
-    """Fill keys older OghmaNano templates omit but the v8 worker requires."""
+    """Fill keys older OghmaNano templates omit but v8 worker requiere."""
     math = data.setdefault("math", {})
     if newton_name:
         math["newton_name"] = str(newton_name)
@@ -857,7 +823,7 @@ def _ensure_oghma_runtime_defaults(data: dict[str, Any], *, newton_name: str | N
 
 
 def _extract_oghma_error(text: str) -> str | None:
-    """Extract the last OghmaNano ``error:`` line from text/html logs."""
+    """Extrae último error OghmaNano."""
     plain = re.sub(r"<[^>]+>", "", text).replace("&nbsp;", " ")
     matches = re.findall(r"error:[^\n\r<]+", plain, flags=re.IGNORECASE)
     if not matches:
@@ -868,21 +834,17 @@ def _extract_oghma_error(text: str) -> str | None:
     return error[:240]
 
 
-# ── result parser ─────────────────────────────────────────────────────────────
+# ── resultado parser ─────────────────────────────────────────────────────────────
 
 def parse_oghma_sim_info(path: str | Path) -> dict[str, float] | None:
-    """Parse OghmaNano ``sim_info.dat``.
-
-    OghmaNano writes sim_info.dat as JSON with keys ``pce``, ``ff``, ``voc``,
-    ``jsc`` (dimensionless / SI).  We normalise keys and units here.
-    """
+    """Parsea OghmaNano ``sim_info.dat``."""
     path = Path(path)
     if not path.exists():
         return None
     try:
         data = json.loads(path.read_text())
     except json.JSONDecodeError:
-        # Try key=value line format (older OghmaNano versions)
+        # Try key=value línea format (older OghmaNano versions)
         data = {}
         for line in path.read_text().splitlines():
             if "=" in line:
@@ -892,16 +854,16 @@ def parse_oghma_sim_info(path: str | Path) -> dict[str, float] | None:
                 except ValueError:
                     pass
 
-    # Normalise keys to our naming convention
+    # Normalise keys our naming convention
     pce = _float_or_none(data.get("pce") or data.get("pce_pct") or data.get("PCE"))
     voc = _float_or_none(data.get("voc") or data.get("Voc") or data.get("voc_V"))
     jsc = _float_or_none(data.get("jsc") or data.get("Jsc") or data.get("jsc_mA_cm2"))
     ff  = _float_or_none(data.get("ff")  or data.get("FF"))
 
-    # OghmaNano reports PCE as 0–1 fraction; convert to percent if needed
+    # OghmaNano reportes PCE as 0-1 fraction
     if pce is not None and pce <= 1.0:
         pce *= 100.0
-    # jsc in A/m² → mA/cm² (×0.1)
+    # jsc en A/m² → mA/cm² (×0.1)
     if jsc is not None and jsc > 100:
         jsc *= 0.1
 
@@ -910,7 +872,7 @@ def parse_oghma_sim_info(path: str | Path) -> dict[str, float] | None:
     return {"pce_pct": pce, "voc_V": voc, "jsc_mA_cm2": jsc, "ff": ff}
 
 
-# ── device stack builder ──────────────────────────────────────────────────────
+# ── dispositivo stack builder ──────────────────────────────────────────────────────
 
 def build_device_stack_from_dft(
     phase_dir: str | Path,
@@ -918,7 +880,7 @@ def build_device_stack_from_dft(
     phase: str,
     config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a simple perovskite device stack from completed DFT outputs."""
+    """Construye stack dispositivo perovskita desde salidas DFT completas."""
     phase_dir = Path(phase_dir)
     cfg = config or {}
     score = _read_json(phase_dir / "12_score" / "solar_score.json")
@@ -983,14 +945,14 @@ def build_device_stack_from_dft(
     }
 
 
-# ── HTML comparison report ────────────────────────────────────────────────────
+# ── Reporte HTML comparativo ───────────────────────────────────────────────────
 
 def write_oghma_method_comparison(
     step_dir: str | Path,
     stack: dict[str, Any],
     oghma_result: OghmaDeviceResult,
 ) -> Path:
-    """Write an HTML comparison of DFT SQ, OghmaNano DD, and ML placeholders."""
+    """Escribe HTML comparativo DFT SQ, OghmaNano DD y marcadores ML."""
     step_dir = Path(step_dir)
     sq_ref = stack.get("dft_inputs", {}).get("sq_limit_reference", {})
     records = [
@@ -1087,7 +1049,7 @@ def _fmt(value: float | None, suffix: str) -> str:
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def resolve_oghma_runner(explicit: str | None = None) -> str | None:
-    """Resolve the oghma_core runner path."""
+    """Resolve oghma_core runner ruta."""
     candidates = [
         explicit,
         os.environ.get("OGHMA_EXECUTABLE"),

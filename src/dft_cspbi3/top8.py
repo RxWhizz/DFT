@@ -1,9 +1,4 @@
-"""Utilities for the PBE comparison set requested in DFT_CONTEXT_TOP8.md.
-
-The goal of this module is deliberately modest: prepare reproducible PBE
-starting structures, write the ML/DFT comparison CSV schema, and collect DFT
-outputs that already exist.  It does not invent missing DFT values.
-"""
+"""Utilidades para conjunto comparativo PBE de DFT_CONTEXT_TOP8.md."""
 
 from __future__ import annotations
 
@@ -71,7 +66,7 @@ COMPARISON_COLUMNS = [
 
 @dataclass(frozen=True)
 class Top8Candidate:
-    """One ML candidate plus enough chemistry to build a PBE starting cell."""
+    """Candidato ML + quimica minima para celda PBE inicial."""
 
     rank_ml: int
     formula: str
@@ -100,7 +95,7 @@ class Top8Candidate:
             return 5
         if self.a_site in {"MA", "FA"}:
             return 12
-        raise ValueError(f"Unsupported A-site species: {self.a_site}")
+        raise ValueError(f"Especie sitio A no soportada: {self.a_site}")
 
 
 TOP8_CANDIDATES = [
@@ -136,11 +131,11 @@ def candidate_by_formula(formula: str) -> Top8Candidate:
     for candidate in TOP8_CANDIDATES:
         if candidate.formula == formula:
             return candidate
-    raise KeyError(f"Unknown Top 8 formula: {formula}")
+    raise KeyError(f"Formula Top 8 desconocida: {formula}")
 
 
 def build_initial_structure(candidate: Top8Candidate) -> Atoms:
-    """Build a cubic ABX3 PBE starting structure for a Top 8 candidate."""
+    """Construye estructura cubica ABX3 PBE inicial."""
     if candidate.a_site == "Cs":
         atoms = StructureBuilder.build_perovskite_cubic(
             candidate.a_site,
@@ -153,13 +148,13 @@ def build_initial_structure(candidate: Top8Candidate) -> Atoms:
     elif candidate.a_site == "FA":
         atoms = _build_fa_perovskite(candidate.b_site, candidate.x_site, candidate.initial_a0_ang)
     else:
-        raise ValueError(f"Unsupported A-site species: {candidate.a_site}")
+        raise ValueError(f"Especie sitio A no soportada: {candidate.a_site}")
 
     atoms.info.update(
         {
             "phase": candidate.material_id,
             "formula": candidate.formula,
-            "space_group": "Pm-3m starting lattice; molecular A-site lowers symmetry",
+            "space_group": "red inicial Pm-3m; sitio A molecular baja simetria",
             "space_group_number": 221,
             "functional_level": "PBE",
             "structure_status": "cubic_initial_guess",
@@ -173,7 +168,7 @@ def generate_top8_structures(
     output_dir: str | Path = "structures/top8",
     overwrite: bool = False,
 ) -> dict[str, Path]:
-    """Write JSON and CIF starting structures for every Top 8 material."""
+    """Escribe JSON y CIF iniciales para cada material Top 8."""
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
@@ -184,9 +179,43 @@ def generate_top8_structures(
         if overwrite or not json_path.exists():
             StructureBuilder.save_json(atoms, json_path)
         if overwrite or not cif_path.exists():
-            write(str(cif_path), atoms)
+            _write_cif_safe(cif_path, atoms)
         written[candidate.material_id] = json_path
     return written
+
+
+def _write_cif_safe(path: Path, atoms: Atoms) -> None:
+    """Escribe CIF; fallback minimo si ASE no trae plugin."""
+    try:
+        write(str(path), atoms)
+        return
+    except Exception:
+        pass
+
+    lengths = atoms.cell.lengths()
+    angles = atoms.cell.angles()
+    scaled = atoms.get_scaled_positions()
+    lines = [
+        f"data_{atoms.info.get('formula', atoms.get_chemical_formula())}",
+        "_symmetry_space_group_name_H-M   'P 1'",
+        f"_cell_length_a   {lengths[0]:.8f}",
+        f"_cell_length_b   {lengths[1]:.8f}",
+        f"_cell_length_c   {lengths[2]:.8f}",
+        f"_cell_angle_alpha   {angles[0]:.8f}",
+        f"_cell_angle_beta    {angles[1]:.8f}",
+        f"_cell_angle_gamma   {angles[2]:.8f}",
+        "loop_",
+        "_atom_site_label",
+        "_atom_site_type_symbol",
+        "_atom_site_fract_x",
+        "_atom_site_fract_y",
+        "_atom_site_fract_z",
+    ]
+    counts: dict[str, int] = {}
+    for sym, pos in zip(atoms.get_chemical_symbols(), scaled):
+        counts[sym] = counts.get(sym, 0) + 1
+        lines.append(f"{sym}{counts[sym]} {sym} {pos[0]:.8f} {pos[1]:.8f} {pos[2]:.8f}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_comparison_csv(
@@ -194,7 +223,7 @@ def write_comparison_csv(
     work_dir: str | Path = "calculations/top8_pbe",
     existing_cspbi3_dir: str | Path = "calculations/alpha",
 ) -> Path:
-    """Collect available PBE results and write the Top 8 comparison CSV."""
+    """Recolecta resultados PBE disponibles y escribe CSV Top 8."""
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     rows = [
@@ -215,7 +244,7 @@ def prepare_top8_pbe_workspace(
     run_script: str | Path | None = None,
     overwrite_structures: bool = False,
 ) -> dict[str, Path]:
-    """Prepare structures, empty comparison CSV, and a PBE run script."""
+    """Nota técnica."""
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
     structures = generate_top8_structures(structures_dir, overwrite=overwrite_structures)
@@ -241,7 +270,7 @@ def write_run_script(
     config_path: str | Path = "configs/default_params.yaml",
     composition_config: str | Path = "configs/top8_pbe.yaml",
 ) -> Path:
-    """Write a shell script that runs the PBE workflow for every candidate."""
+    """Nota técnica."""
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     phases = " ".join(candidate.material_id for candidate in TOP8_CANDIDATES)

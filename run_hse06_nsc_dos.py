@@ -1,11 +1,4 @@
-"""
-Compute HSE06-corrected DOS via non_self_consistent_eigenvalues on a 12x12x12 k-mesh.
-
-Steps:
-  1. Re-diagonalize PBE on 12x12x12 from scf.gpw with symmetry, write dos_wfs_sym.gpw with mode='all'
-  2. Run non_self_consistent_eigenvalues (HSE06) on dos_wfs_sym.gpw
-  3. Compute and save HSE06-corrected DOS arrays
-"""
+"""Calcula DOS HSE06 corregida en malla 12x12x12."""
 
 import sys
 import time
@@ -70,7 +63,7 @@ def _existing_nsc_is_usable() -> bool:
     return True
 
 
-# ── Step 1: PBE non-SCF on 12x12x12 with symmetry-reduced wavefunctions ───────
+# ── Step 1
 if DOS_WFS_GPW.exists():
     print(f"[KEEP] Existing full-mesh DOS checkpoint left untouched: {DOS_WFS_GPW}")
 
@@ -101,7 +94,7 @@ else:
     print(f"Saved {NSC_WFS_GPW}  ({NSC_WFS_GPW.stat().st_size / 1e9:.2f} GB)")
     print(f"Step 1 elapsed: {(time.time()-t0)/60:.1f} min")
 
-# ── Step 2: non_self_consistent_eigenvalues (HSE06) ──────────────────────────
+# ── Step 2
 if not regenerated_wfs and _existing_nsc_is_usable():
     print(f"[SKIP] {NSC_EIG_PATH} already exists with symmetry-reduced k-points")
 else:
@@ -138,20 +131,20 @@ else:
     print(f"Saved {NSC_EIG_PATH}  shape={eig_hse.shape}")
     print(f"Step 2 elapsed: {(time.time()-t0)/60:.1f} min")
 
-# ── Step 3: Compute HSE06-corrected DOS ─────────────────────────────────────
+# ── Step 3
 print("=" * 60)
 print("Step 3: Computing HSE06-corrected DOS")
 print("=" * 60)
 
 from gpaw import GPAW
-eig_hse = np.load(str(NSC_EIG_PATH))   # shape (n_spin, n_kpts_irr, n_bands)
+eig_hse = np.load(str(NSC_EIG_PATH))
 
 calc = GPAW(str(NSC_WFS_GPW), txt=None)
 _validate_ibz(calc, "HSE06 DOS postprocess mesh")
 
 # k-point weights (irreducible BZ)
 kd = calc.wfs.kd
-weights = np.array([kd.weight_k[k] for k in range(kd.nibzkpts)])  # sum = 1
+weights = np.array([kd.weight_k[k] for k in range(kd.nibzkpts)])  # suma = 1
 
 n_spin, n_kpts, n_bands = eig_hse.shape
 if len(weights) != n_kpts:

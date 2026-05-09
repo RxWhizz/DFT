@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-"""
-gpaw_monitor.py — Universal GPAW monitor via /proc/PID/fd.
-
-Reads directly from the process file descriptors, bypassing any OS/editor
-file cache. Maintains its own append-only log so no data is lost even if
-GPAW resets/truncates its own txt file.
-
-Usage:
-    python scripts/gpaw_monitor.py [--pid PID] [--dir CALC_DIR] [--interval N]
-
-    # Monitor current HSE06 run (auto-detects PID):
-    python scripts/gpaw_monitor.py
-
-    # Monitor specific PID:
-    python scripts/gpaw_monitor.py --pid 299971
-"""
+"""Monitor GPAW vía /proc/PID/fd."""
 from __future__ import annotations
 
 import argparse
@@ -41,7 +26,7 @@ def ts() -> str:
 
 
 def find_gpaw_pids() -> list[int]:
-    """Return PIDs of running GPAW/python processes in this repo."""
+    """Devuelve PIDs GPAW/python del repo."""
     try:
         out = subprocess.check_output(
             ["pgrep", "-f", "main.py.*run"], text=True, stderr=subprocess.DEVNULL
@@ -52,7 +37,7 @@ def find_gpaw_pids() -> list[int]:
 
 
 def proc_fd_files(pid: int) -> dict[int, str]:
-    """Return {fd: real_path} for all regular file FDs the process has open."""
+    """Devuelve {fd."""
     fd_dir = Path(f"/proc/{pid}/fd")
     result = {}
     if not fd_dir.exists():
@@ -70,11 +55,7 @@ def proc_fd_files(pid: int) -> dict[int, str]:
 
 
 def read_fd(pid: int, fd: int) -> str | None:
-    """Read entire content of an open fd via /proc/PID/fd/N.
-
-    This reads what the process has written to the file descriptor directly,
-    bypassing any editor or OS page-cache staleness.
-    """
+    """Read entire content open fd via /proc/PID/fd/N."""
     fd_path = f"/proc/{pid}/fd/{fd}"
     try:
         with open(fd_path, "rb") as f:
@@ -88,13 +69,13 @@ def proc_status(pid: int) -> dict:
         stat = Path(f"/proc/{pid}/stat").read_text().split()
         status_lines = Path(f"/proc/{pid}/status").read_text().splitlines()
         rss = next((int(l.split()[1]) for l in status_lines if l.startswith("VmRSS")), 0)
-        cpu = int(stat[13]) + int(stat[14])   # utime + stime (ticks)
+        cpu = int(stat[13]) + int(stat[14])
         return {"state": stat[2], "rss_mb": rss // 1024, "cpu_ticks": cpu}
     except Exception:
         return {}
 
 
-# ── Per-file tracker ─────────────────────────────────────────────────────────
+# ── Per-archivo tracker ─────────────────────────────────────────────────────────
 
 class FileTracker:
     def __init__(self, path: str, fd: int, pid: int):
@@ -109,13 +90,13 @@ class FileTracker:
         self.completed     = False
 
     def refresh(self, log):
-        """Read via /proc/PID/fd and diff against last seen content."""
+        """Read via /proc/PID/fd y diff against last seen content."""
         content = read_fd(self.pid, self.fd)
         if content is None:
             log(f"[{ts()}] WARN  {self.name}: fd/{self.fd} unreadable")
             return
 
-        # ── Detect reset (content shrank — GPAW truncated its file) ──────────
+        # ── Detect reset (content shrank - GPAW truncated its archivo) ──────────
         if len(content) < len(self.last_content) - 256 and self.last_content:
             self.reset_count += 1
             log(
@@ -123,25 +104,25 @@ class FileTracker:
                 f"({len(self.last_content)}→{len(content)} bytes). "
                 f"Reset #{self.reset_count}. Replaying new content↓"
             )
-            self.last_content = ""   # force full reprint of new content
+            self.last_content = ""
 
-        # ── New content since last check ──────────────────────────────────────
+        # ── New content since last revisa ──────────────────────────────────────
         new_part = content[len(self.last_content):]
 
         if new_part.strip():
-            # Log every new iter line
+            # Log cada new iter línea
             for m in _ITER_RE.finditer(new_part):
                 n    = int(m.group(1))
                 t    = m.group(2)
                 rest = m.group(3).strip()
                 parts = rest.split()
-                # GPAW HSE06: first number is energy only if it's << -10 eV.
-                # Early iters (no EXX convergence yet) print log10-change first.
+                # GPAW HSE06
+                # Early iters (no EXX convergencia yet) print log10-change first
                 energy = None
                 if parts:
                     try:
                         v = float(parts[0])
-                        if v < -10.0:   # plausible DFT total energy
+                        if v < -10.0:   # plausible DFT total energía
                             energy = v
                     except ValueError:
                         pass
@@ -164,7 +145,7 @@ class FileTracker:
             if _ERROR_RE.search(new_part):
                 log(f"[{ts()}] ERROR {self.name}: error detected:\n{new_part[:400]}")
         else:
-            # No new text — just report we're alive
+            # No new text - just reporte we're alive
             log(
                 f"[{ts()}] POLL  {self.name}: "
                 f"no new output since last check  "
@@ -208,13 +189,13 @@ def main():
     log(f"  PID={pid}   interval={args.interval}s   log={log_path}")
     log(f"{'='*70}")
 
-    # Discover output files this process has open
+    # Discover salida archivos this process has open
     trackers: dict[int, FileTracker] = {}
 
     def refresh_fds():
         fds = proc_fd_files(pid)
         for fd, path in fds.items():
-            # Only track txt/log files (GPAW output)
+            # Only track txt/log archivos (GPAW salida)
             if path.endswith((".txt", ".log")) and fd not in trackers:
                 log(f"[{ts()}] TRACK fd/{fd} → {path}")
                 trackers[fd] = FileTracker(path, fd, pid)
@@ -223,7 +204,7 @@ def main():
     prev_ticks = 0
 
     while not _stop[0]:
-        # ── Check process is alive ────────────────────────────────────────────
+        # ── Revisa process alive ────────────────────────────────────────────
         st = proc_status(pid)
         if not st:
             log(f"[{ts()}] DEAD  PID {pid} is gone!")
@@ -243,7 +224,7 @@ def main():
         for tracker in list(trackers.values()):
             tracker.refresh(log)
 
-        # ── Check for new fds opened since last time ──────────────────────────
+        # ── Revisa para new fds opened since last time ──────────────────────────
         refresh_fds()
 
         time.sleep(args.interval)
