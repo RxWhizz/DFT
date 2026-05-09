@@ -137,6 +137,71 @@ python scripts/apply_scissor.py \
     --phase alpha --report
 ```
 
+## Top 8 ML vs DFT en PBE
+
+El archivo `DFT_CONTEXT_TOP8.md` se implementa como una base comparativa PBE
+para los 8 candidatos ML. El preparador genera estructuras iniciales cubicas,
+un CSV con el esquema ML/DFT y un runner que no incluye HSE06.
+
+```bash
+# preparar estructuras, CSV y runner
+.venv/bin/python scripts/setup_top8_pbe.py --overwrite-structures
+
+# validar el flujo sin ejecutar GPAW pesado
+DRY_RUN=1 calculations/top8_pbe/run_top8_pbe.sh
+
+# ejecutar PBE para los 8 candidatos
+calculations/top8_pbe/run_top8_pbe.sh
+
+# ejecutar todo automatico: DFT PBE por material y luego AI
+scripts/run_top8_auto.sh
+
+# inicializar/supervisar en segundo plano con MPI_N=7 por defecto
+scripts/supervise_top8_auto.sh start
+scripts/supervise_top8_auto.sh status
+scripts/supervise_top8_auto.sh phase-log
+scripts/supervise_top8_auto.sh calc-log
+
+# refrescar la tabla despues de corridas parciales o completas
+.venv/bin/python scripts/setup_top8_pbe.py --collect-only
+```
+
+Por defecto el runner usa:
+`relax,scf,bands,dos,soc,effective_masses,score`.
+SOC es perturbativo sobre PBE y se usa para masas efectivas cuando existe el
+archivo fino de bandas. La tabla se escribe en
+`calculations/top8_pbe/top8_pbe_comparison.csv`.
+Cuando `score` esta incluido y `MPI_N>1`, el runner separa automaticamente la
+corrida: los pasos DFT pesados usan MPI y `score` se ejecuta serial por defecto
+(`SCORE_MPI_N=1`) para evitar escrituras JSON concurrentes.
+
+El runner automatico acepta variables de entorno utiles:
+
+```bash
+# prueba sin calculos pesados
+DRY_RUN=1 scripts/run_top8_auto.sh
+
+# correr en MPI y continuar aunque un material falle
+MPI_N=7 STOP_ON_ERROR=0 scripts/run_top8_auto.sh
+
+# correr en segundo plano con systemd --user y MPI
+MPI_N=7 STOP_ON_ERROR=0 scripts/supervise_top8_auto.sh start
+
+# reintentar solo score sin MPI
+MPI_N=1 RUN_AI=0 DFT_STEPS=score PHASES="MAPbI3 MASnI3" scripts/run_top8_auto.sh
+
+# solo DFT, solo una formula
+RUN_AI=0 PHASES="CsSnI3" scripts/run_top8_auto.sh
+
+# solo refrescar/ejecutar AI contra el CSV DFT existente
+RUN_DFT=0 RUN_AI=1 scripts/run_top8_auto.sh
+```
+
+Los logs quedan en `calculations/top8_pbe/logs/` y el resumen de ejecucion en
+`calculations/top8_pbe/top8_auto_status.csv`.
+El supervisor guarda el unit activo en `calculations/top8_pbe/top8_auto.unit`;
+para detenerlo usa `scripts/supervise_top8_auto.sh stop`.
+
 ### Paso opcional: OghmaNano device physics
 
 OghmaNano no es ML; es un simulador físico de dispositivo

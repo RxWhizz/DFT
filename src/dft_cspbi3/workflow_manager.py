@@ -191,7 +191,7 @@ class DFTWorkflow:
             logger.info("relax.gpw exists, skipping relaxation")
             return
 
-        atoms = StructureBuilder.load_phase(self.phase)
+        atoms = self._load_initial_structure()
         calc = self.factory.create("relax", txt=str(step_dir / "relax.txt"))
         atoms.calc = calc
 
@@ -208,6 +208,16 @@ class DFTWorkflow:
         opt.run(fmax=self.factory.config["relax"]["convergence"]["forces"])
         calc.write(str(gpw_out))
         write(str(step_dir / "relaxed.cif"), atoms)
+
+    def _load_initial_structure(self):
+        """Load the starting structure for built-in or generic phases."""
+        structures_dir = self.factory.config.get("structures_dir")
+        try:
+            return StructureBuilder.load_phase_generic(self.phase, structures_dir=structures_dir)
+        except FileNotFoundError:
+            if self.phase in {"alpha", "beta", "gamma", "delta"}:
+                return StructureBuilder.load_phase(self.phase)
+            raise
 
     def _run_scf(self, step_dir: Path) -> None:
         gpw_out = step_dir / "scf.gpw"
@@ -1208,6 +1218,10 @@ class DFTWorkflow:
         import json
         from .analysis.scoring import compute_solar_score, exciton_binding_energy
         from .analysis.optical import load_optical_result
+
+        if self.dry_run:
+            logger.info("Dry run: would collect analysis outputs and compute solar score")
+            return
 
         out_json = step_dir / "solar_score.json"
         if out_json.exists():

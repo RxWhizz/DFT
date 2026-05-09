@@ -1,0 +1,76 @@
+# PBE-only setup for DFT_CONTEXT_TOP8.md.
+#
+# Use as a composition-config overlay:
+#   python main.py run --phase MAPbI3 \
+#     --config configs/default_params.yaml \
+#     --composition-config configs/top8_pbe.yaml \
+#     --workdir calculations/top8_pbe \
+#     --steps relax,scf,bands,dos,soc,effective_masses,score
+
+structures_dir: structures/top8
+
+top8:
+  functional_level: PBE
+  default_steps: [relax, scf, bands, dos, soc, effective_masses, score]
+  notes:
+    - "No HSE06 steps are included in the default Top 8 run."
+    - "SOC is perturbative on PBE and is used for effective masses when available."
+    - "Formation energies for MA/FA systems require an explicitly documented reference scheme before comparison."
+  candidates:
+    - {rank_ml: 1, formula: MAPbI3, A: MA, B: Pb, X: I,  ml_bandgap: 1.5, goldschmidt_tolerance: 0.9115, ml_score: 1.9885}
+    - {rank_ml: 2, formula: MASnI3, A: MA, B: Sn, X: I,  ml_bandgap: 1.3, goldschmidt_tolerance: 0.9142, ml_score: 1.9858}
+    - {rank_ml: 3, formula: FAPbI3, A: FA, B: Pb, X: I,  ml_bandgap: 1.5, goldschmidt_tolerance: 0.9866, ml_score: 1.9134}
+    - {rank_ml: 4, formula: FASnI3, A: FA, B: Sn, X: I,  ml_bandgap: 1.3, goldschmidt_tolerance: 0.9895, ml_score: 1.9105}
+    - {rank_ml: 5, formula: CsSnI3, A: Cs, B: Sn, X: I,  ml_bandgap: 1.3, goldschmidt_tolerance: 0.8096, ml_score: 1.9096}
+    - {rank_ml: 6, formula: CsPbI3, A: Cs, B: Pb, X: I,  ml_bandgap: 1.5, goldschmidt_tolerance: 0.8072, ml_score: 1.9072}
+    - {rank_ml: 7, formula: FAPbBr3, A: FA, B: Pb, X: Br, ml_bandgap: 1.8, goldschmidt_tolerance: 1.0079, ml_score: 1.8921}
+    - {rank_ml: 8, formula: FASnBr3, A: FA, B: Sn, X: Br, ml_bandgap: 1.6, goldschmidt_tolerance: 1.0111, ml_score: 1.8889}
+
+relax:
+  xc: PBE
+  mode: PW
+  ecut: 450
+  kpts: [4, 4, 4]
+  convergence:
+    energy: 1.0e-6
+    forces: 0.02
+  mixer:
+    type: Mixer
+    beta: 0.05
+  maxiter: 333
+  symmetry: off
+
+scf:
+  xc: PBE
+  mode: PW
+  ecut: 450
+  kpts: [4, 4, 4]
+  convergence:
+    energy: 1.0e-8
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+
+bands:
+  kpts_path: "GXMG"
+  npoints: 60
+  convergence:
+    bands: -12
+
+dos:
+  kpts: [8, 8, 8]
+  npts: 2000
+  width: 0.05
+
+soc:
+  mode: perturbative
+  theta: 0
+  phi: 0
+
+optical:
+  omega_max_eV: 6.0
+  d_omega_eV: 0.025
+  eta_eV: 0.1
+  onset_threshold_cm1: 1.0e4
+  scissor_eV: null
+  alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]

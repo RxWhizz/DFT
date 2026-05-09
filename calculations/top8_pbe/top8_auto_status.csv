@@ -1,0 +1,16 @@
+timestamp,phase,status,exit_code,log_file
+2026-05-09T03:56:21-07:00,MAPbI3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_MAPbI3_20260509_025945.log
+2026-05-09T04:52:23-07:00,MASnI3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_MASnI3_20260509_035623.log
+2026-05-09T06:14:53-07:00,FAPbI3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FAPbI3_20260509_045225.log
+2026-05-09T07:28:30-07:00,FASnI3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FASnI3_20260509_061454.log
+2026-05-09T07:37:07-07:00,CsSnI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_CsSnI3_20260509_072831.log
+2026-05-09T07:46:04-07:00,CsPbI3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_CsPbI3_20260509_073709.log
+2026-05-09T08:45:23-07:00,FAPbBr3,dft_failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FAPbBr3_20260509_074605.log
+2026-05-09T09:42:20-07:00,FASnBr3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FASnBr3_20260509_084525.log
+2026-05-09T09:45:03-07:00,AI_TOP8,ai_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/ai_top8_20260509_094222.log
+2026-05-09T11:56:37-07:00,MAPbI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_MAPbI3_20260509_115634.log
+2026-05-09T11:56:41-07:00,MASnI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_MASnI3_20260509_115638.log
+2026-05-09T11:56:45-07:00,FAPbI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FAPbI3_20260509_115642.log
+2026-05-09T11:56:48-07:00,FASnI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FASnI3_20260509_115646.log
+2026-05-09T11:56:52-07:00,CsPbI3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_CsPbI3_20260509_115650.log
+2026-05-09T11:56:56-07:00,FAPbBr3,dft_done,0,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/logs/dft_FAPbBr3_20260509_115654.log
