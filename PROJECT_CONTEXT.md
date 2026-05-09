@@ -5,6 +5,47 @@
 
 ---
 
+## OghmaNano / photovoltaic handoff update - 2026-05-09
+
+The photovoltaic/OghmaNano work now lives under `generador fv/` with a
+dedicated Windows venv at `generador fv/.venv`.
+
+Current status:
+- OghmaNano runs natively on Windows with `oghma_core.exe` in worker mode.
+- The alpha device step has completed once and produced `sim_info.dat`, `jv.csv`,
+  optical output, snapshots, plots, and `debug_outputs/DEBUG_REPORT.md`.
+- Current parsed metrics after the `.npy` optical rerun with Urbach tail plus
+  fine JV sweep: PCE = 13.90685 %, Voc = 0.8953726 V,
+  Jsc = -21.9942765 mA/cm2, FF = 0.7061798.
+- Current JV settings: Vstart = 0.0 V, Vstop = 1.2 V, Vstep = 0.01 V,
+  electrical y mesh = 120 points, optical y mesh = 300 points.
+- Current solver iteration caps: maxelectricalitt = 500,
+  maxelectricalitt_ramp = 500, max_newton_iterations = 500.
+- Jsc from Oghma is treated as A/m2 and converted defensively to mA/cm2.
+- Signed PV power is plotted as `P = -V*J` without clipping by current sign;
+  it is positive in the photovoltaic quadrant, crosses zero at Voc, and becomes
+  negative under forward injection after Voc. The current `jv.csv` has one
+  positive power maximum at ~0.68629 V and no secondary positive peak.
+- Geometry sanity now passes: `device_stack.json` matches the Oghma template
+  stack at 1050 nm total thickness, absorber 250-750 nm, and the generation
+  peak is inside the absorber.
+- Oghma `sim/snapshots/` are JV-bias snapshots, not time transients; plots and
+  reports should treat their x-axis as snapshot/bias index.
+- The required optical `.npy` files now exist in `calculations/alpha/11_optical/`.
+  They were generated from the completed RPA `dielectric_function.csv`, deriving
+  n/k from sqrt(epsilon), alpha from `4*pi*k/lambda`, and applying a smooth
+  Urbach sub-gap tail below Eg = 1.5858 eV with Eu = 25 meV before exporting
+  device arrays. The hard sub-gap alpha=0 cutoff is no longer used.
+
+Key files for this branch of work:
+- `generador fv/src/dft_cspbi3/analysis/oghma_device.py`
+- `generador fv/scripts/debug_oghma_outputs.py`
+- `generador fv/tests/test_oghma_device.py`
+- `generador fv/calculations/alpha/14_oghma_device/debug_outputs/DEBUG_REPORT.md`
+- `generador fv/OGHMA_DEBUG_CONTEXT.md`
+
+---
+
 ## Environment
 
 ```

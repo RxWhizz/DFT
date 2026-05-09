@@ -1,0 +1,22 @@
+{
+  "status": "completed",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "pce_pct": 19.86884,
+  "voc_V": 0.9244815,
+  "jsc_mA_cm2": -30.900733319801983,
+  "ff": 0.6955134,
+  "runner": "C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe",
+  "manifest_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\oghma_manifest.json",
+  "stack_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\device_stack.json",
+  "sim_dir": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\sim",
+  "comparison_report_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\method_comparison.html",
+  "flags": [
+    "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
+    "OGHMA_PROJECT_WRITTEN",
+    "WARNING_JSC_SIM_INFO_INTERPRETED_AS_A_M2_AND_CONVERTED_TO_MA_CM2",
+    "WARNING_DFT_OPTICAL_NPY_FILES_MISSING_USED_DIELECTRIC_CSV",
+    "WARNING_GENERATION_DEPTH_EXCLUDES_HTL_BACK_CONTACT_OR_USES_ACTIVE_OPTICAL_SUBREGION",
+    "WARNING_GENERATION_PEAK_OUTSIDE_ABSORBER",
+    "OGHMANANO_WORKER_CMD:C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe --sim-root-path C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\sim --gui --html --simmode segment0@jv --lockfile C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_fresh_check\\sim\\lock0.dat"
+  ]
+}

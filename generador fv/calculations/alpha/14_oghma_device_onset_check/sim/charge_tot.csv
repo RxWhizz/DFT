@@ -1,0 +1,15 @@
+#oghma_csv {"title":"Total charge density - Applied voltage","type":"xy","y_label":"Applied Voltage","data_label":"Total charge density","y_units":"Volts","rgb":"0000ff","data_units":"m^{-3}","x_len":-1,"y_len":12,"z_len":-1,"cols":"yd"}*
+# Generated with OghmaNano (https://www.oghma-nano.com) - multiphysics device simulator
+# Applied Voltage (Volts) ,  Total charge density (m^{-3}) 
+-2.919386e-02 9.419454e+22
+7.083966e-02 9.428460e+22
+1.708794e-01 9.437478e+22
+2.709268e-01 9.446540e+22
+3.709840e-01 9.455696e+22
+4.710539e-01 9.465038e+22
+5.711473e-01 9.474771e+22
+6.715177e-01 9.486193e+22
+7.771645e-01 9.516563e+22
+8.954708e-01 9.589119e+22
+1.019627e+00 9.681380e+22
+1.146398e+00 9.783020e+22

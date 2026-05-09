@@ -1,0 +1,18 @@
+{
+  "phase": "alpha",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "status": "prepared",
+  "runner": "C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe",
+  "execute_requested": true,
+  "sim_dir": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\sim",
+  "stack_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\device_stack.json",
+  "expected_oghma_outputs": [
+    "sim_info.dat",
+    "jv.dat",
+    "out.txt"
+  ],
+  "flags": [
+    "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
+    "OGHMA_PROJECT_WRITTEN"
+  ]
+}

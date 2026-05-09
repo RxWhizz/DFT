@@ -1,0 +1,18 @@
+{
+  "status": "prepared",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "pce_pct": null,
+  "voc_V": null,
+  "jsc_mA_cm2": null,
+  "ff": null,
+  "runner": "C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe",
+  "manifest_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-16\\test_oghma_device_step_prepare0\\alpha\\14_oghma_device\\oghma_manifest.json",
+  "stack_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-16\\test_oghma_device_step_prepare0\\alpha\\14_oghma_device\\device_stack.json",
+  "sim_dir": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-16\\test_oghma_device_step_prepare0\\alpha\\14_oghma_device\\sim",
+  "comparison_report_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-16\\test_oghma_device_step_prepare0\\alpha\\14_oghma_device\\method_comparison.html",
+  "flags": [
+    "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
+    "OGHMA_PROJECT_WRITTEN",
+    "OGHMANANO_EXECUTION_NOT_REQUESTED"
+  ]
+}

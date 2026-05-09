@@ -1,0 +1,15 @@
+#oghma_csv {"title":"Charge density with correction for surface charge - Applied voltage","type":"xy","y_label":"Applied Voltage","data_label":"Charge density","y_units":"Volts","rgb":"0000ff","data_units":"m^{-3}","x_len":-1,"y_len":12,"z_len":-1,"cols":"yd"}*
+# Generated with OghmaNano (https://www.oghma-nano.com) - multiphysics device simulator
+# Applied Voltage (Volts) ,  Charge density (m^{-3}) 
+-3.616788e-02 3.141197e+21
+6.387006e-02 3.262048e+21
+1.639152e-01 3.383633e+21
+2.639694e-01 3.506304e+21
+3.640352e-01 3.630626e+21
+4.641168e-01 3.757613e+21
+5.642368e-01 3.889460e+21
+6.650449e-01 4.030850e+21
+7.739967e-01 4.170978e+21
+8.940489e-01 4.302292e+21
+1.018357e+00 4.452167e+21
+1.144795e+00 4.629091e+21

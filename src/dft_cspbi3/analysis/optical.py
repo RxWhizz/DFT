@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # α(ω) [cm⁻¹] = (ω / ħc) × ε₂(ω) / n(ω)   with ω in eV
 _C_CM_PER_S = 2.998e10
 _HBAR_EV_S  = 6.582e-16
+_HC_EV_CM = 1.239841984e-4
 
 # ASTM G173-03 AM1.5G — representative 18-point table, 0.31–4.50 eV [W/m²/eV]
 # Derived from the standard wavelength table (280–4000 nm) using E = hc/λ.
@@ -88,6 +89,72 @@ def _am15g_score(omega_w: np.ndarray, alpha_w: np.ndarray, onset_eV: Optional[fl
     return min(numerator / denominator, 1.0) if denominator > 0 else 0.0
 
 
+def _absorption_from_k(omega_w: np.ndarray, k_w: np.ndarray) -> np.ndarray:
+    """Return alpha in cm^-1 from extinction coefficient k."""
+    wavelength_cm = np.divide(
+        _HC_EV_CM,
+        omega_w,
+        out=np.full_like(omega_w, np.inf, dtype=float),
+        where=omega_w > 0,
+    )
+    return np.divide(
+        4.0 * np.pi * np.clip(k_w, 0.0, None),
+        wavelength_cm,
+        out=np.zeros_like(k_w, dtype=float),
+        where=np.isfinite(wavelength_cm) & (wavelength_cm > 0),
+    )
+
+
+def _k_from_absorption(omega_w: np.ndarray, alpha_cm1: np.ndarray) -> np.ndarray:
+    """Return extinction coefficient k from alpha in cm^-1."""
+    wavelength_cm = np.divide(
+        _HC_EV_CM,
+        omega_w,
+        out=np.full_like(omega_w, np.inf, dtype=float),
+        where=omega_w > 0,
+    )
+    return np.divide(
+        np.clip(alpha_cm1, 0.0, None) * wavelength_cm,
+        4.0 * np.pi,
+        out=np.zeros_like(alpha_cm1, dtype=float),
+        where=np.isfinite(wavelength_cm) & (wavelength_cm > 0),
+    )
+
+
+def _apply_onset_override(
+    omega_w: np.ndarray,
+    k_w: np.ndarray,
+    onset_eV: Optional[float],
+    *,
+    urbach_energy_meV: Optional[float] = 25.0,
+) -> np.ndarray:
+    """Apply a device-quality onset with an optional Urbach sub-gap tail."""
+    k_out = np.clip(k_w, 0.0, None).astype(float, copy=True)
+    if onset_eV is None:
+        return k_out
+
+    onset = float(onset_eV)
+    eu_eV = 0.0 if urbach_energy_meV is None else float(urbach_energy_meV) * 1e-3
+    energy = np.asarray(omega_w, dtype=float)
+    below = energy < onset
+    if eu_eV <= 0.0:
+        k_out[below] = 0.0
+        return k_out
+
+    alpha = _absorption_from_k(energy, k_out)
+    above = energy >= onset
+    if not np.any(above) or np.nanmax(alpha[above]) <= 0.0:
+        k_out[below] = 0.0
+        return k_out
+
+    order = np.argsort(energy[above])
+    edge_energy = energy[above][order]
+    edge_alpha = alpha[above][order]
+    alpha_edge = float(np.interp(onset, edge_energy, edge_alpha, left=edge_alpha[0], right=edge_alpha[-1]))
+    alpha[below] = alpha_edge * np.exp(np.clip((energy[below] - onset) / eu_eV, -700.0, 0.0))
+    return _k_from_absorption(energy, alpha)
+
+
 def compute_optical_spectrum(
     scf_gpw: str | Path,
     step_dir: Path,
@@ -96,6 +163,8 @@ def compute_optical_spectrum(
     eta_eV: float = 0.1,
     onset_threshold_cm1: float = 1e4,
     scissor_eV: Optional[float] = None,
+    onset_eV_override: Optional[float] = None,
+    urbach_energy_meV: Optional[float] = 25.0,
     alpha_sample_eV: tuple = (1.5, 2.0, 2.5, 3.0),
 ) -> OpticalResult:
     """Compute the optical dielectric function using GPAW's linear response.
@@ -113,6 +182,10 @@ def compute_optical_spectrum(
         onset_threshold_cm1: α threshold defining absorption onset.
         scissor_eV: Rigid conduction-band shift (eshift) in eV. Auto-detected
             from HSE06 vs PBE gap in _run_optical; None = no correction.
+        onset_eV_override: Optional device-quality onset. When set, k(omega)
+            and alpha(omega) use a smooth Urbach tail below this energy before
+            saving. Set urbach_energy_meV <= 0 to recover a hard cutoff.
+        urbach_energy_meV: Urbach energy Eu in meV for sub-gap absorption.
         alpha_sample_eV: Energies at which to report α explicitly.
 
     Returns:
@@ -188,12 +261,19 @@ def compute_optical_spectrum(
     k_w = np.imag(sqrt_eps)
 
     # α(ω) [cm⁻¹] = (ω / ħc) × ε₂ / n  — guard against n→0 at ω=0
-    n_safe = np.where(n_w < 1e-6, 1.0, n_w)
-    alpha_w = (omega_w / (_HBAR_EV_S * _C_CM_PER_S)) * eps2_w / n_safe
+    k_w = _apply_onset_override(omega_w, k_w, onset_eV_override, urbach_energy_meV=urbach_energy_meV)
+    if onset_eV_override is not None:
+        flags.append(f"ONSET_OVERRIDE:{float(onset_eV_override):.6f}eV")
+        if urbach_energy_meV is not None and float(urbach_energy_meV) > 0.0:
+            flags.append(f"URBACH_TAIL:{float(urbach_energy_meV):.1f}meV")
+    alpha_w = _absorption_from_k(omega_w, k_w)
 
     # Absorption onset
-    onset_mask = alpha_w > onset_threshold_cm1
-    onset_eV = float(omega_w[onset_mask][0]) if onset_mask.any() else None
+    if onset_eV_override is not None:
+        onset_eV = float(onset_eV_override)
+    else:
+        onset_mask = alpha_w > onset_threshold_cm1
+        onset_eV = float(omega_w[onset_mask][0]) if onset_mask.any() else None
 
     # ε∞: ε₁ at first non-zero frequency
     eps_inf = float(eps1_w[1]) if len(eps1_w) > 1 else None

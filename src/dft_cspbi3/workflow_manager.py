@@ -1116,15 +1116,21 @@ class DFTWorkflow:
                     logger.info("Auto scissor correction: %+.3f eV (HSE06 − PBE)", scissor_eV)
                 except Exception as exc:
                     logger.warning("Auto scissor failed: %s — running without correction", exc)
-        if scissor_eV is None:
-            # Fallback: read chi_hse_eV from pre-computed hse06_scissor.json
-            scissor_json = self._step_dir("hse06") / "hse06_scissor.json"
-            if scissor_json.exists():
-                import json as _json
-                sc_data = _json.loads(scissor_json.read_text())
+        onset_eV_override = opt_cfg.get("onset_eV_override")
+        scissor_json = self._step_dir("hse06") / "hse06_scissor.json"
+        if scissor_json.exists():
+            import json as _json
+            sc_data = _json.loads(scissor_json.read_text())
+            if scissor_eV is None:
                 scissor_eV = sc_data.get("chi_hse_eV")
                 if scissor_eV is not None:
                     logger.info("Scissor from hse06_scissor.json: %+.3f eV", scissor_eV)
+            if onset_eV_override is None:
+                pbe_gap = sc_data.get("e_pbe_eV")
+                chi_hse = sc_data.get("chi_hse_eV")
+                if pbe_gap is not None and chi_hse is not None:
+                    onset_eV_override = float(pbe_gap + chi_hse)
+                    logger.info("Optical onset override from HSE scissor: %.3f eV", onset_eV_override)
 
         result = compute_optical_spectrum(
             scf_gpw, step_dir,
@@ -1133,6 +1139,8 @@ class DFTWorkflow:
             eta_eV              = opt_cfg.get("eta_eV", 0.1),
             onset_threshold_cm1 = opt_cfg.get("onset_threshold_cm1", 1e4),
             scissor_eV          = scissor_eV,
+            onset_eV_override   = onset_eV_override,
+            urbach_energy_meV   = opt_cfg.get("urbach_energy_meV", 25.0),
             alpha_sample_eV     = tuple(opt_cfg.get("alpha_sample_eV", [1.5, 2.0, 2.5, 3.0])),
         )
         logger.info("Optical spectrum: %s", result.summary)

@@ -1,0 +1,14 @@
+#oghma_csv {"title":"Recombination prefactor - Applied voltage","type":"xy","y_label":"Excess carrier density","data_label":"Recombination prefactor","y_units":"m^{-3}","rgb":"0000ff","data_units":"m^{-6}s^{-1}","x_len":-1,"y_len":11,"z_len":-1,"cols":"yd"}*
+# Generated with OghmaNano (https://www.oghma-nano.com) - multiphysics device simulator
+# Excess carrier density (m^{-3}) ,  Recombination prefactor (m^{-6}s^{-1}) 
+3.259609e+22 1.101078e-19
+3.268614e+22 1.113600e-19
+3.277633e+22 1.129387e-19
+3.286695e+22 1.149182e-19
+3.295851e+22 1.173977e-19
+3.305192e+22 1.205301e-19
+3.314925e+22 1.248607e-19
+3.326348e+22 1.438440e-19
+3.356717e+22 4.382680e-19
+3.429274e+22 1.342487e-18
+3.521535e+22 2.427475e-18

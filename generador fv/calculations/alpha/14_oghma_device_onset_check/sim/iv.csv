@@ -1,0 +1,15 @@
+#oghma_csv {"title":"Current  - Applied voltage","type":"xy","y_label":"Applied Voltage","data_label":"Current","y_units":"Volts","rgb":"0000ff","data_units":"A","x_len":-1,"y_len":12,"z_len":-1,"cols":"yd"}*
+# Generated with OghmaNano (https://www.oghma-nano.com) - multiphysics device simulator
+# Applied Voltage (Volts) ,  Current (A) 
+-2.919386e-02 -1.497121e-03
+7.083966e-02 -1.495402e-03
+1.708794e-01 -1.493365e-03
+2.709268e-01 -1.490933e-03
+3.709840e-01 -1.488002e-03
+4.710539e-01 -1.484414e-03
+5.711473e-01 -1.479624e-03
+6.715177e-01 -1.460629e-03
+7.771645e-01 -1.171049e-03
+8.954708e-01 -2.322666e-04
+1.019627e+00 1.006495e-03
+1.146398e+00 2.379365e-03

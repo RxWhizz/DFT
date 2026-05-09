@@ -145,6 +145,7 @@ optical:
   d_omega_eV: 0.025
   eta_eV: 0.1
   onset_threshold_cm1: 1.0e4
+  urbach_energy_meV: 25.0        # smooth sub-gap Urbach tail below onset; <=0 restores hard cutoff
   scissor_eV: null               # null = auto-detect from HSE06−PBE; float = fixed shift
   alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]
 
@@ -155,14 +156,16 @@ sq_limit:
 
 oghma_device:
   # OghmaNano drift-diffusion + optics solver (not ML).
-  # sim/sim.json is auto-generated from the DFT outputs + GitHub perovskite template.
+  # sim/sim.json is auto-generated from the DFT outputs + local perovskite template.
   # sim/materials/CsPbI3/nk.csv is written from DFT RPA n(ω)/k(ω).
-  executable: null               # null = auto-detect: OGHMA_EXECUTABLE env → oghma_core → oghma
-  execute: true                  # run oghma_core automatically (wine64 required)
+  # On Windows: oghma_core.exe runs natively; lockfile and sim_root_path are set automatically.
+  # On Linux: requires wine64 + xvfb-run.
+  executable: null               # null = auto-detect: OGHMA_EXECUTABLE env → oghma_core.exe → oghma_core
+  execute: true
   timeout_s: 600
-  use_xvfb: true                 # required by OghmaNano core under Wine, even headless
-  simmode: segment0@jv           # use equilibrium@equilibrium for first stability smoke tests
-  lockfile: 'S:\lock0.dat'
+  use_xvfb: true                 # Linux only; ignored automatically on Windows
+  simmode: segment0@jv
+  lockfile: 'S:\lock0.dat'       # Linux/Wine only; overridden automatically on Windows
   fast_mode: true
   fast_vstep: 0.1                # quick JV smoke test; use 0.02 for production
   fast_ion_density: 0.0          # disable ion migration for quick smoke tests

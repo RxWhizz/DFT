@@ -1,0 +1,115 @@
+{
+  "sim": {
+    "simmode": "segment0@jv",
+    "version": "8.0"
+  },
+  "sims": {
+    "jv": {
+      "segments": 1,
+      "segment0": {
+        "name": "JV curve",
+        "Vstart": 0.0,
+        "Vstop": 1.2,
+        "Vstep": 0.01,
+        "id": "jv_seg0"
+      }
+    }
+  },
+  "math": {
+    "max_newton_iterations": 500,
+    "newton_clever_exit": true,
+    "maxelectricalitt": 500,
+    "maxelectricalitt_ramp": 500
+  },
+  "optical": {
+    "light": {
+      "light_model": "full",
+      "sun": "AM1.5G",
+      "Dphotoneff": 1.0,
+      "NDfilter": 0.0
+    }
+  },
+  "epitaxy": {
+    "segments": 5,
+    "segment0": {
+      "name": "FTO",
+      "obj_type": "contact",
+      "dy": 5e-08,
+      "shape_dos": {}
+    },
+    "segment1": {
+      "name": "TiO2",
+      "obj_type": "layer",
+      "dy": 2e-07,
+      "shape_dos": {
+        "Eg": 3.2,
+        "epsilonr": 9.0
+      }
+    },
+    "segment2": {
+      "name": "Perovskite",
+      "obj_type": "active",
+      "dy": 5.000000000000001e-07,
+      "shape_dos": {
+        "mue_y": 0.01,
+        "muh_y": 0.01,
+        "Nc": 1e+26,
+        "Nv": 1e+26,
+        "free_to_free_recombination": 1e-15,
+        "srh_tau_n": 1e-07,
+        "srh_tau_p": 1e-07,
+        "ss_srh_enabled": true,
+        "ion_density": 0.0,
+        "ion_mobility": 0.0,
+        "epsilonr": 6.2,
+        "Eg": 1.58,
+        "Xi": 3.8,
+        "mue_x": 0.01,
+        "mue_z": 0.01,
+        "muh_x": 0.01,
+        "muh_z": 0.01
+      },
+      "optical_material": "CsPbI3"
+    },
+    "segment3": {
+      "name": "Spiro",
+      "obj_type": "layer",
+      "dy": 2e-07,
+      "shape_dos": {
+        "Eg": 3.0,
+        "epsilonr": 3.0
+      }
+    },
+    "segment4": {
+      "name": "Au",
+      "obj_type": "contact",
+      "dy": 1e-07,
+      "shape_dos": {}
+    },
+    "contacts": {
+      "segments": 2,
+      "segment0": {
+        "position": "top"
+      },
+      "segment1": {
+        "position": "bottom"
+      }
+    }
+  },
+  "mesh": {
+    "mesh_y": {
+      "segments": 1,
+      "segment0": {
+        "len": 1e-06,
+        "points": 120.0,
+        "mul": 1.0
+      }
+    }
+  },
+  "server": {
+    "max_gpvdm_instances": 1
+  },
+  "dump": {
+    "dump_level": 1
+  }
+}

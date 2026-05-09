@@ -1,0 +1,60 @@
+{
+  "simulator": "OghmaNano",
+  "phase": "alpha",
+  "formula": "CsPbI3",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "layers": [
+    {
+      "name": "FTO",
+      "role": "front_contact",
+      "thickness_nm": 50.0
+    },
+    {
+      "name": "TiO2",
+      "role": "ETL",
+      "thickness_nm": 200.0,
+      "bandgap_eV": 3.2
+    },
+    {
+      "name": "CsPbI3",
+      "role": "absorber",
+      "thickness_nm": 500.0,
+      "bandgap_eV": 1.58,
+      "dielectric_constant": 6.2
+    },
+    {
+      "name": "Spiro-OMeTAD",
+      "role": "HTL",
+      "thickness_nm": 200.0,
+      "bandgap_eV": 3.0
+    },
+    {
+      "name": "Au",
+      "role": "back_contact",
+      "thickness_nm": 100.0
+    }
+  ],
+  "dft_inputs": {
+    "bandgap_eV": 1.58,
+    "dielectric_constant": 6.2,
+    "effective_masses": {
+      "m_e_m0": 0.11,
+      "m_h_m0": 0.15
+    },
+    "sq_limit_reference": {
+      "pce_pct": 27.2,
+      "jsc_mA_cm2": 23.9,
+      "voc_V": 1.26,
+      "ff": 0.9
+    }
+  },
+  "source_files": {
+    "solar_score": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\12_score\\solar_score.json",
+    "sq_limit": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\13_sq_limit\\sq_limit.json",
+    "electronic_analysis": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\10_effective_masses\\electronic_analysis.json",
+    "optical_frequencies": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\11_optical\\optical_frequencies.npy",
+    "absorption": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\11_optical\\absorption_cm1.npy",
+    "n_omega": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\11_optical\\n_omega.npy",
+    "k_omega": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\.tmp_pytest\\pytest-of-LUIS\\pytest-14\\test_oghma_device_step_prepare0\\alpha\\11_optical\\k_omega.npy"
+  }
+}

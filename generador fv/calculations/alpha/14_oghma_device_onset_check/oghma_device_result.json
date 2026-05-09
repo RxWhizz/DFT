@@ -1,0 +1,20 @@
+{
+  "status": "completed",
+  "method_type": "device_physics_drift_diffusion_not_ml",
+  "pce_pct": 16.34717,
+  "voc_V": 0.9187499,
+  "jsc_mA_cm2": -24.943444659798864,
+  "ff": 0.7133273,
+  "runner": "C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe",
+  "manifest_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\oghma_manifest.json",
+  "stack_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\device_stack.json",
+  "sim_dir": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\sim",
+  "comparison_report_path": "C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\method_comparison.html",
+  "flags": [
+    "OGHMANANO_IS_DEVICE_PHYSICS_NOT_ML",
+    "OGHMA_PROJECT_WRITTEN",
+    "WARNING_JSC_SIM_INFO_INTERPRETED_AS_A_M2_AND_CONVERTED_TO_MA_CM2",
+    "WARNING_DFT_OPTICAL_NPY_FILES_MISSING_USED_DIELECTRIC_CSV",
+    "OGHMANANO_WORKER_CMD:C:\\Program Files (x86)\\OghmaNano\\oghma_core.exe --sim-root-path C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\sim --gui --html --simmode segment0@jv --lockfile C:\\Users\\LUIS\\Documents\\GitHub\\DFT\\generador fv\\calculations\\alpha\\14_oghma_device_onset_check\\sim\\lock0.dat"
+  ]
+}
