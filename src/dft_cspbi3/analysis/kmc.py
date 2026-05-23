@@ -1,17 +1,4 @@
-"""Kinetic Monte Carlo (BKL algorithm) for defect/ion evolution in CsPbI₃.
-
-Implements the Bortz-Kalos-Lebowitz (BKL) residence-time algorithm:
-  1. Compute all event rates {k_i} from Arrhenius (NEB barriers) + generation (optical).
-  2. Total rate: K = Σ k_i
-  3. Select event j with probability k_j / K (cumsum sampling).
-  4. Advance time: Δt = −ln(u₁) / K, u₁ ~ U(0,1).
-  5. Update lattice; repeat.
-
-Typical usage (post L3 + L4):
-  barriers = {"V_I_hop": 0.25, "I_i_hop": 0.18}  # from NEB in eV
-  lattice = KMCLattice.from_atoms(atoms, barriers, generation_rate_cm3s=1e21)
-  result = run_kmc(lattice, temperature_K=300, total_time_s=1e-6)
-"""
+"""Kinetic Monte Carlo (BKL algorithm) para defect/ion evolution en CsPbI₃."""
 
 from __future__ import annotations
 
@@ -28,25 +15,25 @@ logger = logging.getLogger(__name__)
 
 # Physical constants
 _KB_EV = 8.617333e-5      # Boltzmann constant [eV/K]
-_Q_C   = 1.602e-19        # elementary charge [C]
+_Q_C   = 1.602e-19
 
-# Attempt frequency ν₀ [Hz] — default: typical optical phonon frequency ~1 THz
+# Attempt frequency ν₀ [Hz] - default
 _DEFAULT_NU0_HZ = 1e12
 
 
 @dataclass
 class KMCEvent:
-    """A single lattice event (defect hop, capture, generation, recombination)."""
+    """A único lattice event (defect hop, capture, generación, recombination)."""
     name: str
-    rate_Hz: float          # Arrhenius rate at current T [s⁻¹]
-    barrier_eV: float       # activation energy
-    defect_type: str        # "V_I", "I_i", "V_Pb", "V_Cs", etc.
-    event_type: str         # "hop" | "capture" | "generation" | "recombination"
+    rate_Hz: float
+    barrier_eV: float
+    defect_type: str
+    event_type: str
 
 
 @dataclass
 class KMCSnapshot:
-    """State of the kMC lattice at a given time."""
+    """State kMC lattice en dado time."""
     time_s: float
     n_events: int
     defect_counts: dict[str, int]
@@ -57,16 +44,16 @@ class KMCSnapshot:
 
 @dataclass
 class KMCResult:
-    """Output of a kMC simulation run."""
+    """Output kMC simulation ejecuta."""
 
     temperature_K: float
     total_time_s: float
     n_steps: int
     snapshots: list[KMCSnapshot]
-    mean_defect_counts: dict[str, float]   # time-averaged
+    mean_defect_counts: dict[str, float]
     total_recombinations: int
     total_hops: int
-    photostability_label: str              # "stable" | "degrading" | "unstable"
+    photostability_label: str
     flags: list[str] = field(default_factory=list)
 
     @property
@@ -79,11 +66,7 @@ class KMCResult:
 
 
 class KMCLattice:
-    """Minimal kMC lattice for ionic defect migration in CsPbI₃.
-
-    Sites are stored as a flat list; each defect occupies one site.
-    For publication-quality results use a 3×3×3 or larger supercell.
-    """
+    """Minimal kMC lattice para ionic defect migration en CsPbI₃."""
 
     def __init__(
         self,
@@ -98,7 +81,7 @@ class KMCLattice:
         self.generation_rate_cm3s = generation_rate_cm3s
         self.nu0_Hz = nu0_Hz
 
-        # Build event list with Arrhenius rates
+        # Construye event list con Arrhenius rates
         self.events: list[KMCEvent] = []
         for ev in events:
             rate = nu0_Hz * math.exp(-ev.barrier_eV / (_KB_EV * temperature_K))
@@ -109,7 +92,7 @@ class KMCLattice:
                 event_type=ev.event_type,
             ))
 
-        # Add photogeneration event if rate > 0
+        # Add photogeneration event si rate > 0
         if generation_rate_cm3s > 0.0:
             self.events.append(KMCEvent(
                 name="photogeneration",
@@ -123,7 +106,7 @@ class KMCLattice:
         self.defect_counts: dict[str, int] = {
             ev.defect_type: 0 for ev in self.events if ev.event_type == "hop"
         }
-        # Seed initial population: 1 of each mobile defect
+        # Seed initial population
         for key in self.defect_counts:
             self.defect_counts[key] = 1
 
@@ -142,19 +125,7 @@ class KMCLattice:
         generation_rate_cm3s: float = 0.0,
         nu0_Hz: float = _DEFAULT_NU0_HZ,
     ) -> "KMCLattice":
-        """Build a KMCLattice from an ASE Atoms and a dict of barrier heights.
-
-        Args:
-            atoms: ASE Atoms of the primitive cell (used only for n_sites).
-            barriers: Dict mapping defect hop labels to barrier [eV], e.g.
-                {"V_I_hop": 0.25, "V_Cs_hop": 0.45, "I_i_hop": 0.18}.
-            temperature_K: Simulation temperature [K].
-            generation_rate_cm3s: Photogeneration rate G(x) [photons/cm³/s].
-            nu0_Hz: Attempt frequency [Hz].
-
-        Returns:
-            KMCLattice ready for run_kmc().
-        """
+        """Construye KMCLattice desde ASE Atoms y dict barrier heights."""
         events = []
         for name, barrier_eV in barriers.items():
             parts = name.split("_")
@@ -162,7 +133,7 @@ class KMCLattice:
             event_type  = parts[-1] if parts[-1] in ("hop", "capture", "recombination") else "hop"
             events.append(KMCEvent(
                 name=name,
-                rate_Hz=0.0,    # recomputed inside __init__
+                rate_Hz=0.0,
                 barrier_eV=barrier_eV,
                 defect_type=defect_type,
                 event_type=event_type,
@@ -179,7 +150,7 @@ class KMCLattice:
         return sum(ev.rate_Hz for ev in self.events)
 
     def _select_event(self, K: float) -> KMCEvent:
-        """Select event j proportional to k_j / K (cumsum method)."""
+        """Select event j proportional k_j / K (cumsum método)."""
         u = random.random() * K
         cumsum = 0.0
         for ev in self.events:
@@ -189,7 +160,7 @@ class KMCLattice:
         return self.events[-1]
 
     def step(self) -> KMCEvent:
-        """Advance kMC by one event; update time and counters."""
+        """Advance kMC by one event."""
         K = self._total_rate()
         if K < 1e-100:
             self.time_s += 1e-6
@@ -203,10 +174,10 @@ class KMCLattice:
 
         if ev.event_type == "hop":
             self.hop_events += 1
-            # Hop: move defect to a random neighbouring site (implicit)
+            # Hop
         elif ev.event_type == "capture":
             self.capture_events += 1
-            # Capture: remove one electron-hole pair
+            # Capture
             if self.defect_counts.get("electron-hole", 0) > 0:
                 self.defect_counts["electron-hole"] = (
                     self.defect_counts.get("electron-hole", 0) - 1
@@ -227,18 +198,7 @@ def run_kmc(
     snapshot_interval: int = 1000,
     seed: Optional[int] = 42,
 ) -> KMCResult:
-    """Run BKL kinetic Monte Carlo until total_time_s or max_steps.
-
-    Args:
-        lattice: Configured KMCLattice instance.
-        total_time_s: Physical simulation time [s].
-        max_steps: Safety cap on number of kMC steps.
-        snapshot_interval: Steps between state snapshots.
-        seed: RNG seed for reproducibility.
-
-    Returns:
-        KMCResult with time-series snapshots and aggregated statistics.
-    """
+    """Ejecuta BKL kinetic Monte Carlo until total_time_s o max_steps."""
     if seed is not None:
         random.seed(seed)
 
@@ -263,7 +223,7 @@ def run_kmc(
     if step_count >= max_steps:
         flags.append(f"MAX_STEPS_REACHED:{max_steps}")
 
-    # Time-averaged defect counts from snapshots
+    # Time-averaged defect counts desde snapshots
     mean_counts: dict[str, float] = {}
     if snapshots:
         for key in snapshots[0].defect_counts:
@@ -297,7 +257,7 @@ def run_kmc(
 
 
 def save_kmc_result(result: KMCResult, work_dir: Path) -> None:
-    """Persist kMC result as a text summary and numpy time-series."""
+    """Persist kMC resultado as text resumen y numpy time-series."""
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,17 +1,4 @@
-"""Structural stability classification from phonon/Hessian results.
-
-Classification criteria (per user specification):
-
-  STABLE      — no imaginary phonon frequencies above numerical noise (< 10 cm⁻¹)
-  METASTABLE  — small imaginary frequencies (10–100 cm⁻¹); possibly numerical noise,
-                local minimum in a flat landscape, or soft mode near phase transition
-  UNSTABLE    — clear imaginary modes (> 100 cm⁻¹); structure is a saddle point
-                and will distort spontaneously
-
-Hessian-only classification (single unit cell, Γ-point only):
-  STABLE      — all eigenvalues ≥ -_ZERO_THRESH  (only translational modes ~0)
-  UNSTABLE    — one or more clearly negative eigenvalues
-"""
+"""Clasifica estabilidad por fonones/Hessiano."""
 
 from __future__ import annotations
 
@@ -22,9 +9,7 @@ from typing import Optional
 import numpy as np
 
 
-# ---------------------------------------------------------------------------
-# Enum
-# ---------------------------------------------------------------------------
+# Enum.
 
 
 class StabilityClass(enum.Enum):
@@ -34,28 +19,24 @@ class StabilityClass(enum.Enum):
     UNKNOWN = "unknown"
 
 
-# ---------------------------------------------------------------------------
-# Thresholds
-# ---------------------------------------------------------------------------
+# Umbrales.
 
-_NOISE_CM1 = 10.0       # Below this: treated as numerical zero
-_SOFT_CM1 = 100.0       # Below this (absolute): metastable
-_HESS_NOISE = 0.05      # eV/Å²  — Hessian eigenvalue noise floor
+_NOISE_CM1 = 10.0
+_SOFT_CM1 = 100.0
+_HESS_NOISE = 0.05      # eV/Å²; piso ruido autovalor Hessian
 
 
-# ---------------------------------------------------------------------------
-# Data class
-# ---------------------------------------------------------------------------
+# Datos.
 
 
 @dataclass
 class StabilityReport:
-    """Combined stability assessment from phonons and/or Hessian."""
+    """Estabilidad combinada fonones/Hessiano."""
 
     classification: StabilityClass
-    source: str                           # "phonons", "hessian", or "both"
+    source: str
     n_imaginary_phonons: int
-    max_imaginary_cm1: float              # 0.0 if stable
+    max_imaginary_cm1: float              # 0.0 si estable
     n_negative_hessian: int
     min_hessian_eigval: float             # eV/Å²
     diagnosis: str
@@ -67,54 +48,44 @@ class StabilityReport:
         return self.classification in (StabilityClass.STABLE, StabilityClass.METASTABLE)
 
 
-# ---------------------------------------------------------------------------
-# Classification functions
-# ---------------------------------------------------------------------------
+# Clasificadores.
 
 
 def classify_from_phonons(phonon_result) -> StabilityReport:
-    """Classify stability based on a PhononResult object.
-
-    Args:
-        phonon_result: PhononResult from validation.phonons.compute_phonons().
-
-    Returns:
-        StabilityReport.
-    """
+    """Clasifica estabilidad desde PhononResult."""
     n_imag = phonon_result.n_imaginary
-    max_imag = phonon_result.max_imaginary_cm1  # most negative, 0 if none
+    max_imag = phonon_result.max_imaginary_cm1  # most negative, 0 si none
 
     if n_imag == 0:
         cls = StabilityClass.STABLE
         diagnosis = (
-            f"All phonon frequencies are real and positive "
+            f"Frecuencias phonon reales y positivas "
             f"(min = {phonon_result.frequencies_cm1.min():.1f} cm⁻¹). "
-            "Structure is at a stable energy minimum."
+            "Estructura en minimo energetico stable."
         )
         recs: list[str] = []
     elif abs(max_imag) < _SOFT_CM1:
         cls = StabilityClass.METASTABLE
         diagnosis = (
-            f"{n_imag} imaginary mode(s) with |ω| < {_SOFT_CM1} cm⁻¹ "
-            f"(worst: {max_imag:.1f} cm⁻¹). "
-            "Could be numerical noise, a flat potential landscape, or a soft mode "
-            "near a structural phase transition."
+            f"{n_imag} modos imaginarios con |ω| < {_SOFT_CM1} cm⁻¹ "
+            f"(peor: {max_imag:.1f} cm⁻¹). "
+            "Puede ser ruido numerico, PES plana o modo blando cerca transicion."
         )
         recs = [
-            "Increase supercell size to check if modes are artefacts.",
-            "Re-relax with tighter force criterion (fmax < 0.01 eV/Å).",
-            "Check for nearby phase transitions (e.g. octahedral tilting).",
+            "Aumentar supercelda; descartar artefactos.",
+            "Relajar otra vez con fmax < 0.01 eV/Å.",
+            "Revisar transiciones cercanas: tilt octaedrico.",
         ]
     else:
         cls = StabilityClass.UNSTABLE
         diagnosis = (
-            f"{n_imag} imaginary mode(s) with |ω| up to {abs(max_imag):.1f} cm⁻¹. "
-            "Structure is a saddle point and will relax to a lower-energy configuration."
+            f"{n_imag} modos imaginarios con |ω| hasta {abs(max_imag):.1f} cm⁻¹. "
+            "Estructura = punto silla; relajara a configuracion mas baja."
         )
         recs = [
-            "Follow the imaginary eigenvector to reach a true minimum.",
-            "Consider a larger supercell or different initial geometry.",
-            "Check if octahedral tilting or A-site ordering is suppressed.",
+            "Seguir autovector imaginario hasta minimo real.",
+            "Usar supercelda mayor o geometria inicial distinta.",
+            "Revisar tilt octaedrico u orden sitio A suprimido.",
         ]
 
     return StabilityReport(
@@ -131,36 +102,29 @@ def classify_from_phonons(phonon_result) -> StabilityReport:
 
 
 def classify_from_hessian(hessian_result) -> StabilityReport:
-    """Classify stability based on a HessianResult object (Γ-point only).
-
-    Args:
-        hessian_result: HessianResult from validation.hessian.compute_hessian().
-
-    Returns:
-        StabilityReport. Less reliable than full phonon calculation.
-    """
+    """Clasifica estabilidad desde HessianResult."""
     n_neg = hessian_result.n_negative
     min_eigval = hessian_result.min_eigenvalue
 
     if n_neg == 0:
         cls = StabilityClass.STABLE
         diagnosis = (
-            f"All Hessian eigenvalues ≥ −{_HESS_NOISE} eV/Å² "
+            f"Autovalores Hessian ≥ −{_HESS_NOISE} eV/Å² "
             f"(min = {min_eigval:.4f} eV/Å²). "
-            "Γ-point Hessian is positive semi-definite."
+            "Hessian Γ semidefinido positivo."
         )
         recs: list[str] = []
     else:
         cls = StabilityClass.UNSTABLE
         diagnosis = (
-            f"{n_neg} negative Hessian eigenvalue(s) "
+            f"{n_neg} autovalores Hessian negativos "
             f"(min = {min_eigval:.4f} eV/Å²). "
-            "Structure is not at a local energy minimum."
+            "Estructura no esta en minimo local."
         )
         recs = [
-            "Re-relax the structure with tighter convergence.",
-            "Follow the negative eigenvector to escape the saddle point.",
-            "Run a full phonon calculation with supercells to confirm instability.",
+            "Relajar con convergencia mas estricta.",
+            "Seguir autovector negativo para salir de punto silla.",
+            "Correr phonon completo con superceldas para confirmar instability.",
         ]
 
     return StabilityReport(
@@ -180,15 +144,11 @@ def classify_combined(
     hessian_result,
     phonon_result,
 ) -> StabilityReport:
-    """Merge Hessian and phonon stability assessments into a single verdict.
-
-    Phonon result takes precedence when both are available since it accounts
-    for the full Brillouin zone (not only Γ).
-    """
+    """Une veredictos Hessiano + fonones."""
     ph_report = classify_from_phonons(phonon_result)
     h_report = classify_from_hessian(hessian_result)
 
-    # Phonon result dominates; Hessian provides corroborating evidence
+    # Resultado phonon domina.
     combined_flags = list(dict.fromkeys(ph_report.flags + h_report.flags))
 
     if ph_report.classification == StabilityClass.STABLE and h_report.classification == StabilityClass.STABLE:
@@ -199,8 +159,8 @@ def classify_combined(
         cls = StabilityClass.METASTABLE
 
     diagnosis = (
-        f"Phonon analysis: {ph_report.diagnosis}\n"
-        f"Hessian analysis (Γ-point): {h_report.diagnosis}"
+        f"Analisis phonon: {ph_report.diagnosis}\n"
+        f"Analisis Hessian (Γ): {h_report.diagnosis}"
     )
     recs = list(dict.fromkeys(ph_report.recommendations + h_report.recommendations))
 

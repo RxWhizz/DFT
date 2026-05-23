@@ -7,9 +7,9 @@
 
   "electronic": {
     "gap_PBE_eV": 1.0891,
-    "gap_location": "R=(0.5,0.5,0.5) — direct",
+    "gap_location": "R=(0.5,0.5,0.5) — directo",
     "gap_HSE06_estimated_eV": 1.5858,
-    "gap_HSE06_note": "non_self_consistent_eigenvalues (nsc_2x2x2): PBE 1.089 + chi_hse 0.497 eV (vs old literature scissor 0.671 eV)",
+    "gap_HSE06_note": "non_self_consistent_eigenvalues (nsc_2x2x2): PBE 1.089 + chi_hse 0.497 eV (vs scissor literatura viejo 0.671 eV)",
     "gap_PBE_SOC_approx_eV": 0.3517,
     "chi_SOC_eV": -0.7374,
     "chi_SOC_canonical_eV": -0.789,
@@ -17,7 +17,7 @@
     "effective_mass_h_PBE_m0": 0.0983,
     "effective_mass_e_SOC_m0": 0.1108,
     "effective_mass_h_SOC_m0": 0.1510,
-    "effective_mass_note": "PBE masses from fine k-mesh around R; SOC masses from perturbative correction (6x CBM degeneracy lifted)"
+    "effective_mass_note": "Masas PBE desde malla k fina alrededor de R; masas SOC desde correccion perturbativa (degeneracion CBM 6x rota)"
   },
 
   "thermodynamic": {
@@ -26,11 +26,11 @@
     "E_perovskite_per_fu_eV": -14.053696,
     "E_CsI_per_fu_eV": -5.394232,
     "E_PbI2_per_fu_eV": -8.470050,
-    "summary": "delta_Hf = -0.189 eV/f.u. → STABLE vs binary decomposition (CsI + PbI2)"
+    "summary": "delta_Hf = -0.189 eV/f.u. → estable vs descomposicion binaria (CsI + PbI2)"
   },
 
   "optical": {
-    "method": "GPAW RPA LFC (PBE ground state)",
+    "method": "GPAW RPA LFC (estado base PBE)",
     "eps_inf": 6.1648,
     "absorption_onset_PBE_eV": 0.90,
     "absorption_onset_HSE06_corrected_eV": 1.5858,
@@ -39,11 +39,11 @@
     "alpha_at_2p5_eV_cm1": 439226.0,
     "alpha_at_3p0_eV_cm1": 640177.0,
     "am15g_absorption_score": 1.0,
-    "note": "Onset override applied: absorptance zeroed below HSE06 gap (1.5858 eV) for SQ calculation"
+    "note": "Override onset aplicado: absortancia cero bajo gap HSE06 (1.5858 eV) para SQ"
   },
 
   "photovoltaic_sq_limit": {
-    "method": "Würfel detailed balance (Beer-Lambert absorptance, ASTM G173-03 AM1.5G)",
+    "method": "Balance detallado Würfel (absortancia Beer-Lambert, ASTM G173-03 AM1.5G)",
     "thickness_nm": 500.0,
     "T_K": 300.0,
     "onset_eV_used": 1.5858,
@@ -80,14 +80,14 @@
     },
     "inputs_used": {
       "bandgap_eV": 1.5858,
-      "gap_type": "direct",
+      "gap_type": "directo",
       "delta_Hf_eV": -0.18941,
       "m_e_m0": 0.1108,
       "m_h_m0": 0.1510,
       "eps_r": 6.1648,
       "exciton_binding_meV": 22.9
     },
-    "summary": "PV Score: 83.8/100 [A]  |  Eg=1.59 eV (direct), delta_Hf=-0.189 eV, m*_e=0.11 m0, E_b=23 meV"
+    "summary": "Score FV: 83.8/100 [A]  |  Eg=1.59 eV (directo), delta_Hf=-0.189 eV, m*_e=0.11 m0, E_b=23 meV"
   },
 
   "structural": {
@@ -95,11 +95,11 @@
     "octahedral_factor": 0.5409,
     "mean_BX_bond_Ang": 3.09,
     "BX_bond_variance": 0.0,
-    "note": "Ideal cubic perovskite structure (Pm-3m), no tilt"
+    "note": "Estructura perovskita cubica ideal (Pm-3m), sin tilt"
   },
 
   "phonons": {
-    "method": "finite-difference (delta=0.02 A, 2x2x2 supercell, Phonopy)",
+    "method": "diferencias finitas (delta=0.02 A, supercelda 2x2x2, Phonopy)",
     "n_imaginary_modes_total": 101,
     "n_imaginary_modes_optical": 0,
     "phonon_optical_range_cm1": [5.1, 135.6],
@@ -118,12 +118,12 @@
       -15.98, -11.52, -2.36, 5.15, 13.44, 16.42, 18.2, 21.34,
       23.98, 24.36, 26.38, 28.43, 102.55, 103.17, 103.32
     ],
-    "interpretation": "alpha-CsPbI3 cubic phase dynamically unstable at 0K (98/900+ imaginary modes). Thermodynamically stable experimentally only above ~600K. Score penalised (stability=0.6)."
+    "interpretation": "alpha-CsPbI3 cubica dinamicamente inestable a 0K (98/900+ modos imaginarios). Experimentalmente estable solo sobre ~600K. Score penalizado (estabilidad=0.6)."
   },
 
   "in_gap_defects": {
     "in_gap_dos_states_per_eV": 0.0,
-    "method": "eigenvalue count between VBM+0.1eV and CBM-0.1eV (PBE DOS k-mesh)",
-    "result": "No in-gap states detected — clean bandgap, defects score = 10/10"
+    "method": "conteo autovalores entre VBM+0.1eV y CBM-0.1eV (malla k DOS PBE)",
+    "result": "Sin estados intra-gap detectados — bandgap limpio, score defectos = 10/10"
   }
 }

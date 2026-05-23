@@ -1,4 +1,4 @@
-"""Plotting utilities for band structures, DOS, and convergence curves."""
+"""Utilidades gráficas: bandas, DOS, convergencia."""
 
 from __future__ import annotations
 
@@ -18,19 +18,19 @@ matplotlib.rcParams.update({
     "figure.dpi": 100,
 })
 
-# Color palette for PDOS — covers common halide perovskite elements
+# Color palette para PDOS - covers common haluro perovskita elements
 _BASE_PDOS_COLORS: dict[str, str] = {
-    "I":  "#2176AE",   # blue — I 5p dominates VBM in lead iodide perovskites
-    "Pb": "#D62828",   # red  — Pb 6p dominates CBM
-    "Cs": "#888888",   # grey — Cs minimal near gap
-    "Br": "#0D6E3A",   # green
-    "Cl": "#8B0000",   # dark red
-    "Sn": "#B5460F",   # brown
-    "Ge": "#7A3300",   # dark brown
+    "I":  "#2176AE",   # blue - I 5p dominates VBM en lead iodide perovskites
+    "Pb": "#D62828",   # red - Pb 6p dominates CBM
+    "Cs": "#888888",
+    "Br": "#0D6E3A",
+    "Cl": "#8B0000",
+    "Sn": "#B5460F",
+    "Ge": "#7A3300",
     "Rb": "#666666",
     "K":  "#444444",
-    "MA": "#9B59B6",   # purple — methylammonium
-    "FA": "#6C3483",   # dark purple — formamidinium
+    "MA": "#9B59B6",
+    "FA": "#6C3483",
 }
 
 _AUTO_COLORS = [
@@ -45,11 +45,7 @@ OUTPUT_DPI = 300
 
 
 def get_pdos_colors(elements: list[str]) -> dict[str, str]:
-    """Return a color mapping for the given element symbols.
-
-    Known perovskite elements use fixed literature-inspired colors.
-    Unknown elements get colors auto-assigned from a fallback palette.
-    """
+    """Devuelve colores por elemento."""
     result: dict[str, str] = {}
     auto_pool = [c for c in _AUTO_COLORS if c not in _BASE_PDOS_COLORS.values()]
     for el in elements:
@@ -69,33 +65,19 @@ def plot_band_structure(
     output_prefix: str = "band_structure",
     output_dir: str | Path = ".",
 ) -> plt.Figure:
-    """Plot an ASE BandStructure with optional SOC overlay and scissor shift.
-
-    Args:
-        bs: ASE BandStructure from calc.band_structure().
-        soc_eigs: SOC eigenvalues array (nkpts × nbands) in eV, relative to EF.
-                  If provided, drawn as a dashed overlay in a second color.
-        scissor_shift: Rigid shift applied to conduction bands (eV).
-        title: Plot title string.
-        energy_window: (Emin, Emax) relative to VBM in eV.
-        output_prefix: Filename prefix (no extension) for saved files.
-        output_dir: Directory for output files.
-
-    Returns:
-        matplotlib Figure.
-    """
+    """Grafica bandas ASE + SOC/scissor opcional."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    energies = bs.energies.copy()          # shape: (nspins, nkpts, nbands)
-    ef = bs.reference                      # Fermi / VBM reference
+    energies = bs.energies.copy()
+    ef = bs.reference
 
-    # Apply scissor to conduction bands
+    # Aplica scissor conduction bands
     if scissor_shift != 0.0:
         cb_mask = energies > ef
         energies[cb_mask] += scissor_shift
 
-    # Relative to VBM
+    # Relative VBM
     energies -= ef
     kx = np.linspace(0, 1, energies.shape[1])
 
@@ -119,7 +101,7 @@ def plot_band_structure(
                 label="SOC" if band_idx == 0 else "",
             )
 
-    # Mark VBM and CBM
+    # Mark VBM y CBM
     try:
         vbm = float(energies[energies <= 0].max())
         cbm = float(energies[energies > 0].min())
@@ -137,7 +119,7 @@ def plot_band_structure(
     except ValueError:
         pass
 
-    # High-symmetry k-point vertical lines (if available)
+    # High-symmetry k-point vertical lines (si disponible)
     if hasattr(bs, "path") and bs.path is not None:
         try:
             special_k = bs.path.special_points
@@ -147,13 +129,13 @@ def plot_band_structure(
             ax.set_xticks(xcoords)
             ax.set_xticklabels([r"$\Gamma$" if l == "G" else l for l in labels])
         except Exception:
-            ax.set_xlabel("k-path (a.u.)")
+            ax.set_xlabel("ruta k (u.a.)")
     else:
-        ax.set_xlabel("k-path (a.u.)")
+        ax.set_xlabel("ruta k (u.a.)")
 
     ax.axhline(0, color="black", lw=0.8, ls="--", alpha=0.4)
     ax.set_ylim(energy_window)
-    ax.set_ylabel("Energy − VBM (eV)")
+    ax.set_ylabel("Energía - VBM (eV)")
     ax.set_xlim(0, 1)
     if title:
         ax.set_title(title)
@@ -178,18 +160,7 @@ def plot_dos(
     output_dir: str | Path = ".",
     pdos_colors: Optional[dict[str, str]] = None,
 ) -> plt.Figure:
-    """Plot total DOS and per-element PDOS.
-
-    Args:
-        energies: Energy axis in eV (relative to EF = 0).
-        total_dos: Total DOS array (states/eV/cell).
-        pdos_dict: {element: array} — PDOS per element.
-        title: Plot title.
-        energy_window: (Emin, Emax) in eV.
-        output_prefix: Filename prefix.
-        output_dir: Directory for output files.
-        pdos_colors: Optional color mapping per element. Auto-assigned if None.
-    """
+    """Grafica DOS total + PDOS."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -198,7 +169,7 @@ def plot_dos(
     fig, ax = plt.subplots(figsize=(6, 5))
 
     # Total DOS
-    ax.plot(energies, total_dos, color="black", lw=1.5, label="Total DOS")
+    ax.plot(energies, total_dos, color="black", lw=1.5, label="DOS total")
 
     # PDOS
     for sym, pdos in pdos_dict.items():
@@ -210,8 +181,8 @@ def plot_dos(
 
     ax.set_xlim(energy_window)
     ax.set_ylim(bottom=0)
-    ax.set_xlabel("Energy (eV)")
-    ax.set_ylabel("DOS (states/eV/cell)")
+    ax.set_xlabel("Energía (eV)")
+    ax.set_ylabel("DOS (estados/eV/celda)")
     ax.legend(loc="upper left", framealpha=0.8)
     if title:
         ax.set_title(title)
@@ -233,17 +204,7 @@ def plot_convergence(
     output_prefix: str = "convergence",
     output_dir: str | Path = ".",
 ) -> plt.Figure:
-    """Plot convergence of total energy vs. Ecut or k-mesh density.
-
-    Args:
-        df: DataFrame with columns [param, 'delta_meV_per_atom'].
-        param: Column name for x-axis ('ecut_eV' or 'nkpts_total').
-        ylabel: Y-axis label.
-        threshold_meV: Draw a horizontal dashed line at this value.
-        title: Plot title.
-        output_prefix: Filename prefix.
-        output_dir: Output directory.
-    """
+    """Grafica convergencia energía vs Ecut/k."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -254,11 +215,11 @@ def plot_convergence(
 
     ax.plot(x, y, "o-", color="#1f4e79", lw=1.8, ms=6, label="|ΔE|")
     ax.axhline(threshold_meV, color="crimson", lw=1.2, ls="--",
-               label=f"{threshold_meV} meV/atom threshold")
+               label=f"umbral {threshold_meV} meV/átomo")
 
     xlabel_map = {
-        "ecut_eV": "Plane-wave cutoff (eV)",
-        "nkpts_total": "Total k-points (Nx·Ny·Nz)",
+        "ecut_eV": "Corte ondas planas (eV)",
+        "nkpts_total": "Puntos k totales (Nx·Ny·Nz)",
     }
     ax.set_xlabel(xlabel_map.get(param, param))
     ax.set_ylabel(ylabel)
@@ -275,26 +236,15 @@ def plot_convergence(
     return fig
 
 
-# ---------------------------------------------------------------------------
-# Phonon dispersion + comparison plots
-# ---------------------------------------------------------------------------
+# Dispersion fonon + plots comparativos.
 
 def plot_phonon_dispersion(
     result,
-    title: str = "Phonon dispersion",
+    title: str = "Dispersión fonónica",
     output_path: Optional[Path] = None,
 ) -> plt.Figure:
-    """Publication-quality phonon dispersion + DOS panel.
-
-    Args:
-        result: PhononResult (from compute_phonons or compute_phonons_phonopy).
-        title: Figure title.
-        output_path: Save path (PNG + PDF). If None, figure is returned but not saved.
-
-    Returns:
-        matplotlib Figure.
-    """
-    freqs = result.frequencies_cm1   # (nq, nbranch)
+    """Panel fonones + DOS."""
+    freqs = result.frequencies_cm1
     nq, nbranch = freqs.shape
 
     has_dos = result.dos_frequencies_cm1 is not None and result.dos_weights is not None
@@ -315,8 +265,8 @@ def plot_phonon_dispersion(
 
     ax_disp.axhline(0, color="k", lw=0.8, ls="--", alpha=0.5)
     ax_disp.set_xlim(0, nq - 1)
-    ax_disp.set_ylabel("Frequency (cm⁻¹)")
-    ax_disp.set_xlabel("q-path")
+    ax_disp.set_ylabel("Frecuencia (cm⁻¹)")
+    ax_disp.set_xlabel("ruta q")
     ax_disp.set_title(title)
 
     if has_dos:
@@ -346,20 +296,7 @@ def plot_phonon_comparison(
     label_old: str = "ASE Δ=0.05 Å",
     label_new: str = "Phonopy Δ=0.02 Å",
 ) -> plt.Figure:
-    """Side-by-side comparison of two PhononResult objects.
-
-    Left panel: old result (with artefacts). Right panel: new result (corrected).
-    Bottom panel: overlaid DOS comparison.
-
-    Args:
-        result_old: First PhononResult (typically ASE, larger Δ).
-        result_new: Second PhononResult (typically Phonopy, smaller Δ).
-        output_dir: Directory for output files.
-        label_old, label_new: Labels for the two datasets.
-
-    Returns:
-        matplotlib Figure.
-    """
+    """Compara dos PhononResult."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -381,10 +318,10 @@ def plot_phonon_comparison(
         ax.axhline(0, color="k", lw=0.8, ls="--", alpha=0.5)
         ax.set_xlim(0, nq - 1)
         ax.set_title(label, fontsize=11)
-        ax.set_ylabel("Frequency (cm⁻¹)")
-        ax.set_xlabel("q-path")
+        ax.set_ylabel("Frecuencia (cm⁻¹)")
+        ax.set_xlabel("ruta q")
         n_im = result.n_imaginary
-        tag = f"{n_im} imag." if n_im else "stable"
+        tag = f"{n_im} imag." if n_im else "estable"
         ax.text(0.97, 0.03, tag, transform=ax.transAxes, ha="right", va="bottom",
                 fontsize=9, color="#d32f2f" if n_im else "green")
 
@@ -402,11 +339,11 @@ def plot_phonon_comparison(
                                  alpha=0.15, color=color)
 
     ax_dos.axvline(0, color="k", lw=0.8, ls="--", alpha=0.5)
-    ax_dos.set_xlabel("Frequency (cm⁻¹)")
+    ax_dos.set_xlabel("Frecuencia (cm⁻¹)")
     ax_dos.set_ylabel("DOS")
     ax_dos.legend(fontsize=9)
 
-    fig.suptitle("Phonon dispersion: Δ comparison", fontsize=13, fontweight="bold")
+    fig.suptitle("Dispersión fonónica: comparación Δ", fontsize=13, fontweight="bold")
     fig.tight_layout()
 
     for ext in ("png", "pdf"):
@@ -415,45 +352,34 @@ def plot_phonon_comparison(
     return fig
 
 
-# ---------------------------------------------------------------------------
-# PES scan and NEB path plots
-# ---------------------------------------------------------------------------
+# PES scan y NEB ruta plots
 
 def plot_pes_scan(
     result,
-    title: str = "PES scan — soft mode",
+    title: str = "Barrido PES - modo blando",
     output_path: Optional[Path] = None,
 ) -> plt.Figure:
-    """Plot E(Q) curve from a PESScanResult.
-
-    Args:
-        result: PESScanResult from scan_pes_1d().
-        title: Figure title.
-        output_path: Save path without extension (PNG + PDF). Not saved if None.
-
-    Returns:
-        matplotlib Figure.
-    """
+    """Grafica E(Q) desde PES."""
     q = result.displacements_Ang
-    E = result.energies_eV * 1000  # convert to meV for readability
+    E = result.energies_eV * 1000  # convert meV para readability
 
     fig, ax = plt.subplots(figsize=(6, 4))
 
     ax.plot(q, E, "o-", color="#1f4e79", lw=1.8, ms=5, label="E(Q)")
-    ax.axvline(0, color="black", lw=0.8, ls="--", alpha=0.5, label="Equilibrium")
+    ax.axvline(0, color="black", lw=0.8, ls="--", alpha=0.5, label="Equilibrio")
 
     if result.double_well_detected:
         ax.plot(result.saddle_Q_Ang, result.energies_eV[
             int(np.argmin(np.abs(q - result.saddle_Q_Ang)))
-        ] * 1000, "v", color="#d32f2f", ms=10, zorder=5, label="Saddle point")
+        ] * 1000, "v", color="#d32f2f", ms=10, zorder=5, label="Punto silla")
         ax.plot(result.q_min1_Ang, result.energies_eV[
             int(np.argmin(np.abs(q - result.q_min1_Ang)))
-        ] * 1000, "o", color="steelblue", ms=9, zorder=5, label="Minima")
+        ] * 1000, "o", color="steelblue", ms=9, zorder=5, label="Mínimos")
         ax.plot(result.q_min2_Ang, result.energies_eV[
             int(np.argmin(np.abs(q - result.q_min2_Ang)))
         ] * 1000, "o", color="steelblue", ms=9, zorder=5)
         ax.annotate(
-            f"Barrier: {result.barrier_meV:.1f} meV",
+            f"Barrera: {result.barrier_meV:.1f} meV",
             xy=(result.saddle_Q_Ang, result.energies_eV[
                 int(np.argmin(np.abs(q - result.saddle_Q_Ang)))
             ] * 1000),
@@ -462,12 +388,12 @@ def plot_pes_scan(
             arrowprops=dict(arrowstyle="->", color="#d32f2f", lw=1.2),
         )
 
-    ax.set_xlabel(f"Displacement Q along mode {result.mode_index} (Å)")
+    ax.set_xlabel(f"Desplazamiento Q modo {result.mode_index} (Å)")
     ax.set_ylabel("ΔE (meV)")
     ax.set_title(
         f"{title}\n"
         f"λ = {result.eigenvalue_eV_Ang2:.4f} eV/Å²  |  "
-        f"{'double well' if result.double_well_detected else 'single well'}",
+        f"{'doble pozo' if result.double_well_detected else 'pozo simple'}",
         fontsize=11,
     )
     ax.legend(fontsize=9)
@@ -484,19 +410,10 @@ def plot_pes_scan(
 
 def plot_neb_path(
     result,
-    title: str = "CI-NEB energy profile",
+    title: str = "Perfil energía CI-NEB",
     output_path: Optional[Path] = None,
 ) -> plt.Figure:
-    """Plot the NEB energy profile from a NEBResult.
-
-    Args:
-        result: NEBResult from run_cineb().
-        title: Figure title.
-        output_path: Save path without extension (PNG + PDF). Not saved if None.
-
-    Returns:
-        matplotlib Figure.
-    """
+    """Grafica perfil NEB."""
     E_meV = result.energies_eV * 1000
     images_idx = np.arange(result.n_images)
 
@@ -505,24 +422,24 @@ def plot_neb_path(
     ax.plot(images_idx, E_meV, "o-", color="#1f4e79", lw=1.8, ms=6)
     ax.plot(
         result.saddle_image_idx, E_meV[result.saddle_image_idx],
-        "v", color="#d32f2f", ms=11, zorder=5, label="Saddle (TS)",
+        "v", color="#d32f2f", ms=11, zorder=5, label="Silla (TS)",
     )
 
     ax.annotate(
-        f"Barrier(fwd): {result.barrier_forward_meV:.1f} meV",
+        f"Barrera ida: {result.barrier_forward_meV:.1f} meV",
         xy=(result.saddle_image_idx, E_meV[result.saddle_image_idx]),
         xytext=(0.05, 0.88), textcoords="axes fraction",
         fontsize=10, color="#d32f2f",
     )
     ax.annotate(
-        f"Barrier(rev): {result.barrier_reverse_meV:.1f} meV",
+        f"Barrera vuelta: {result.barrier_reverse_meV:.1f} meV",
         xy=(result.saddle_image_idx, E_meV[result.saddle_image_idx]),
         xytext=(0.05, 0.76), textcoords="axes fraction",
         fontsize=10, color="steelblue",
     )
 
-    converged_str = "converged" if result.converged else "NOT converged"
-    ax.set_xlabel("NEB image index")
+    converged_str = "convergido" if result.converged else "no convergido"
+    ax.set_xlabel("índice imagen NEB")
     ax.set_ylabel("ΔE (meV)")
     ax.set_title(f"{title}\n{converged_str}", fontsize=11)
     ax.set_xticks(images_idx)

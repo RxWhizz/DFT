@@ -6,7 +6,7 @@ Construir una base DFT consistente para comparar contra los 8 candidatos que el 
 
 ## Candidatos ML validos
 
-| Rank ML | Formula | Bandgap ML fast (eV) | Tolerance factor | Score ML | Valid |
+| Rank ML | Formula | Bandgap ML rapido (eV) | Factor tolerancia | Score ML | Valido |
 |---:|---|---:|---:|---:|---:|
 | 1 | MAPbI3 | 1.5000 | 0.9115 | 1.9885 | 1 |
 | 2 | MASnI3 | 1.3000 | 0.9142 | 1.9858 | 1 |
@@ -23,13 +23,13 @@ Para CsPbI3 fase alpha se encontro una referencia DFT con:
 
 | Propiedad | Valor | Metodo/fuente |
 |---|---:|---|
-| Bandgap HSE06+SOC/RPA reference | 1.5858 eV | GPAW PBE+HSE06_nsc+SOC+RPA |
+| Bandgap HSE06+SOC/RPA referencia | 1.5858 eV | GPAW PBE+HSE06_nsc+SOC+RPA |
 | Bandgap PBE | 1.0891 eV | GPAW PBE |
 | Energia de formacion | -0.037882 eV/atom | GPAW, referencia DFT existente |
 | Masa efectiva electron | 0.1108 m0 | PBE+SOC, ajuste parabolico |
 | Masa efectiva hueco | 0.1510 m0 | PBE+SOC, ajuste parabolico |
 | Dielectrico epsilon_r | 6.1648 | RPA |
-| Exciton binding | 22.9 meV | postproceso con masas/dielectrico |
+| Energia enlace exciton | 22.9 meV | postproceso con masas/dielectrico |
 | PCE SQ | 27.23 % | limite Shockley-Queisser |
 | Solar score | 83.8 | score DFT/postproceso |
 | Fonos Gamma min | -29.9 cm^-1 | GPAW FD + Phonopy |

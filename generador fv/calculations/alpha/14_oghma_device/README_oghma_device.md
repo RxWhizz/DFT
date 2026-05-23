@@ -1,23 +1,21 @@
-# OghmaNano device step
+# Paso dispositivo OghmaNano
 
-OghmaNano is a drift-diffusion + optics device physics solver (not ML).
+OghmaNano = solver drift-diffusion + optica. No ML.
 
-## Files generated
+## Archivos
 
-- `device_stack.json` — DFT-derived device parameters
-- `sim/sim.json` — OghmaNano project (perovskite template + DFT params)
-- `sim/materials/CsPbI3/nk.csv` — DFT n(ω)/k(ω) optical data
-- `sim/materials/CsPbI3/mat.json` — material metadata
+- `device_stack.json` — parametros dispositivo desde DFT
+- `sim/sim.json` — proyecto OghmaNano
+- `sim/materials/CsPbI3/nk.csv` — datos opticos n(ω)/k(ω)
+- `sim/materials/CsPbI3/mat.json` — metadatos material
 
-## To run
+## Ejecutar
 
-Either set `execute: true` in `configs/default_params.yaml` under `oghma_device:`
-and rerun the workflow, or run manually:
+Activa `execute: true` en `configs/default_params.yaml` bajo `oghma_device:`
+y reejecuta workflow, o manual:
 
-```powershell
-& "C:\Program Files (x86)\OghmaNano\oghma_core.exe" --sim-root-path "C:\Users\LUIS\Documents\GitHub\DFT\generador fv\calculations\alpha\14_oghma_device\sim" --gui --html --simmode segment0@jv --lockfile "C:\Users\LUIS\Documents\GitHub\DFT\generador fv\calculations\alpha\14_oghma_device\sim\lock0.dat"
+```bash
+cd sim && /usr/bin/oghma_core
 ```
 
-Linux/Wine runs use the same worker arguments, with `xvfb-run -a --` and the Wine S: drive mapping.
-
-Output `sim_info.dat` is parsed for PCE, Voc, Jsc, FF on next workflow run.
+`sim_info.dat` se parsea en siguiente corrida para PCE, Voc, Jsc, FF.

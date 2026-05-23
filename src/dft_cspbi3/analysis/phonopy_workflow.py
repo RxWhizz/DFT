@@ -1,20 +1,4 @@
-"""Phonon calculation via Phonopy + GPAW finite-displacement method.
-
-Advantages over the ASE Phonons backend:
-  1. Symmetry reduction: Pm-3m (O_h) reduces ~30 displacements to ~4-6 independent.
-  2. Crystal ASR: symmetrize_force_constants() applies the acoustic sum rule as
-     a symmetry constraint on C(R), not as a post-hoc diagonal correction.
-  3. Compatible with LO-TO Gonze-Lee correction (set_born_charges).
-
-Δ choice for CsPbI3:
-  Optimal Δ ≈ 0.02 Å — balances numerical noise (σ_F/2Δ) against anharmonic
-  contamination (∝ V3·Δ²). The previous Δ=0.05 Å exceeds the harmonic regime
-  for soft cage/tilt modes, producing spurious acoustic branches.
-
-Extended with compute_quasiharmonic() for Quasi-Harmonic Approximation (QHA):
-  Runs phonon force sets at 5–7 volumes, computes F_vib(T,V) via Phonopy QHA,
-  and extracts thermal expansion α(T), heat capacity C_p(T), and G(T).
-"""
+"""Fonones con Phonopy + GPAW."""
 
 from __future__ import annotations
 
@@ -30,16 +14,14 @@ logger = logging.getLogger(__name__)
 # 1 THz = 33.3564 cm⁻¹
 _THZ_TO_CM1 = 33.3564
 
-# imaginary threshold — same as in phonons.py
+# imaginary umbral - mismo as en fonones.py
 _IMAGINARY_THRESHOLD_CM1 = 10.0
 
 
-# ---------------------------------------------------------------------------
-# Structure conversion helpers
-# ---------------------------------------------------------------------------
+# Estructura conversion helpers
 
 def _ase_to_phonopy(atoms: Atoms):
-    """Convert ASE Atoms to PhonopyAtoms."""
+    """Convert ASE Atoms PhonopyAtoms."""
     from phonopy.structure.atoms import PhonopyAtoms
     return PhonopyAtoms(
         symbols=atoms.get_chemical_symbols(),
@@ -49,18 +31,16 @@ def _ase_to_phonopy(atoms: Atoms):
 
 
 def _phonopy_to_ase(ph_atoms) -> Atoms:
-    """Convert PhonopyAtoms to ASE Atoms with PBC."""
+    """Convert PhonopyAtoms ASE Atoms con PBC."""
     return Atoms(
         symbols=list(ph_atoms.symbols),
-        positions=np.array(ph_atoms.positions),   # Cartesian positions in Å
+        positions=np.array(ph_atoms.positions),   # Cartesian positions en Å
         cell=np.array(ph_atoms.cell),
         pbc=True,
     )
 
 
-# ---------------------------------------------------------------------------
-# Step 1: Generate symmetry-reduced displacements
-# ---------------------------------------------------------------------------
+# Step 1
 
 def generate_phonopy_displacements(
     atoms: Atoms,
@@ -68,18 +48,7 @@ def generate_phonopy_displacements(
     delta: float = 0.02,
     work_dir: Path = Path("."),
 ) -> tuple:
-    """Generate symmetry-reduced displacements using Phonopy.
-
-    Args:
-        atoms: Relaxed primitive cell ASE Atoms with PBC.
-        supercell: Supercell expansion factors.
-        delta: Displacement amplitude in Å.
-        work_dir: Directory for phonopy_disp.yaml output.
-
-    Returns:
-        (phonon, displaced_supercells, n_independent) where
-        displaced_supercells is a list of ASE Atoms.
-    """
+    """Genera symmetry-reduced displacements usa Phonopy."""
     from phonopy import Phonopy
 
     work_dir = Path(work_dir)
@@ -104,9 +73,7 @@ def generate_phonopy_displacements(
     return phonon, ase_displaced, n
 
 
-# ---------------------------------------------------------------------------
-# Step 2: Run GPAW forces for each displaced supercell
-# ---------------------------------------------------------------------------
+# Step 2
 
 def build_supercell_reference(
     atoms: Atoms,
@@ -116,17 +83,7 @@ def build_supercell_reference(
     scf_convergence: Optional[dict] = None,
     kpts_sc: Optional[list] = None,
 ) -> Path:
-    """Run a reference SCF on the undisplaced supercell and save as sc_ref.gpw.
-
-    Used by run_gpaw_forces() as wavefunction starting point for each
-    displaced SCF, cutting iterations from ~50 to ~8 (10× speedup).
-
-    The reference uses the same k-mesh and convergence as the displaced SCFs
-    so wavefunctions are directly transferable.
-
-    Returns:
-        Path to sc_ref.gpw.
-    """
+    """Ejecuta SCF referencia en supercelda."""
     from ase.build import make_supercell
     from gpaw import GPAW
 
@@ -166,44 +123,18 @@ def run_gpaw_forces(
     txt_prefix: str = "phonopy_sc",
     reference_gpw: Optional[Path] = None,
 ) -> list[np.ndarray]:
-    """Run GPAW SCF for each displaced supercell and collect forces.
-
-    Force caching: if forces_NNN.npy already exists in work_dir, the
-    displacement is skipped and the cached forces are loaded.
-
-    Wavefunction restart: if reference_gpw is provided (a converged SCF on
-    the undisplaced supercell with the same k-mesh), each displaced SCF starts
-    from those wavefunctions instead of LCAO, reducing iterations ~10×.
-
-    CORRECTNESS NOTE: convergence dict is *merged*, not replaced.
-    factory.create() uses kwargs.update(params_override), which would clobber
-    the energy criterion if convergence were passed raw. We always include
-    energy:1e-8 as a floor before adding any tighter criteria from config.
-
-    Args:
-        phonon: Phonopy object with displacements generated.
-        supercells: List of displaced supercell Atoms (from generate_phonopy_displacements).
-        factory: GPAWCalculatorFactory instance.
-        work_dir: Directory for output files and force caches.
-        supercell_matrix: (3,3) supercell matrix (diagonal for cubic).
-        scf_convergence: Extra convergence criteria to add on top of energy:1e-8.
-        txt_prefix: Prefix for GPAW log file names.
-        reference_gpw: Optional path to sc_ref.gpw for wavefunction restart.
-
-    Returns:
-        List of force arrays, each shape (N_atoms_supercell, 3).
-    """
+    """Ejecuta SCF por desplazamiento."""
     from gpaw import GPAW
 
     work_dir = Path(work_dir)
 
-    # CRITICAL: merge convergence — never replace energy threshold
+    # CRITICAL
     convergence = {"energy": 1e-8}
     if scf_convergence:
         convergence.update(scf_convergence)
 
-    # Scale k-mesh inversely to supercell to maintain k-point density
-    base_kpts = factory.config["scf"]["kpts"]   # e.g. [6, 6, 6]
+    # Scale k-mesh inversely supercell maintain k-point densidad
+    base_kpts = factory.config["scf"]["kpts"]   # e.g
     sc_diag = [int(supercell_matrix[i, i]) for i in range(3)]
     kpts_sc = [max(1, k // s) for k, s in zip(base_kpts, sc_diag)]
     logger.info("Supercell k-mesh: %s (base %s ÷ supercell %s)", kpts_sc, base_kpts, sc_diag)
@@ -228,8 +159,8 @@ def run_gpaw_forces(
         )
 
         if use_restart:
-            # Start from converged supercell wavefunctions — skips LCAO init
-            # and converges in ~8 iterations instead of ~50
+            # Start desde converged supercell wavefunctions - skips LCAO init
+            # y converges en ~8 iterations instead ~50
             calc = GPAW(
                 str(reference_gpw),
                 convergence=convergence,
@@ -241,7 +172,7 @@ def run_gpaw_forces(
                 "scf",
                 params_override={
                     "kpts": {"size": kpts_sc, "gamma": True},
-                    "symmetry": "off",      # displacement breaks crystal symmetry
+                    "symmetry": "off",
                     "convergence": convergence,
                 },
                 txt=str(work_dir / f"{txt_prefix}_{i:03d}.txt"),
@@ -261,9 +192,7 @@ def run_gpaw_forces(
     return force_sets
 
 
-# ---------------------------------------------------------------------------
-# Step 3: Build force constants, apply ASR, compute dispersion + DOS
-# ---------------------------------------------------------------------------
+# Step 3
 
 def compute_phonon_dispersion(
     phonon,
@@ -276,52 +205,32 @@ def compute_phonon_dispersion(
     asr: str = "crystal",
     work_dir: Path = Path("."),
 ) -> "PhononResult":
-    """Build force constants from force sets, apply ASR, compute dispersion + DOS.
-
-    Frequencies are evaluated at the q-points from ASE's cell.bandpath for
-    direct comparison with the ASE Phonons backend results.
-
-    Args:
-        phonon: Phonopy object after generate_displacements().
-        force_sets: List of force arrays from run_gpaw_forces().
-        atoms: Original primitive cell Atoms (for bandpath).
-        delta: Displacement amplitude in Å (stored in result).
-        supercell: Supercell tuple (stored in result).
-        kpath_npoints: Number of q-points along band path.
-        dos_kpts: Mesh for DOS integration.
-        asr: "crystal" applies full crystal symmetry (recommended);
-             "translational" applies translational ASR only;
-             "none" skips symmetrisation.
-        work_dir: Output directory for .npy result files.
-
-    Returns:
-        PhononResult with frequencies, DOS, and stability classification.
-    """
+    """Construye constantes de fuerza + ASR."""
     from dft_cspbi3.validation.phonons import PhononResult
 
     work_dir = Path(work_dir)
     flags: list[str] = []
 
-    # --- Assemble force constants ---
+    # Assemble fuerza constants
     phonon.forces = [np.array(f) for f in force_sets]
     phonon.produce_force_constants()
 
     if asr != "none":
         # symmetrize_force_constants(level=1) enforces translational + point-group
-        # constraints simultaneously, producing a physically correct ASR.
+        # constraints simultaneously, producing physically correct ASR
         phonon.symmetrize_force_constants(level=1)
         flags.append(f"ASR_{asr.upper()}_APPLIED")
         logger.info("Force constants symmetrised (ASR=%s)", asr)
 
-    # --- Band structure at ASE q-path ---
+    # Banda estructura en ASE q-ruta
     freqs_cm1 = np.zeros((kpath_npoints, 3 * len(atoms)))
     try:
         ase_path = atoms.cell.bandpath(npoints=kpath_npoints)
         qpoints = ase_path.kpts   # fractional (nq, 3)
         phonon.run_qpoints(qpoints, with_eigenvectors=False)
         qp_dict = phonon.get_qpoints_dict()
-        freqs_thz = qp_dict["frequencies"]   # (nq, nbranch), in THz
-        # Phonopy sign convention: imaginary → negative THz
+        freqs_thz = qp_dict["frequencies"]
+        # Phonopy sign convention
         freqs_cm1 = freqs_thz * _THZ_TO_CM1
         logger.info(
             "Band structure done: min=%.1f cm⁻¹, max=%.1f cm⁻¹",
@@ -331,7 +240,7 @@ def compute_phonon_dispersion(
         flags.append(f"BAND_STRUCTURE_FAILED:{exc}")
         logger.warning("Phonopy band structure failed: %s", exc)
 
-    # --- DOS ---
+    # DOS
     dos_freqs = None
     dos_weights = None
     try:
@@ -344,7 +253,7 @@ def compute_phonon_dispersion(
         flags.append(f"DOS_FAILED:{exc}")
         logger.warning("Phonopy DOS failed: %s", exc)
 
-    # --- Save outputs ---
+    # Guarda salidas
     np.save(str(work_dir / "phonon_frequencies_phonopy.npy"), freqs_cm1)
     if dos_freqs is not None:
         np.save(
@@ -352,7 +261,7 @@ def compute_phonon_dispersion(
             np.column_stack([dos_freqs, dos_weights]),
         )
 
-    # --- Classify imaginary modes ---
+    # Clasifica imaginary modes
     n_imaginary = int(np.sum(freqs_cm1 < -_IMAGINARY_THRESHOLD_CM1))
     if n_imaginary > 0:
         max_imag = float(freqs_cm1[freqs_cm1 < -_IMAGINARY_THRESHOLD_CM1].min())
@@ -369,16 +278,14 @@ def compute_phonon_dispersion(
         n_atoms_unit_cell=len(atoms),
         supercell=tuple(supercell),
         delta_Ang=delta,
-        band_structure=None,   # Phonopy obj, not ASE BandStructure
+        band_structure=None,
         dos_frequencies_cm1=dos_freqs,
         dos_weights=dos_weights,
         flags=flags,
     )
 
 
-# ---------------------------------------------------------------------------
-# Step 4 (optional): Compare Δ convergence
-# ---------------------------------------------------------------------------
+# Step 4 (opcional)
 
 def compare_delta_convergence(
     atoms: Atoms,
@@ -388,22 +295,7 @@ def compare_delta_convergence(
     supercell: tuple[int, int, int] = (2, 2, 2),
     scf_convergence: Optional[dict] = None,
 ) -> dict:
-    """Run phonon calculation for multiple Δ values and compare acoustic branches.
-
-    Results are cached: if forces_NNN.npy already exist for a given Δ, the
-    SCF step is skipped and only the post-processing is repeated.
-
-    Args:
-        atoms: Primitive cell Atoms.
-        factory: GPAWCalculatorFactory.
-        work_dir: Parent directory; subdirs delta_002/ etc. are created automatically.
-        deltas: List of displacement amplitudes in Å. Defaults to [0.02, 0.03].
-        supercell: Supercell matrix diagonal.
-        scf_convergence: Tighter SCF convergence for force accuracy.
-
-    Returns:
-        dict mapping delta (float) → PhononResult.
-    """
+    """Ejecuta fonón cálculo para multiple Δ valores y compara acoustic branches."""
     if deltas is None:
         deltas = [0.02, 0.03]
 
@@ -426,7 +318,7 @@ def compare_delta_convergence(
         )
         results[delta] = result
 
-        # Log acoustic branches at Γ (first q-point should be Γ for bandpath starting at G)
+        # Log ramas acusticas en Γ; primer q debe ser Γ.
         acoustic_at_gamma = result.frequencies_cm1[0, :3]
         logger.info(
             "Δ=%.3f Å: acoustic at Γ = [%.2f, %.2f, %.2f] cm⁻¹ (ideal: 0)",
@@ -436,24 +328,22 @@ def compare_delta_convergence(
     return results
 
 
-# ---------------------------------------------------------------------------
 # Quasi-Harmonic Approximation (QHA)
-# ---------------------------------------------------------------------------
 
 from dataclasses import dataclass as _dc, field as _field
 
 
 @_dc
 class QHAResult:
-    """Output of a Quasi-Harmonic Approximation calculation."""
+    """Output Quasi-Harmonic Approximation cálculo."""
 
     volumes_Ang3: np.ndarray            # volume grid [Å³]
-    temperatures_K: np.ndarray          # temperature grid [K]
-    gibbs_free_energy_eV: np.ndarray    # G(T) at equilibrium V [eV/cell]
+    temperatures_K: np.ndarray
+    gibbs_free_energy_eV: np.ndarray    # G(T) en equilibrium V [eV/celda]
     thermal_expansion: np.ndarray       # α(T) = d ln V / dT [1/K]
-    heat_capacity_Cp: np.ndarray        # C_p(T) [kB/cell] or [eV/K/cell]
+    heat_capacity_Cp: np.ndarray        # C_p(T) [kB/celda] o [eV/K/celda]
     equilibrium_volume_Ang3: np.ndarray # V_eq(T) [Å³]
-    bulk_modulus_GPa: Optional[float]   # B₀ at 0 K from BM EOS [GPa]
+    bulk_modulus_GPa: Optional[float]   # B₀ en 0 K desde BM EOS [GPa]
     flags: list[str] = _field(default_factory=list)
 
     @property
@@ -479,28 +369,7 @@ def compute_quasiharmonic(
     temperatures_K: tuple[float, ...] = tuple(range(0, 801, 50)),
     eos_model: str = "vinet",
 ) -> QHAResult:
-    """Compute quasi-harmonic thermodynamic properties.
-
-    Strategy:
-      1. Scale primitive cell volume by each strain factor.
-      2. Relax ions (fixed cell) with GPAW SCF at each volume.
-      3. Run full Phonopy displacement calculation at each volume.
-      4. Feed (V, E_DFT, phonon force sets) to Phonopy QHA.
-      5. Extract G(T), α(T), C_p(T), V_eq(T).
-
-    Args:
-        atoms: Relaxed equilibrium structure (0 K, 0 GPa).
-        factory: GPAWCalculatorFactory.
-        work_dir: Root directory; sub-dirs vol_{strain}/ are created.
-        volume_strains: Fractional volume strains relative to V₀.
-        supercell: Phonon supercell expansion.
-        delta: Displacement amplitude [Å].
-        temperatures_K: Temperature grid for thermodynamic integration.
-        eos_model: Equation of state for volume optimisation ("vinet" | "birch_murnaghan").
-
-    Returns:
-        QHAResult with thermodynamic properties.
-    """
+    """Calcula quasi-harmonic thermodynamic properties."""
     from phonopy import Phonopy
     from phonopy.structure.atoms import PhonopyAtoms
 
@@ -509,7 +378,7 @@ def compute_quasiharmonic(
     flags: list[str] = []
 
     V0 = float(atoms.get_volume())
-    a0 = float(atoms.cell[0, 0])   # cubic approximation
+    a0 = float(atoms.cell[0, 0])
 
     volumes:    list[float] = []
     energies:   list[float] = []
@@ -520,12 +389,12 @@ def compute_quasiharmonic(
         vol_dir = work_dir / f"vol_{strain:+.3f}"
         vol_dir.mkdir(parents=True, exist_ok=True)
 
-        # Scaled structure
+        # Scaled estructura
         scaled_atoms = atoms.copy()
         scaled_atoms.set_cell(atoms.cell * scale, scale_atoms=True)
         V = float(scaled_atoms.get_volume())
 
-        # DFT total energy (fixed cell SCF)
+        # DFT total energía (fixed celda SCF)
         energy_npy = vol_dir / "E_dft.npy"
         if energy_npy.exists():
             E = float(np.load(str(energy_npy)))
@@ -546,7 +415,7 @@ def compute_quasiharmonic(
         volumes.append(V)
         energies.append(E)
 
-        # Phonon force sets at this volume
+        # Phonon fuerza sets en this volume
         phonon_obj, displaced, n_disp = generate_phonopy_displacements(
             scaled_atoms, supercell=supercell, delta=delta, work_dir=vol_dir,
         )
@@ -564,7 +433,7 @@ def compute_quasiharmonic(
     try:
         from phonopy.qha import PhonopyQHA
 
-        # Build force constants for each volume
+        # Construye fuerza constants para each volume
         entropy_list: list[np.ndarray]  = []
         cv_list:      list[np.ndarray]  = []
         fe_list:      list[np.ndarray]  = []
@@ -579,7 +448,7 @@ def compute_quasiharmonic(
             entropy_list.append(np.array(tp["entropy"]) * 1.0364e-4)  # J/mol/K → eV/K
             cv_list.append(np.array(tp["heat_capacity"]) * 1.0364e-4) # J/mol/K → eV/K
 
-        fe_arr      = np.stack(fe_list, axis=0)      # (n_vol, n_T)
+        fe_arr      = np.stack(fe_list, axis=0)
         entropy_arr = np.stack(entropy_list, axis=0)
         cv_arr      = np.stack(cv_list, axis=0)
 
@@ -587,7 +456,7 @@ def compute_quasiharmonic(
             volumes=volumes_arr,
             electronic_energies=energies_arr,
             temperatures=list(temps_arr),
-            free_energy=fe_arr.T,      # PhonopyQHA expects (n_T, n_vol)
+            free_energy=fe_arr.T,
             cv=cv_arr.T,
             entropy=entropy_arr.T,
             eos=eos_model,
@@ -599,7 +468,7 @@ def compute_quasiharmonic(
         v_eq     = np.array(qha.get_volume_temperature())
         cp       = np.array(qha.get_heat_capacity_P_numerical())
 
-        # Bulk modulus at 0 K from EOS fit
+        # Bulk modulus en 0 K desde EOS fit
         try:
             bm = float(qha.get_bulk_modulus_temperature()[0]) * 160.2   # eV/Å³ → GPa
         except Exception:

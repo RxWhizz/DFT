@@ -1,8 +1,4 @@
-"""Tests for validation/* and reporting/* modules (no GPAW required).
-
-All GPAW, ASE-phonon, and ASE-vibration calls are mocked so these tests run
-on any Python ≥ 3.11 with numpy installed.
-"""
+"""Tests validación/reporting sin GPAW."""
 
 from __future__ import annotations
 
@@ -14,14 +10,11 @@ from unittest.mock import MagicMock, patch, mock_open
 
 import numpy as np
 
-# ---------------------------------------------------------------------------
-# Build complete mocks for gpaw and ase BEFORE any dft_cspbi3 import
-# ---------------------------------------------------------------------------
 
 def _build_mocks():
-    """Inject minimal but complete gpaw + ase stubs into sys.modules."""
+    """Inject minimal but completo gpaw + ase stubs into sys.modules."""
 
-    # ---- ASE Atoms stub ----
+    # ASE Atoms stub
     class _Atoms:
         def __init__(self, *a, **kw):
             self._pos = np.zeros((5, 3))
@@ -44,11 +37,11 @@ def _build_mocks():
         def calc(self, v): self._calc = v
         def get_potential_energy(self): return -100.0
 
-    # ---- ASE: build a fake package hierarchy ----
+    # ASE
     def _pkg(name, **attrs):
-        """Create a fake package (module with __path__ so sub-imports work)."""
+        """Crea fake package (module con __path__ so sub-imports trabajo)."""
         m = types.ModuleType(name)
-        m.__path__ = []          # marks it as a package
+        m.__path__ = []
         m.__package__ = name
         for k, v in attrs.items():
             setattr(m, k, v)
@@ -86,9 +79,9 @@ def _build_mocks():
         ("ase.spacegroup",   ase_spacegroup),
         ("ase.units",        ase_units),
     ]:
-        sys.modules[mod_name] = mod   # force-register (no setdefault)
+        sys.modules[mod_name] = mod
 
-    # ---- GPAW stubs ----
+    # GPAW stubs
     class _PW:
         def __init__(self, ecut): self.ecut = ecut
 
@@ -119,7 +112,7 @@ def _build_mocks():
     sys.modules.setdefault("gpaw", gpaw_mod)
     sys.modules.setdefault("gpaw.spinorbit", spinorbit_mod)
 
-    # ---- Other heavy deps ----
+    # Other heavy deps
     pandas_mod = types.ModuleType("pandas")
     pandas_mod.DataFrame = MagicMock
     sys.modules.setdefault("pandas", pandas_mod)
@@ -156,9 +149,7 @@ BASE = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(BASE))
 
 
-# ===========================================================================
-# Tests: validation.stability
-# ===========================================================================
+# Tests
 
 class TestStabilityClass(unittest.TestCase):
 
@@ -189,17 +180,17 @@ class TestStabilityClass(unittest.TestCase):
         return r
 
     def test_stable_phonons(self):
-        ph = self._make_phonon_result(0, 5.0)  # 5 cm⁻¹ < threshold
+        ph = self._make_phonon_result(0, 5.0)  # 5 cm⁻¹ < umbral
         report = self.classify_from_phonons(ph)
         self.assertEqual(report.classification, self.StabilityClass.STABLE)
 
     def test_metastable_phonons(self):
-        ph = self._make_phonon_result(2, -50.0)  # 50 cm⁻¹ < 100 threshold
+        ph = self._make_phonon_result(2, -50.0)  # 50 cm⁻¹ < 100 umbral
         report = self.classify_from_phonons(ph)
         self.assertEqual(report.classification, self.StabilityClass.METASTABLE)
 
     def test_unstable_phonons(self):
-        ph = self._make_phonon_result(3, -150.0)  # 150 cm⁻¹ > 100 threshold
+        ph = self._make_phonon_result(3, -150.0)  # 150 cm⁻¹ > 100 umbral
         report = self.classify_from_phonons(ph)
         self.assertEqual(report.classification, self.StabilityClass.UNSTABLE)
 
@@ -221,7 +212,7 @@ class TestStabilityClass(unittest.TestCase):
 
     def test_combined_phonon_unstable_dominates(self):
         ph = self._make_phonon_result(2, -200.0)
-        h = self._make_hessian_result(0, 0.01)  # hessian OK
+        h = self._make_hessian_result(0, 0.01)
         r = self.classify_combined(h, ph)
         self.assertEqual(r.classification, self.StabilityClass.UNSTABLE)
 
@@ -262,9 +253,7 @@ class TestStabilityClass(unittest.TestCase):
         self.assertEqual(len(r.recommendations), 0)
 
 
-# ===========================================================================
-# Tests: validation.scf (text parsing — no GPAW needed for parse functions)
-# ===========================================================================
+# Tests
 
 class TestSCFReportDataclass(unittest.TestCase):
 
@@ -337,7 +326,7 @@ class TestSCFReportDataclass(unittest.TestCase):
 
     def test_oscillation_detection(self):
         from dft_cspbi3.validation.scf import validate_scf
-        # Alternating energies → should detect oscillation
+        # Alternating energies → debe detecta oscillation
         lines = "\n".join(
             f"iter:  {i+1}  12:00:{i:02d}  {e:.4f}   -1.00   -1.00"
             for i, e in enumerate([-100, -101, -100, -101, -100, -101, -100, -101])
@@ -349,9 +338,7 @@ class TestSCFReportDataclass(unittest.TestCase):
         self.assertTrue(r.oscillating)
 
 
-# ===========================================================================
-# Tests: validation.scf — physical checks (uses GPAW mock)
-# ===========================================================================
+# Tests
 
 class TestPhysicalChecks(unittest.TestCase):
 
@@ -364,7 +351,7 @@ class TestPhysicalChecks(unittest.TestCase):
 
     def test_energy_negative_flag(self):
         from dft_cspbi3.validation.scf import validate_physical_checks
-        # Patch GPAW mock to return positive energy
+        # Patch GPAW mock devuelve positive energía
         import sys
         orig = sys.modules["gpaw"].GPAW
         class _BadGPAW(orig):
@@ -383,9 +370,7 @@ class TestPhysicalChecks(unittest.TestCase):
         self.assertGreater(pc.n_electrons, 0)
 
 
-# ===========================================================================
-# Tests: validation.soc
-# ===========================================================================
+# Tests
 
 class TestSOCReport(unittest.TestCase):
 
@@ -415,7 +400,7 @@ class TestSOCReport(unittest.TestCase):
 
     def test_validate_soc_with_mocked_npy(self):
         from dft_cspbi3.validation.soc import validate_soc
-        # soc_eigenvalues.npy: shape (nkpts=8, 2*nbands=88)
+        # soc_eigenvalues.npy
         e_kn = np.linspace(-5, 5, 8 * 88).reshape(8, 88)
         spin_kn = np.ones((8, 88)) * 0.3
 
@@ -443,14 +428,14 @@ class TestSOCReport(unittest.TestCase):
             n_kpts=8,
             n_bands_soc=88,
         )
-        # For Pb systems, χSOC must be negative
+        # For Pb systems, χSOC debe be negative
         self.assertLess(r.chi_soc_eV, 0)
 
     def test_out_of_range_chi_soc_invalid(self):
         r = self.SOCReport(
             soc_applied=True,
             gap_no_soc_eV=1.44,
-            gap_soc_eV=2.5,    # SOC increases gap — physically wrong for Pb
+            gap_soc_eV=2.5,    # SOC increases gap - physically wrong para Pb
             chi_soc_eV=+1.06,
             chi_soc_plausible=False,
             splitting_detected=True,
@@ -462,9 +447,7 @@ class TestSOCReport(unittest.TestCase):
         self.assertFalse(r.valid)
 
 
-# ===========================================================================
-# Tests: validation.hessian — data class and math
-# ===========================================================================
+# Tests
 
 class TestHessianResult(unittest.TestCase):
 
@@ -518,7 +501,7 @@ class TestHessianResult(unittest.TestCase):
         from dft_cspbi3.validation.hessian import compute_hessian
         import types
 
-        # Build a fake atoms object and a calculator that returns known forces
+        # Construye fake atoms object y calculator that returns known fuerzas
         atoms = MagicMock()
         atoms.__len__ = MagicMock(return_value=2)
         atoms.get_masses.return_value = np.array([1.0, 1.0])
@@ -529,7 +512,7 @@ class TestHessianResult(unittest.TestCase):
         call_count = [0]
         def fake_forces():
             call_count[0] += 1
-            # Return small random forces
+            # Devuelve small random fuerzas
             return np.random.default_rng(call_count[0]).random((2, 3)) * 0.001
 
         atoms.get_forces.side_effect = fake_forces
@@ -538,14 +521,12 @@ class TestHessianResult(unittest.TestCase):
         calc = MagicMock()
 
         result = compute_hessian(atoms, calc, delta=0.01)
-        # Check H is symmetric (by construction — (H + H.T)/2)
+        # Revisa H symmetric (by construction - (H + H.T)/2)
         diff = np.max(np.abs(result.hessian - result.hessian.T))
         self.assertAlmostEqual(diff, 0.0, places=12)
 
 
-# ===========================================================================
-# Tests: validation.phonons — helpers
-# ===========================================================================
+# Tests
 
 class TestPhononHelpers(unittest.TestCase):
 
@@ -601,9 +582,7 @@ class TestPhononHelpers(unittest.TestCase):
         self.assertIn("UNSTABLE", r.summary)
 
 
-# ===========================================================================
-# Tests: reporting.methodology and reporting.assumptions
-# ===========================================================================
+# Tests
 
 class TestReportingMethodology(unittest.TestCase):
 
@@ -656,9 +635,7 @@ class TestReportingMethodology(unittest.TestCase):
         self.assertEqual(note, "")
 
 
-# ===========================================================================
-# Tests: reporting.validation_report
-# ===========================================================================
+# Tests
 
 class TestValidationReport(unittest.TestCase):
 
@@ -738,9 +715,7 @@ class TestValidationReport(unittest.TestCase):
         self.assertEqual(_fmt_opt(1.44, ".4f"), "1.4400")
 
 
-# ===========================================================================
-# Tests: reporting.vibrational_analysis
-# ===========================================================================
+# Tests
 
 class TestVibrationalReport(unittest.TestCase):
 
@@ -801,9 +776,7 @@ class TestVibrationalReport(unittest.TestCase):
             self.assertIn("instabilit", text.lower())
 
 
-# ===========================================================================
-# Tests: soc_was_applied helper
-# ===========================================================================
+# Tests
 
 class TestSOCWasApplied(unittest.TestCase):
 
@@ -818,9 +791,7 @@ class TestSOCWasApplied(unittest.TestCase):
             self.assertFalse(soc_was_applied("/fake/soc_dir"))
 
 
-# ===========================================================================
 # Entry point
-# ===========================================================================
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()

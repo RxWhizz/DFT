@@ -1,4 +1,4 @@
-"""Tests for GPAWCalculatorFactory — validates parameter correctness without running GPAW."""
+"""Tests GPAWCalculatorFactory; valida parámetros sin GPAW."""
 
 import sys
 from pathlib import Path
@@ -17,13 +17,11 @@ def _load_config():
         return yaml.safe_load(fh)
 
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def mock_gpaw_module(monkeypatch):
-    """Patch the gpaw module so GPAWCalculatorFactory can be imported without GPAW installed."""
+    """Parchea gpaw; importa sin GPAW."""
     gpaw_mock = MagicMock()
     gpaw_mock.GPAW = MagicMock(side_effect=lambda **kwargs: MagicMock(_kwargs=kwargs))
     gpaw_mock.Mixer = MagicMock(side_effect=lambda **kwargs: MagicMock(_kwargs=kwargs))
@@ -46,9 +44,7 @@ def alpha_atoms():
     return StructureBuilder.build_alpha()
 
 
-# ---------------------------------------------------------------------------
 # Config loading
-# ---------------------------------------------------------------------------
 
 class TestConfigLoading:
     def test_config_loaded(self, factory):
@@ -73,9 +69,7 @@ class TestConfigLoading:
         assert 550 in cr
 
 
-# ---------------------------------------------------------------------------
 # Calculator creation
-# ---------------------------------------------------------------------------
 
 class TestRelaxCalc:
     def test_returns_gpaw_object(self, factory, mock_gpaw_module):
@@ -91,7 +85,7 @@ class TestRelaxCalc:
     def test_ecut_is_pw_mode(self, factory, mock_gpaw_module):
         factory.create("relax")
         kwargs = mock_gpaw_module.GPAW.call_args.kwargs
-        # PW(450) should have been called
+        # PW(450) debe have been llamado
         mock_gpaw_module.PW.assert_called_with(450)
 
     def test_kpoints(self, factory, mock_gpaw_module):
@@ -102,7 +96,7 @@ class TestRelaxCalc:
 
     def test_mixer_beta(self, factory, mock_gpaw_module):
         factory.create("relax")
-        # Mixer should have been constructed with beta=0.05
+        # Mixer debe have been construido con beta=0.05
         mock_gpaw_module.Mixer.assert_called_with(beta=0.05, nmaxold=5, weight=50.0)
 
     def test_maxiter(self, factory, mock_gpaw_module):
@@ -148,13 +142,13 @@ class TestHSE06Calc:
         assert kwargs["xc"]["name"] == "HSE06"
 
     def test_omega_value(self, factory, mock_gpaw_module):
-        """HSE06 screening parameter omega = 0.11 Bohr⁻¹."""
+        """HSE06 screening parámetro omega = 0.11 Bohr⁻¹."""
         factory.create("hse06")
         kwargs = mock_gpaw_module.GPAW.call_args.kwargs
         assert kwargs["xc"]["omega"] == pytest.approx(0.11)
 
     def test_reduced_kpoints(self, factory, mock_gpaw_module):
-        """HSE06 uses 4×4×4 k-mesh to reduce O(N³) cost."""
+        """HSE06 usa 4×4×4 k-mesh reduce O(N³) cost."""
         factory.create("hse06")
         kwargs = mock_gpaw_module.GPAW.call_args.kwargs
         assert kwargs["kpts"]["size"] == [4, 4, 4]

@@ -1,8 +1,4 @@
-"""Structural geometry analysis for ABX3 halide perovskites.
-
-Computes Goldschmidt tolerance factor, octahedral factor, and BX6
-octahedral distortion metrics from ASE Atoms objects.
-"""
+"""Analiza geometría ABX3."""
 
 from __future__ import annotations
 
@@ -15,7 +11,7 @@ from ase import Atoms
 
 logger = logging.getLogger(__name__)
 
-# Shannon ionic radii (Å) — Shannon 1976 Acta Cryst A32:751
+# Shannon ionic radii (Å) - Shannon 1976 Acta Cryst A32:751
 IONIC_RADII = {
     "Cs":  {"CN12": 1.74, "CN6": 1.67},
     "MA":  {"CN12": 2.17, "CN6": 2.17},
@@ -33,7 +29,7 @@ IONIC_RADII = {
 
 @dataclass
 class StructuralMetrics:
-    """Geometric stability and distortion metrics for ABX3 perovskite."""
+    """Métricas geométricas ABX3."""
 
     tolerance_factor: float
     octahedral_factor: float
@@ -82,15 +78,7 @@ def analyze_perovskite_geometry(
     B_species: str = "Pb",
     X_species: str = "I",
 ) -> StructuralMetrics:
-    """Compute structural stability metrics for an ABX3 perovskite.
-
-    Args:
-        atoms: Relaxed ASE Atoms (unit cell or supercell).
-        A_species, B_species, X_species: Element symbols.
-
-    Returns:
-        StructuralMetrics with t, μ, and distortion metrics.
-    """
+    """Calcula métricas estabilidad ABX3."""
     flags: list[str] = []
 
     r_A = IONIC_RADII.get(A_species, {}).get("CN12")

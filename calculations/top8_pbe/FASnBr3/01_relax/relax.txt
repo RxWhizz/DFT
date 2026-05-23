@@ -1,0 +1,4296 @@
+
+  ___ ___ ___ _ _ _  
+ |   |   |_  | | | | 
+ | | | | | . | | | | 
+ |__ |  _|___|_____|  25.7.0
+ |___|_|             
+
+User:   luis-ochoa@luis-pc
+Date:   Sat May  9 08:45:26 2026
+Arch:   x86_64
+Pid:    172605
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
+Python: 3.12.3
+gpaw:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw
+_gpaw:  /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/
+        _gpaw.cpython-312-x86_64-linux-gnu.so
+ase:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/ase (version 3.28.0)
+numpy:  /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/numpy (version 2.4.4)
+scipy:  /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/scipy (version 1.17.1)
+libxc:  5.2.3
+units:  Angstrom and eV
+cores: 7
+OpenMP: False
+OMP_NUM_THREADS: 1
+
+Input parameters:
+  convergence: {energy: 1e-06,
+                forces: 0.02}
+  kpts: {gamma: True,
+         size: [4, 4, 4]}
+  mixer: {backend: pulay,
+          beta: 0.05,
+          method: separate,
+          nmaxold: 5,
+          weight: 50.0}
+  mode: {ecut: 450.00000000000006,
+         name: pw}
+  symmetry: off
+  xc: PBE
+
+System changes: positions, numbers, cell, pbc, initial_charges, initial_magmoms 
+
+Initialize ...
+
+species:
+  Sn:
+    name: Tin
+    id: d1329c6b410f1e0bd923643368775dcd
+    Z: 50.0
+    valence: 14
+    core: 36
+    charge: 0.0
+    file: /home/luis-ochoa/.gpaw/gpaw-setups-24.11.0/Sn.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.38,
+                           lmax: 2}
+    cutoffs: {filter: 2.23,
+              core: 2.35}
+    projectors:
+      #              energy  rcut
+      - 5s(2.00)   -10.538   1.201
+      - 5p(2.00)    -3.696   1.270
+      - 4d(10.00)   -25.845   1.185
+      -  s          16.674   1.201
+      -  p          23.515   1.270
+      -  d           1.367   1.185
+  
+    # Using partial waves for Sn as LCAO basis
+
+  Br:
+    name: Bromine
+    id: 39dc90fcf3bf77f2d83386b416c2c495
+    Z: 35.0
+    valence: 7
+    core: 28
+    charge: 0.0
+    file: /home/luis-ochoa/.gpaw/gpaw-setups-24.11.0/Br.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.35,
+                           lmax: 2}
+    cutoffs: {filter: 1.98,
+              core: 2.38}
+    projectors:
+      #              energy  rcut
+      - 4s(2.00)   -20.121   1.111
+      - 4p(5.00)    -7.861   1.111
+      -  s           7.091   1.111
+      -  p          19.351   1.111
+      -  d           0.000   1.111
+  
+    # Using partial waves for Br as LCAO basis
+
+  C:
+    name: Carbon
+    id: 4aa54d4b901d75f77cc0ea3eec22967b
+    Z: 6.0
+    valence: 4
+    core: 2
+    charge: 0.0
+    file: /home/luis-ochoa/.gpaw/gpaw-setups-24.11.0/C.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.20,
+                           lmax: 2}
+    cutoffs: {filter: 1.14,
+              core: 1.14}
+    projectors:
+      #              energy  rcut
+      - 2s(2.00)   -13.751   0.635
+      - 2p(2.00)    -5.284   0.635
+      -  s          13.461   0.635
+      -  p          21.927   0.635
+      -  d           0.000   0.635
+  
+    # Using partial waves for C as LCAO basis
+
+  N:
+    name: Nitrogen
+    id: f7500608b86eaa90eef8b1d9a670dc53
+    Z: 7.0
+    valence: 5
+    core: 2
+    charge: 0.0
+    file: /home/luis-ochoa/.gpaw/gpaw-setups-24.11.0/N.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.18,
+                           lmax: 2}
+    cutoffs: {filter: 1.11,
+              core: 0.96}
+    projectors:
+      #              energy  rcut
+      - 2s(2.00)   -18.583   0.603
+      - 2p(3.00)    -7.089   0.529
+      -  s           8.629   0.603
+      -  p          20.123   0.529
+      -  d           0.000   0.577
+  
+    # Using partial waves for N as LCAO basis
+
+  H:
+    name: Hydrogen
+    id: d65de229564ff8ea4db303e23b6d1ecf
+    Z: 1.0
+    valence: 1
+    core: 0
+    charge: 0.0
+    file: /home/luis-ochoa/.gpaw/gpaw-setups-24.11.0/H.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.15,
+                           lmax: 2}
+    cutoffs: {filter: 0.85,
+              core: 0.53}
+    projectors:
+      #              energy  rcut
+      - 1s(1.00)    -6.494   0.476
+      -  s          20.717   0.476
+      -  p           0.000   0.476
+  
+    # Using partial waves for H as LCAO basis
+
+Reference energy: -384770.958430  # eV
+
+Spin-paired calculation
+
+Convergence criteria:
+ Maximum [total energy] change in last 3 cyles: 1e-06 eV / valence electron
+ Maximum integral of absolute [dens]ity change: 0.0001 electrons / valence electron
+ Maximum integral of absolute [eigenst]ate change: 4e-08 eV^2 / valence electron
+ Maximum change in the atomic [forces] across last 2 cycles: 0.02 eV/Ang OR
+Maximum error relative to the maximum force is below inf
+ Maximum number of scf [iter]ations: 333
+ (Square brackets indicate name in SCF output, whereas a 'c' in
+ the SCF output indicates the quantity has converged.)
+
+Symmetries present (total): 1
+
+  ( 1  0  0)
+  ( 0  1  0)
+  ( 0  0  1)
+
+64 k-points: 4 x 4 x 4 Monkhorst-Pack grid + [1/8,1/8,1/8]
+64 k-points in the irreducible part of the Brillouin zone
+       k-points in crystal coordinates                weights
+   0:    -0.25000000   -0.25000000   -0.25000000          1/64
+   1:    -0.25000000   -0.25000000    0.00000000          1/64
+   2:    -0.25000000   -0.25000000    0.25000000          1/64
+   3:    -0.25000000   -0.25000000    0.50000000          1/64
+   4:    -0.25000000    0.00000000   -0.25000000          1/64
+   5:    -0.25000000    0.00000000    0.00000000          1/64
+   6:    -0.25000000    0.00000000    0.25000000          1/64
+   7:    -0.25000000    0.00000000    0.50000000          1/64
+   8:    -0.25000000    0.25000000   -0.25000000          1/64
+   9:    -0.25000000    0.25000000    0.00000000          1/64
+          ...
+  63:     0.50000000    0.50000000    0.50000000          1/64
+
+Wave functions: Plane wave expansion
+  Cutoff energy: 450.000 eV
+  Number of coefficients (min, max): 4515, 4632
+  Pulay-stress correction: 0.000000 eV/Ang^3 (de/decut=0.000000)
+  Using Numpy's FFT
+  ScaLapack parameters: grid=1x1, blocksize=None
+  Wavefunction extrapolation:
+    Improved wavefunction reuse through dual PAW basis 
+
+Occupation numbers: Fermi-Dirac:
+  width: 0.1000  # eV
+ 
+
+Eigensolver
+   Davidson(niter=2) 
+
+Densities:
+  Coarse grid: 30*30*30 grid
+  Fine grid: 60*60*60 grid
+  Total Charge: 0.000000 
+
+Density mixing:
+  Method: separate
+  Backend: pulay
+  Linear mixing parameter: 0.05
+  old densities: 5
+  Damping of long wavelength oscillations: 50 
+
+Hamiltonian:
+  XC and Coulomb potentials evaluated on a 60*60*60 grid
+  Using the PBE Exchange-Correlation functional
+  External potential:
+    NoExternalPotential
+ 
+
+XC parameters: PBE with 2 nearest neighbor stencil
+
+Memory estimate:
+  Process memory now: 133.12 MiB
+  Calculator: 60.16 MiB
+    Density: 17.09 MiB
+      Arrays: 5.36 MiB
+      Localized functions: 9.68 MiB
+      Mixer: 2.06 MiB
+    Hamiltonian: 3.80 MiB
+      Arrays: 3.50 MiB
+      XC: 0.00 MiB
+      Poisson: 0.00 MiB
+      vbar: 0.30 MiB
+    Wavefunctions: 39.27 MiB
+      Arrays psit_nG: 23.54 MiB
+      Eigensolver: 3.18 MiB
+      Projections: 0.61 MiB
+      Projectors: 10.27 MiB
+      PW-descriptor: 1.67 MiB
+
+Total number of cores used: 7
+Parallelization over k-points: 7
+
+Number of atoms: 12
+Number of atomic orbitals: 38
+Number of bands in calculation: 37
+Number of valence electrons: 54
+Bands to converge: occupied
+
+... initialized
+
+Initializing position-dependent things.
+
+Density initialized from atomic densities
+Creating initial wave functions:
+  37 bands from LCAO basis set
+
+     .--------------.  
+    /|              |  
+   / |              |  
+  /  |              |  
+ *   |    H         |  
+ |   | H        H   |  
+ |   H N  C   H     |  
+ |   .--------------.  
+ Br /              /   
+ | Br             /    
+ |/              /     
+ Sn-----Br------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000    0.000000    0.000000    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000    0.000000    0.000000    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000    0.000000    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000    0.000000    2.970000    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    2.970000    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.690000    2.970000    2.970000    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.250000    2.970000    2.970000    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.070000    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.180000    3.853346    2.970000    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.180000    2.086654    2.970000    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.760000    3.853346    2.970000    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.760000    2.086654    2.970000    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:45:36   -51.341372
+iter:   2 08:45:42   -49.814404   -1.23  -0.94
+iter:   3 08:45:47   -48.349794   -1.65  -1.02
+iter:   4 08:45:52   -48.010926   -1.98  -1.14
+iter:   5 08:45:57   -47.845062   -1.44  -1.23
+iter:   6 08:46:03   -47.706989   -2.29  -1.49
+iter:   7 08:46:08   -47.961281   -2.29  -1.62
+iter:   8 08:46:13   -47.699666   -2.27  -1.60
+iter:   9 08:46:19   -47.717489   -3.05  -1.86
+iter:  10 08:46:24   -47.696002   -3.51  -2.09
+iter:  11 08:46:29   -47.693511   -4.37  -2.46
+iter:  12 08:46:34   -47.691855   -4.71  -2.50
+iter:  13 08:46:40   -47.691227   -4.30  -2.58
+iter:  14 08:46:45   -47.691189   -5.11  -2.85
+iter:  15 08:46:50   -47.691147   -6.20  -2.88
+iter:  16 08:46:55   -47.691038   -5.30  -2.91
+iter:  17 08:47:01   -47.690974   -5.43  -3.18
+iter:  18 08:47:06   -47.690868   -6.23  -3.46
+iter:  19 08:47:11   -47.690850   -7.11  -3.70
+iter:  20 08:47:17   -47.690847c  -7.58c -3.73
+iter:  21 08:47:22   -47.690842c  -6.75  -3.76
+iter:  22 08:47:27   -47.690863c  -7.32  -4.06c
+iter:  23 08:47:33   -47.690867c  -7.96c -4.10c
+iter:  24 08:47:40   -47.690862c  -8.58c -4.58c -3.14c
+
+Converged after 24 iterations.
+
+Dipole moment: (0.000000, -0.000000, 0.089124) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +64.806111
+Potential:      -60.813523
+External:        +0.000000
+XC:             -51.373164
+Entropy (-ST):   -0.219423
+Local:           -0.200575
+SIC:             +0.000000
+--------------------------
+Free energy:    -47.800573
+Extrapolated:   -47.690862
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.22769    2.00000
+  0    26      2.00263    1.52200
+  0    27      2.20749    0.58205
+  0    28      4.79115    0.00000
+
+  1    25      0.19359    2.00000
+  1    26      1.99677    1.54299
+  1    27      2.25129    0.41883
+  1    28      5.18342    0.00000
+
+
+Fermi level: 2.11845
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000    0.01417
+  1 Br    0.00000    0.00000   -0.03785
+  2 Br    0.00000    0.00000    0.03372
+  3 Br    0.00000    0.00000    0.00094
+  4 C    -0.00000   -0.00000    1.49853
+  5 N    -2.52790    0.00000   -2.29062
+  6 N     2.52790    0.00000   -2.29062
+  7 H    -0.00000    0.00000    3.12774
+  8 H    -0.80797    0.68478   -0.01271
+  9 H    -0.80797   -0.68478   -0.01271
+ 10 H     0.80797    0.68478   -0.01271
+ 11 H     0.80797   -0.68478   -0.01271
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|              |  
+   / |              |  
+  /  |              |  
+ *   |  BrH         |  
+ |   | H  C     H   |  
+ |   H N      H     |  
+ Br  Sn-------------.  
+ |  /              /   
+ | /r             /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.000202    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000    0.000000   -0.000541    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000    0.000482    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000    0.000000    2.970013    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    2.991408    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.653887    2.970000    2.937277    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.286113    2.970000    2.937277    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.114682    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.168458    3.863129    2.969818    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.168458    2.076871    2.969818    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.771542    3.863129    2.969818    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.771542    2.076871    2.969818    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:47:47   -48.381556   -1.64
+iter:   2 08:47:52   -48.287062   -3.00  -1.61
+iter:   3 08:47:57   -48.193624   -2.80  -1.75
+iter:   4 08:48:03   -48.179743   -3.33  -2.30
+iter:   5 08:48:08   -48.178585   -3.88  -2.38
+iter:   6 08:48:13   -48.177809   -3.87  -2.42
+iter:   7 08:48:18   -48.176222   -4.41  -2.73
+iter:   8 08:48:23   -48.176027   -4.76  -3.02
+iter:   9 08:48:29   -48.175941   -5.21  -3.10
+iter:  10 08:48:34   -48.175952   -5.69  -3.50
+iter:  11 08:48:39   -48.175965c  -6.57  -3.64
+iter:  12 08:48:44   -48.175964c  -7.33  -3.77
+iter:  13 08:48:50   -48.175948c  -6.62  -3.86
+iter:  14 08:48:56   -48.175944c  -7.68c -4.26c
+iter:  15 08:49:02   -48.175939c  -8.18c -4.30c -2.10c
+
+Converged after 15 iterations.
+
+Dipole moment: (-0.000000, -0.000000, 0.079649) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +58.736802
+Potential:      -56.450085
+External:        +0.000000
+XC:             -50.139124
+Entropy (-ST):   -0.241612
+Local:           -0.202727
+SIC:             +0.000000
+--------------------------
+Free energy:    -48.296745
+Extrapolated:   -48.175939
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.24215    2.00000
+  0    26      1.83754    1.29105
+  0    27      1.94026    0.78933
+  0    28      4.74903    0.00000
+
+  1    25      0.19221    2.00000
+  1    26      1.83572    1.29937
+  1    27      1.99138    0.56223
+  1    28      5.15751    0.00000
+
+
+Fermi level: 1.89749
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000    0.01080
+  1 Br   -0.00000   -0.00000   -0.03795
+  2 Br   -0.00000   -0.00000   -0.01999
+  3 Br   -0.00000   -0.00000    0.01382
+  4 C     0.00000   -0.00000    3.38041
+  5 N    -0.40606    0.00000   -2.59935
+  6 N     0.40606    0.00000   -2.59935
+  7 H     0.00000   -0.00000    1.94785
+  8 H    -0.80174    0.62178   -0.01188
+  9 H    -0.80174   -0.62178   -0.01188
+ 10 H     0.80174    0.62178   -0.01188
+ 11 H     0.80174   -0.62178   -0.01188
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   / |              |  
+  /  Br             |  
+ *   |    H         |  
+ |   |H   C     H   |  
+ |   H N      NH    |  
+ |   Sn-------------.  
+ |  /              /   
+ | Br             /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.001078    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.003180    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000    0.001051    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.970506    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.158103    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.548126    2.970000    2.767529    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.391874    2.970000    2.767529    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.293419    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.112396    3.908731    2.968961    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.112396    2.031269    2.968961    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.827604    3.908731    2.968961    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.827604    2.031269    2.968961    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:49:09   -54.048881   -0.30
+iter:   2 08:49:14   -51.719400   -1.72  -1.03
+iter:   3 08:49:20   -51.025040   -1.08  -1.10
+iter:   4 08:49:25   -50.655680   -2.86  -1.35
+iter:   5 08:49:30   -54.918173   -1.35  -1.37
+iter:   6 08:49:35   -52.176181   -1.90  -1.04
+iter:   7 08:49:41   -53.757474   -1.59  -1.26
+iter:   8 08:49:46   -51.341492   -0.68  -1.04
+iter:   9 08:49:51   -49.711203   -1.33  -1.16
+iter:  10 08:49:57   -49.771082   -2.51  -1.57
+iter:  11 08:50:02   -49.508296   -2.63  -1.55
+iter:  12 08:50:07   -49.496865   -3.45  -1.93
+iter:  13 08:50:12   -49.505688   -3.50  -2.05
+iter:  14 08:50:17   -49.490874   -3.93  -2.14
+iter:  15 08:50:23   -49.618576   -2.62  -2.15
+iter:  16 08:50:28   -49.501487   -3.25  -1.81
+iter:  17 08:50:33   -49.480113   -3.62  -2.21
+iter:  18 08:50:39   -49.480466   -4.99  -2.69
+iter:  19 08:50:44   -49.475638   -4.37  -2.73
+iter:  20 08:50:49   -49.485076   -4.22  -2.54
+iter:  21 08:50:54   -49.479684   -5.01  -2.73
+iter:  22 08:51:00   -49.479716   -6.34  -3.30
+iter:  23 08:51:05   -49.480091   -5.97  -3.34
+iter:  24 08:51:10   -49.479834   -6.85  -3.48
+iter:  25 08:51:15   -49.479806   -6.45  -3.59
+iter:  26 08:51:21   -49.479797c  -7.40  -4.04c
+iter:  27 08:51:27   -49.479809c  -8.05c -4.13c
+iter:  28 08:51:33   -49.479803c  -7.88c -4.20c -2.42c
+
+Converged after 28 iterations.
+
+Dipole moment: (-0.000000, 0.000000, 0.218609) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +35.049106
+Potential:      -39.107600
+External:        +0.000000
+XC:             -45.115208
+Entropy (-ST):   -0.202679
+Local:           -0.204761
+SIC:             +0.000000
+--------------------------
+Free energy:    -49.581143
+Extrapolated:   -49.479803
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.39546    1.99982
+  0    26      1.17087    1.65657
+  0    27      1.44057    0.49071
+  0    28      4.56120    0.00000
+
+  1    25      0.30531    1.99993
+  1    26      1.31630    1.05950
+  1    27      1.43143    0.52535
+  1    28      4.99375    0.00000
+
+
+Fermi level: 1.32822
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000   -0.00000    0.02950
+  1 Br   -0.00000   -0.00000   -0.07210
+  2 Br   -0.00000    0.00000   -0.34499
+  3 Br    0.00000    0.00000    0.04036
+  4 C     0.00000    0.00000    3.11446
+  5 N     3.89278   -0.00000   -1.42693
+  6 N    -3.89278   -0.00000   -1.42693
+  7 H     0.00000   -0.00000   -0.55750
+  8 H    -0.04342   -0.97210    0.16317
+  9 H    -0.04342    0.97210    0.16317
+ 10 H     0.04342   -0.97210    0.16317
+ 11 H     0.04342    0.97210    0.16317
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   / |            Br|  
+  /  |              |  
+ *   |    H         |  
+ |   |H    C    H   |  
+ |   H N      NH    |  
+ Br  .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.001586    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.004347    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.002943    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000    0.000000    2.970924    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.187410    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.566602    2.970000    2.740541    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.373398    2.970000    2.740541    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.313301    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.107938    3.899283    2.971133    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.107938    2.040717    2.971133    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.832062    3.899283    2.971133    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.832062    2.040717    2.971133    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:51:40   -49.844753   -2.18
+iter:   2 08:51:45   -49.826861   -3.29  -2.17
+iter:   3 08:51:51   -49.808674   -3.68  -2.30
+iter:   4 08:51:56   -49.817874   -4.33  -2.50
+iter:   5 08:52:01   -49.810330   -4.45  -2.47
+iter:   6 08:52:06   -49.806546   -4.72  -2.69
+iter:   7 08:52:11   -49.806853   -5.36  -3.09
+iter:   8 08:52:17   -49.806420   -5.35  -3.24
+iter:   9 08:52:22   -49.807129   -5.73  -3.32
+iter:  10 08:52:27   -49.807047   -7.12  -3.66
+iter:  11 08:52:32   -49.807007   -7.59c -3.71
+iter:  12 08:52:37   -49.807077   -6.86  -3.81
+iter:  13 08:52:43   -49.807051   -7.77c -4.07c
+iter:  14 08:52:49   -49.807049c  -8.48c -4.16c
+iter:  15 08:52:55   -49.807066c  -7.46c -4.20c -1.67
+iter:  16 08:53:01   -49.807057c  -8.56c -4.50c -2.45c
+
+Converged after 16 iterations.
+
+Dipole moment: (0.000000, 0.000000, 0.454189) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +34.300486
+Potential:      -38.783787
+External:        +0.000000
+XC:             -45.025483
+Entropy (-ST):   -0.185471
+Local:           -0.205538
+SIC:             +0.000000
+--------------------------
+Free energy:    -49.899792
+Extrapolated:   -49.807057
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.39608    1.99973
+  0    26      1.09501    1.74083
+  0    27      1.41952    0.41489
+  0    28      4.54874    0.00000
+
+  1    25      0.30282    1.99989
+  1    26      1.24465    1.20135
+  1    27      1.41046    0.44548
+  1    28      4.97957    0.00000
+
+
+Fermi level: 1.28548
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.02906
+  1 Br   -0.00000    0.00000   -0.08497
+  2 Br   -0.00000    0.00000   -0.39952
+  3 Br    0.00000   -0.00000    0.04472
+  4 C    -0.00000   -0.00000    2.39980
+  5 N     3.61245    0.00000   -1.04345
+  6 N    -3.61245   -0.00000   -1.04345
+  7 H    -0.00000    0.00000   -0.38684
+  8 H     0.15593   -1.10072    0.13754
+  9 H     0.15593    1.10072    0.13754
+ 10 H    -0.15593   -1.10072    0.13754
+ 11 H    -0.15593    1.10072    0.13754
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|              |  
+   / |            Br|  
+  /  |              |  
+ *   |   Br         |  
+ |   |H    C    H   |  
+ |   H N      NH    |  
+ Br  .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.004712    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000    0.000000   -0.012265    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.035133    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000    0.000000    2.974061    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.297198    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.740949    2.970000    2.642546    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.199051    2.970000    2.642546    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.379381    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.112508    3.806149    2.984917    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.112508    2.133851    2.984917    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.827492    3.806149    2.984917    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.827492    2.133851    2.984917    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:53:08   -51.858667   -0.72
+iter:   2 08:53:14   -51.685980   -2.05  -1.53
+iter:   3 08:53:19   -51.245932   -1.64  -1.58
+iter:   4 08:53:24   -51.233894   -2.92  -1.79
+iter:   5 08:53:29   -51.201658   -3.20  -1.94
+iter:   6 08:53:35   -51.201826   -2.94  -2.03
+iter:   7 08:53:40   -51.196839   -4.60  -2.36
+iter:   8 08:53:45   -51.193800   -3.76  -2.49
+iter:   9 08:53:50   -51.194075   -4.71  -2.84
+iter:  10 08:53:55   -51.193759   -5.89  -2.93
+iter:  11 08:54:01   -51.194172   -5.16  -3.00
+iter:  12 08:54:06   -51.193732   -5.05  -3.14
+iter:  13 08:54:11   -51.193743   -6.68  -3.60
+iter:  14 08:54:16   -51.193786c  -6.32  -3.61
+iter:  15 08:54:21   -51.193742c  -6.11  -3.67
+iter:  16 08:54:27   -51.193799   -6.50  -3.72
+iter:  17 08:54:32   -51.193806   -7.35  -4.00c
+iter:  18 08:54:37   -51.193763c  -6.76  -4.03c
+iter:  19 08:54:43   -51.193777c  -7.68c -4.20c
+iter:  20 08:54:48   -51.193799c  -7.16  -4.44c
+iter:  21 08:54:55   -51.193794c  -8.40c -4.60c -2.12c
+
+Converged after 21 iterations.
+
+Dipole moment: (-0.000000, -0.000000, 2.240847) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +38.300238
+Potential:      -43.247893
+External:        +0.000000
+XC:             -46.022787
+Entropy (-ST):   -0.061837
+Local:           -0.192433
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.224712
+Extrapolated:   -51.193794
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.28806    1.99988
+  0    26      0.60362    1.99720
+  0    27      1.56893    0.08759
+  0    28      4.57096    0.00000
+
+  1    25      0.21932    1.99994
+  1    26      0.72674    1.99044
+  1    27      1.55924    0.09608
+  1    28      5.00184    0.00000
+
+
+Fermi level: 1.26059
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000    0.03401
+  1 Br   -0.00000    0.00000   -0.13807
+  2 Br   -0.00000   -0.00000   -0.52197
+  3 Br   -0.00000    0.00000    0.03999
+  4 C    -0.00000   -0.00000    0.03270
+  5 N    -0.29744   -0.00000    0.18594
+  6 N     0.29744    0.00000    0.18594
+  7 H     0.00000   -0.00000    0.90400
+  8 H     1.19898   -1.04500   -0.19289
+  9 H     1.19898    1.04500   -0.19289
+ 10 H    -1.19898   -1.04500   -0.19289
+ 11 H    -1.19898    1.04500   -0.19289
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|              |  
+   / |            Br|  
+  /  |              |  
+ *   |   Br         |  
+ |   |H   C     H   |  
+ |   H  N    N H    |  
+ Br  .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.005993    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000    0.000000   -0.016239    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.050999    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000    0.000000    2.975420    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.326504    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.784176    2.970000    2.624229    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.155824    2.970000    2.624229    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.401843    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.133730    3.766492    2.985139    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.133730    2.173508    2.985139    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.806270    3.766492    2.985139    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.806270    2.173508    2.985139    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:55:02   -51.448589   -1.82
+iter:   2 08:55:07   -51.428908   -3.19  -2.02
+iter:   3 08:55:12   -51.381814   -3.10  -2.08
+iter:   4 08:55:17   -51.394080   -3.98  -2.36
+iter:   5 08:55:22   -51.379075   -3.55  -2.30
+iter:   6 08:55:27   -51.377900   -3.97  -2.70
+iter:   7 08:55:32   -51.378323   -4.05  -2.83
+iter:   8 08:55:37   -51.377483   -5.17  -3.22
+iter:   9 08:55:43   -51.378041   -5.26  -3.35
+iter:  10 08:55:48   -51.377626   -5.75  -3.37
+iter:  11 08:55:53   -51.377612   -5.91  -3.66
+iter:  12 08:55:58   -51.377620c  -7.46c -3.87
+iter:  13 08:56:03   -51.377612c  -7.35  -3.94
+iter:  14 08:56:08   -51.377597c  -6.56  -4.06c
+iter:  15 08:56:13   -51.377593c  -6.81  -4.14c
+iter:  16 08:56:19   -51.377597c  -8.46c -4.63c
+iter:  17 08:56:25   -51.377603c  -8.46c -4.68c -2.70c
+
+Converged after 17 iterations.
+
+Dipole moment: (-0.000000, -0.000000, 3.092761) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +42.597597
+Potential:      -46.884657
+External:        +0.000000
+XC:             -46.862887
+Entropy (-ST):   -0.056852
+Local:           -0.199229
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.406029
+Extrapolated:   -51.377603
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.22004    1.99997
+  0    26      0.42138    1.99974
+  0    27      1.63812    0.07823
+  0    28      4.61765    0.00000
+
+  1    25      0.18240    1.99998
+  1    26      0.51433    1.99935
+  1    27      1.62863    0.08568
+  1    28      5.02688    0.00000
+
+
+Fermi level: 1.31798
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.03494
+  1 Br    0.00000    0.00000   -0.14350
+  2 Br   -0.00000   -0.00000   -0.48982
+  3 Br   -0.00000   -0.00000    0.03489
+  4 C    -0.00000    0.00000   -0.59807
+  5 N    -0.91103   -0.00000    0.37046
+  6 N     0.91103    0.00000    0.37046
+  7 H    -0.00000    0.00000    1.10501
+  8 H     1.04164   -0.53030   -0.18105
+  9 H     1.04164    0.53030   -0.18105
+ 10 H    -1.04164   -0.53030   -0.18105
+ 11 H    -1.04164    0.53030   -0.18105
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|              |  
+   / |            Br|  
+  /  Br             |  
+ *   |   Br         |  
+ |   |H    C    H   |  
+ |   H  N    N H    |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------Sn     
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000    0.000000    0.007258    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000    0.000000   -0.020900    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.068307    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.976762    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.335169    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.796364    2.970000    2.626139    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.143636    2.970000    2.626139    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.422586    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.166450    3.737878    2.981206    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.166450    2.202122    2.981206    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.773550    3.737878    2.981206    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.773550    2.202122    2.981206    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:56:32   -51.594027   -2.22
+iter:   2 08:56:37   -51.568358   -3.68  -1.97
+iter:   3 08:56:42   -51.499277   -2.89  -2.03
+iter:   4 08:56:48   -51.512715   -3.87  -2.33
+iter:   5 08:56:53   -51.494012   -3.35  -2.32
+iter:   6 08:56:58   -51.494449   -3.82  -2.64
+iter:   7 08:57:03   -51.493731   -4.04  -2.75
+iter:   8 08:57:08   -51.493459   -5.22  -3.17
+iter:   9 08:57:13   -51.493921   -5.09  -3.17
+iter:  10 08:57:18   -51.493817   -5.67  -3.44
+iter:  11 08:57:23   -51.493792   -6.43  -3.75
+iter:  12 08:57:28   -51.493795c  -6.40  -3.81
+iter:  13 08:57:33   -51.493769c  -6.74  -3.97
+iter:  14 08:57:38   -51.493782c  -6.66  -4.19c
+iter:  15 08:57:44   -51.493793c  -7.40c -4.34c
+iter:  16 08:57:50   -51.493792c  -8.04c -4.63c -2.84c
+
+Converged after 16 iterations.
+
+Dipole moment: (-0.000000, -0.000000, 4.009125) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +47.937600
+Potential:      -50.933837
+External:        +0.000000
+XC:             -48.265378
+Entropy (-ST):   -0.061557
+Local:           -0.201399
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.524571
+Extrapolated:   -51.493792
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.18343    1.99998
+  0    26      0.35703    1.99987
+  0    27      1.61716    0.09562
+  0    28      4.63957    0.00000
+
+  1    25      0.15192    1.99998
+  1    26      0.43632    1.99970
+  1    27      1.60757    0.10475
+  1    28      5.02932    0.00000
+
+
+Fermi level: 1.31801
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000   -0.00000    0.02852
+  1 Br   -0.00000   -0.00000   -0.14365
+  2 Br   -0.00000   -0.00000   -0.44979
+  3 Br    0.00000   -0.00000    0.02696
+  4 C     0.00000   -0.00000   -0.18918
+  5 N    -0.12717    0.00000   -0.19473
+  6 N     0.12717    0.00000   -0.19473
+  7 H     0.00000   -0.00000    0.68409
+  8 H     0.37363    0.34672    0.10003
+  9 H     0.37363   -0.34672    0.10003
+ 10 H    -0.37363    0.34672    0.10003
+ 11 H    -0.37363   -0.34672    0.10003
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   / |            Br|  
+  /  Br             |  
+ *   |    H         |  
+ |   |H    C    H   |  
+ |   H  N    N H    |  
+ |   .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.008030    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.024369    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.079473    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.977536    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.342819    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.794066    2.970000    2.615425    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.145934    2.970000    2.615425    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.445849    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.177344    3.738456    2.981934    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.177344    2.201544    2.981934    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.762656    3.738456    2.981934    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.762656    2.201544    2.981934    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:57:57   -51.535329   -2.63
+iter:   2 08:58:03   -51.526008   -3.94  -2.18
+iter:   3 08:58:08   -51.520987   -3.66  -2.30
+iter:   4 08:58:13   -51.519718   -5.22  -2.80
+iter:   5 08:58:18   -51.519609   -4.41  -2.91
+iter:   6 08:58:23   -51.520060   -5.32  -3.30
+iter:   7 08:58:28   -51.520096   -4.91  -3.40
+iter:   8 08:58:33   -51.519936   -5.82  -3.56
+iter:   9 08:58:38   -51.519936   -7.17  -3.95
+iter:  10 08:58:43   -51.519938c  -6.14  -3.94
+iter:  11 08:58:48   -51.519957c  -6.64  -3.91
+iter:  12 08:58:54   -51.519950c  -7.53c -4.21c
+iter:  13 08:59:00   -51.519937c  -7.67c -4.27c -2.15c
+
+Converged after 13 iterations.
+
+Dipole moment: (-0.000000, 0.000001, 4.615727) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +46.875822
+Potential:      -50.192717
+External:        +0.000000
+XC:             -47.967991
+Entropy (-ST):   -0.063614
+Local:           -0.203244
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.551745
+Extrapolated:   -51.519937
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.16997    1.99998
+  0    26      0.33656    1.99988
+  0    27      1.60358    0.10339
+  0    28      4.64097    0.00000
+
+  1    25      0.14044    1.99998
+  1    26      0.41053    1.99976
+  1    27      1.59409    0.11310
+  1    28      5.02614    0.00000
+
+
+Fermi level: 1.31265
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000    0.01861
+  1 Br   -0.00000    0.00000   -0.14828
+  2 Br    0.00000    0.00000   -0.44100
+  3 Br    0.00000    0.00000    0.02941
+  4 C    -0.00000    0.00000   -0.38167
+  5 N     0.35899   -0.00000    0.14812
+  6 N    -0.35899   -0.00000    0.14812
+  7 H     0.00000   -0.00000    0.15302
+  8 H     0.22388    0.40363    0.10799
+  9 H     0.22388   -0.40363    0.10799
+ 10 H    -0.22388    0.40363    0.10799
+ 11 H    -0.22388   -0.40363    0.10799
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   / |            Br|  
+  /  Br             |  
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.009181    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.031060    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.100550    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.978909    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.332951    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.798557    2.970000    2.617624    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.141443    2.970000    2.617624    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.464271    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.197844    3.747575    2.984486    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.197843    2.192425    2.984486    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.742157    3.747575    2.984486    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.742156    2.192425    2.984486    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 08:59:07   -51.567177   -2.62
+iter:   2 08:59:12   -51.564310   -4.05  -2.39
+iter:   3 08:59:18   -51.555045   -3.77  -2.44
+iter:   4 08:59:23   -51.555242   -4.90  -2.67
+iter:   5 08:59:28   -51.554043   -3.97  -2.77
+iter:   6 08:59:33   -51.553913   -4.81  -3.07
+iter:   7 08:59:38   -51.553907   -4.59  -3.20
+iter:   8 08:59:43   -51.553852   -5.61  -3.51
+iter:   9 08:59:48   -51.553854   -5.59  -3.54
+iter:  10 08:59:53   -51.553849c  -5.39  -3.60
+iter:  11 08:59:58   -51.553819c  -7.25  -4.03c
+iter:  12 09:00:03   -51.553810c  -6.92  -4.08c
+iter:  13 09:00:08   -51.553820c  -7.39  -4.15c
+iter:  14 09:00:14   -51.553820c  -7.97c -4.34c
+iter:  15 09:00:20   -51.553839c  -7.98c -4.42c -1.93c
+
+Converged after 15 iterations.
+
+Dipole moment: (-0.000000, 0.000002, 5.728080) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +47.630803
+Potential:      -50.824022
+External:        +0.000000
+XC:             -48.125911
+Entropy (-ST):   -0.062290
+Local:           -0.203565
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.584984
+Extrapolated:   -51.553839
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.17614    1.99998
+  0    26      0.34409    1.99990
+  0    27      1.62967    0.09886
+  0    28      4.64241    0.00000
+
+  1    25      0.14188    1.99999
+  1    26      0.41809    1.99979
+  1    27      1.62031    0.10803
+  1    28      5.03425    0.00000
+
+
+Fermi level: 1.33402
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000   -0.00000    0.01437
+  1 Br    0.00000   -0.00000   -0.13829
+  2 Br   -0.00000    0.00000   -0.39787
+  3 Br   -0.00000   -0.00000    0.02095
+  4 C    -0.00000    0.00000    0.74278
+  5 N     0.20942   -0.00000   -0.09474
+  6 N    -0.20942    0.00000   -0.09474
+  7 H    -0.00000   -0.00000   -0.61704
+  8 H     0.07091    0.36022    0.12810
+  9 H     0.07091   -0.36022    0.12810
+ 10 H    -0.07091    0.36022    0.12810
+ 11 H    -0.07091   -0.36022    0.12810
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   / |            Br|  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.010190    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.037923    ( 0.0000,  0.0000,  0.0000)
+   2 Br    -0.000000    2.970000   -0.121287    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.980148    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.335637    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.798416    2.970000    2.617478    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.141584    2.970000    2.617478    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.469180    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.212114    3.761109    2.988455    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.212114    2.178891    2.988455    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.727886    3.761109    2.988455    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.727886    2.178891    2.988455    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:00:27   -51.581460   -2.99
+iter:   2 09:00:33   -51.581211   -4.55  -2.61
+iter:   3 09:00:38   -51.580989   -4.19  -2.66
+iter:   4 09:00:43   -51.580043   -5.28  -2.88
+iter:   5 09:00:48   -51.579625   -4.81  -3.01
+iter:   6 09:00:53   -51.579690   -5.55  -3.23
+iter:   7 09:00:58   -51.579495   -5.30  -3.41
+iter:   8 09:01:03   -51.579509   -6.41  -3.70
+iter:   9 09:01:08   -51.579493c  -6.05  -3.73
+iter:  10 09:01:13   -51.579479c  -6.43  -3.94
+iter:  11 09:01:20   -51.579483c  -7.68c -4.29c
+iter:  12 09:01:26   -51.579503c  -7.61c -4.32c -2.30c
+
+Converged after 12 iterations.
+
+Dipole moment: (0.000000, 0.000003, 6.795194) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +47.099809
+Potential:      -50.476983
+External:        +0.000000
+XC:             -47.966068
+Entropy (-ST):   -0.061947
+Local:           -0.205287
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.610476
+Extrapolated:   -51.579503
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.17629    1.99998
+  0    26      0.34524    1.99990
+  0    27      1.63452    0.09779
+  0    28      4.63316    0.00000
+
+  1    25      0.13686    1.99999
+  1    26      0.42349    1.99979
+  1    27      1.62537    0.10666
+  1    28      5.03119    0.00000
+
+
+Fermi level: 1.33772
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000    0.00739
+  1 Br    0.00000   -0.00000   -0.13618
+  2 Br    0.00000   -0.00000   -0.35444
+  3 Br    0.00000    0.00000    0.01638
+  4 C    -0.00000    0.00000    0.62401
+  5 N     0.20607   -0.00000    0.06102
+  6 N    -0.20607    0.00000    0.06102
+  7 H     0.00000   -0.00000   -0.67242
+  8 H     0.02182    0.15128    0.08493
+  9 H     0.02182   -0.15128    0.08493
+ 10 H    -0.02182    0.15128    0.08493
+ 11 H    -0.02182   -0.15128    0.08493
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.011579    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.048982    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.153643    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.981957    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.342706    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.803257    2.970000    2.623095    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.136743    2.970000    2.623095    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.462722    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.232290    3.775661    2.994594    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.232290    2.164339    2.994594    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.707710    3.775661    2.994594    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.707710    2.164339    2.994594    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:01:33   -51.626084   -2.66
+iter:   2 09:01:38   -51.618693   -4.24  -2.26
+iter:   3 09:01:44   -51.603753   -3.69  -2.33
+iter:   4 09:01:49   -51.607295   -4.90  -2.66
+iter:   5 09:01:54   -51.602377   -3.66  -2.63
+iter:   6 09:01:59   -51.603488   -5.12  -2.91
+iter:   7 09:02:04   -51.602910   -4.89  -3.16
+iter:   8 09:02:09   -51.602968   -5.71  -3.53
+iter:   9 09:02:14   -51.602906   -6.12  -3.56
+iter:  10 09:02:19   -51.602880   -5.82  -3.64
+iter:  11 09:02:24   -51.602888c  -7.02  -4.20c
+iter:  12 09:02:29   -51.602897c  -7.24  -4.24c
+iter:  13 09:02:34   -51.602908c  -7.21  -4.27c
+iter:  14 09:02:40   -51.602905c  -8.58c -4.74c
+iter:  15 09:02:46   -51.602901c  -9.14c -4.80c -2.79c
+
+Converged after 15 iterations.
+
+Dipole moment: (0.000000, 0.000005, 8.365414) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +47.850521
+Potential:      -51.104558
+External:        +0.000000
+XC:             -48.114519
+Entropy (-ST):   -0.060791
+Local:           -0.203951
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.633297
+Extrapolated:   -51.602901
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.17408    1.99998
+  0    26      0.34038    1.99991
+  0    27      1.64582    0.09423
+  0    28      4.61794    0.00000
+
+  1    25      0.12805    1.99999
+  1    26      0.42375    1.99980
+  1    27      1.63698    0.10250
+  1    28      5.02483    0.00000
+
+
+Fermi level: 1.34514
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000   -0.00000   -0.00609
+  1 Br    0.00000   -0.00000   -0.13500
+  2 Br    0.00000   -0.00000   -0.28004
+  3 Br    0.00000   -0.00000    0.01086
+  4 C    -0.00000    0.00000    0.26082
+  5 N     0.05213   -0.00000    0.08872
+  6 N    -0.05213   -0.00000    0.08872
+  7 H    -0.00000   -0.00000   -0.30208
+  8 H    -0.07131   -0.04930    0.05710
+  9 H    -0.07131    0.04930    0.05710
+ 10 H     0.07131   -0.04930    0.05710
+ 11 H     0.07131    0.04930    0.05710
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   .--------------Sn 
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000   -0.000000    0.011804    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.053874    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.166025    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.982566    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.347228    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.806077    2.970000    2.626244    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.133923    2.970000    2.626244    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.456266    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.235885    3.777342    2.997197    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.235885    2.162658    2.997197    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.704115    3.777342    2.997197    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.704115    2.162658    2.997197    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:02:53   -51.616884   -3.56
+iter:   2 09:02:58   -51.613905   -5.06  -2.58
+iter:   3 09:03:04   -51.608070   -4.36  -2.68
+iter:   4 09:03:09   -51.609001   -5.89  -3.16
+iter:   5 09:03:14   -51.607929   -4.72  -3.18
+iter:   6 09:03:19   -51.608386   -6.24  -3.44
+iter:   7 09:03:24   -51.608137   -5.75  -3.60
+iter:   8 09:03:29   -51.608190   -6.32  -3.89
+iter:   9 09:03:34   -51.608168c  -7.20  -4.05c
+iter:  10 09:03:39   -51.608166c  -6.74  -4.08c
+iter:  11 09:03:46   -51.608169c  -7.79c -4.50c
+iter:  12 09:03:52   -51.608169c  -7.98c -4.76c -2.59c
+
+Converged after 12 iterations.
+
+Dipole moment: (0.000000, 0.000006, 8.965629) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.424677
+Potential:      -51.555799
+External:        +0.000000
+XC:             -48.243824
+Entropy (-ST):   -0.060200
+Local:           -0.203123
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.638270
+Extrapolated:   -51.608169
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.17058    1.99998
+  0    26      0.33397    1.99992
+  0    27      1.64903    0.09237
+  0    28      4.61121    0.00000
+
+  1    25      0.12271    1.99999
+  1    26      0.41891    1.99981
+  1    27      1.64030    0.10038
+  1    28      5.02029    0.00000
+
+
+Fermi level: 1.34625
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000   -0.00787
+  1 Br   -0.00000   -0.00000   -0.13561
+  2 Br    0.00000   -0.00000   -0.25358
+  3 Br    0.00000    0.00000    0.00607
+  4 C    -0.00000   -0.00000   -0.02826
+  5 N    -0.04581    0.00000    0.07266
+  6 N     0.04581   -0.00000    0.07266
+  7 H    -0.00000   -0.00000    0.01411
+  8 H    -0.08249   -0.08163    0.05154
+  9 H    -0.08249    0.08163    0.05154
+ 10 H     0.08249   -0.08163    0.05154
+ 11 H     0.08249    0.08163    0.05154
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.011772    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.059270    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.177871    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.983015    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.350194    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.807531    2.970000    2.628824    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.132469    2.970000    2.628824    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.452802    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.235963    3.776530    2.999736    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.235963    2.163470    2.999736    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.704037    3.776530    2.999736    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.704037    2.163470    2.999736    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:03:59   -51.616604   -3.93
+iter:   2 09:04:04   -51.615147   -5.39  -2.78
+iter:   3 09:04:09   -51.612118   -4.85  -2.88
+iter:   4 09:04:15   -51.612539   -6.30  -3.37
+iter:   5 09:04:20   -51.612139   -5.31  -3.41
+iter:   6 09:04:25   -51.612235   -6.99  -3.72
+iter:   7 09:04:30   -51.612157   -6.25  -3.82
+iter:   8 09:04:35   -51.612164   -6.76  -4.05c
+iter:   9 09:04:41   -51.612161c  -7.85c -4.24c
+iter:  10 09:04:46   -51.612162c  -7.29  -4.27c
+iter:  11 09:04:52   -51.612167c  -7.74c -4.51c -1.91c
+
+Converged after 11 iterations.
+
+Dipole moment: (0.000000, 0.000006, 9.556776) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.778328
+Potential:      -51.829760
+External:        +0.000000
+XC:             -48.328350
+Entropy (-ST):   -0.059641
+Local:           -0.202565
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.641988
+Extrapolated:   -51.612167
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.16674    1.99998
+  0    26      0.32728    1.99992
+  0    27      1.65074    0.09061
+  0    28      4.60425    0.00000
+
+  1    25      0.11718    1.99999
+  1    26      0.41386    1.99982
+  1    27      1.64209    0.09840
+  1    28      5.01464    0.00000
+
+
+Fermi level: 1.34595
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000   -0.00000   -0.01407
+  1 Br   -0.00000    0.00000   -0.13514
+  2 Br   -0.00000    0.00000   -0.23071
+  3 Br   -0.00000   -0.00000    0.00484
+  4 C     0.00000    0.00000   -0.18921
+  5 N    -0.10502    0.00000    0.04647
+  6 N     0.10502    0.00000    0.04647
+  7 H    -0.00000   -0.00000    0.20782
+  8 H    -0.07859   -0.07820    0.05175
+  9 H    -0.07859    0.07820    0.05175
+ 10 H     0.07859   -0.07820    0.05175
+ 11 H     0.07859    0.07820    0.05175
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.011296    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.076047    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.213085    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.984302    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.356071    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.809021    2.970000    2.634673    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.130979    2.970000    2.634673    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.449847    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.234223    3.773685    3.007290    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.234223    2.166315    3.007291    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.705777    3.773685    3.007291    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.705777    2.166315    3.007291    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:04:59   -51.630399   -3.23
+iter:   2 09:05:04   -51.627697   -4.69  -2.53
+iter:   3 09:05:10   -51.621913   -4.41  -2.61
+iter:   4 09:05:15   -51.623008   -5.67  -3.00
+iter:   5 09:05:20   -51.621828   -4.74  -3.00
+iter:   6 09:05:25   -51.622060   -6.23  -3.38
+iter:   7 09:05:30   -51.621819   -5.81  -3.46
+iter:   8 09:05:35   -51.621832   -6.31  -3.80
+iter:   9 09:05:40   -51.621837c  -6.95  -3.89
+iter:  10 09:05:45   -51.621845c  -6.70  -3.92
+iter:  11 09:05:51   -51.621849c  -8.30c -4.45c
+iter:  12 09:05:58   -51.621856c  -8.18c -4.54c -2.22c
+
+Converged after 12 iterations.
+
+Dipole moment: (0.000000, 0.000008, 11.215586) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.271981
+Potential:      -52.219479
+External:        +0.000000
+XC:             -48.442572
+Entropy (-ST):   -0.058046
+Local:           -0.202764
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.650879
+Extrapolated:   -51.621856
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.15686    1.99999
+  0    26      0.31245    1.99993
+  0    27      1.65433    0.08584
+  0    28      4.58256    0.00000
+
+  1    25      0.10276    1.99999
+  1    26      0.40373    1.99983
+  1    27      1.64588    0.09306
+  1    28      4.99532    0.00000
+
+
+Fermi level: 1.34388
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000   -0.02095
+  1 Br   -0.00000    0.00000   -0.12808
+  2 Br    0.00000   -0.00000   -0.15991
+  3 Br   -0.00000   -0.00000   -0.00516
+  4 C     0.00000   -0.00000   -0.42667
+  5 N    -0.18190    0.00000   -0.00456
+  6 N     0.18190    0.00000   -0.00456
+  7 H     0.00000   -0.00000    0.48432
+  8 H    -0.06030   -0.06069    0.05231
+  9 H    -0.06030    0.06069    0.05231
+ 10 H     0.06030   -0.06069    0.05231
+ 11 H     0.06030    0.06069    0.05231
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   /r|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.010215    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.103554    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.268592    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.986085    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.362013    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.808553    2.970000    2.641851    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.131447    2.970000    2.641851    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.452977    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.230027    3.769137    3.019402    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.230027    2.170863    3.019402    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.709973    3.769137    3.019402    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.709973    2.170863    3.019402    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:06:05   -51.641366   -2.94
+iter:   2 09:06:10   -51.639840   -4.38  -2.52
+iter:   3 09:06:15   -51.635517   -4.42  -2.58
+iter:   4 09:06:20   -51.636223   -5.43  -2.89
+iter:   5 09:06:26   -51.635543   -4.70  -2.95
+iter:   6 09:06:31   -51.635346   -5.59  -3.25
+iter:   7 09:06:36   -51.635354   -5.69  -3.37
+iter:   8 09:06:41   -51.635349c  -6.59  -3.76
+iter:   9 09:06:46   -51.635399c  -6.60  -3.80
+iter:  10 09:06:52   -51.635397c  -7.48c -4.20c
+iter:  11 09:06:58   -51.635382c  -8.03c -4.35c -2.04c
+
+Converged after 11 iterations.
+
+Dipole moment: (0.000000, 0.000010, 13.409980) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.433937
+Potential:      -52.364493
+External:        +0.000000
+XC:             -48.473668
+Entropy (-ST):   -0.055434
+Local:           -0.203441
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.663099
+Extrapolated:   -51.635382
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.14405    1.99999
+  0    26      0.29787    1.99994
+  0    27      1.65955    0.07875
+  0    28      4.54557    0.00000
+
+  1    25      0.08545    1.99999
+  1    26      0.39412    1.99984
+  1    27      1.65139    0.08516
+  1    28      4.95725    0.00000
+
+
+Fermi level: 1.34010
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000   -0.04379
+  1 Br   -0.00000   -0.00000   -0.11898
+  2 Br    0.00000   -0.00000   -0.05408
+  3 Br   -0.00000   -0.00000   -0.01219
+  4 C    -0.00000    0.00000   -0.50457
+  5 N    -0.20924   -0.00000   -0.05292
+  6 N     0.20924   -0.00000   -0.05292
+  7 H     0.00000   -0.00000    0.57148
+  8 H    -0.02678   -0.03192    0.05070
+  9 H    -0.02678    0.03192    0.05070
+ 10 H     0.02678   -0.03192    0.05070
+ 11 H     0.02678    0.03192    0.05070
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   /r|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.008076    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.136500    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.331353    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.987883    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.365540    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.804971    2.970000    2.647942    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.135029    2.970000    2.647942    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.463530    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.224537    3.764507    3.033631    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.224537    2.175493    3.033631    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.715463    3.764507    3.033631    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.715463    2.175493    3.033631    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:07:05   -51.649757   -2.83
+iter:   2 09:07:10   -51.649475   -4.21  -2.53
+iter:   3 09:07:15   -51.648860   -4.08  -2.56
+iter:   4 09:07:21   -51.648181   -5.49  -2.89
+iter:   5 09:07:26   -51.647461   -4.90  -2.96
+iter:   6 09:07:31   -51.647950   -5.24  -3.18
+iter:   7 09:07:36   -51.647701   -5.40  -3.20
+iter:   8 09:07:41   -51.647722   -7.01  -3.70
+iter:   9 09:07:46   -51.647730c  -6.55  -3.73
+iter:  10 09:07:51   -51.647717c  -6.78  -3.94
+iter:  11 09:07:57   -51.647729c  -8.28c -4.26c
+iter:  12 09:08:03   -51.647739c  -8.16c -4.30c -2.07c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000000, 0.000012, 15.275466) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.014938
+Potential:      -52.068601
+External:        +0.000000
+XC:             -48.364952
+Entropy (-ST):   -0.052205
+Local:           -0.203022
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.673842
+Extrapolated:   -51.647739
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.13141    1.99999
+  0    26      0.29143    1.99994
+  0    27      1.66607    0.07083
+  0    28      4.50036    0.00000
+
+  1    25      0.07066    1.99999
+  1    26      0.39040    1.99984
+  1    27      1.65820    0.07641
+  1    28      4.90320    0.00000
+
+
+Fermi level: 1.33561
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.06302
+  1 Br   -0.00000   -0.00000   -0.10951
+  2 Br    0.00000   -0.00000    0.05968
+  3 Br   -0.00000   -0.00000   -0.02400
+  4 C    -0.00000   -0.00000   -0.32618
+  5 N    -0.13106    0.00000   -0.04947
+  6 N     0.13106    0.00000   -0.04947
+  7 H     0.00000    0.00000    0.33775
+  8 H     0.01195   -0.00716    0.04477
+  9 H     0.01195    0.00716    0.04477
+ 10 H    -0.01195   -0.00716    0.04477
+ 11 H    -0.01195    0.00716    0.04477
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.006263    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.149122    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.350597    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.988037    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.364217    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.801832    2.970000    2.648962    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.138168    2.970000    2.648962    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.470539    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.222818    3.763515    3.038864    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.222818    2.176485    3.038864    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.717182    3.763515    3.038864    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.717182    2.176485    3.038864    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:08:10   -51.649920   -3.58
+iter:   2 09:08:15   -51.650053   -4.93  -2.76
+iter:   3 09:08:21   -51.651292   -4.79  -2.85
+iter:   4 09:08:26   -51.651033   -5.91  -3.17
+iter:   5 09:08:31   -51.650892   -5.22  -3.27
+iter:   6 09:08:36   -51.651072   -6.35  -3.55
+iter:   7 09:08:41   -51.651040   -6.11  -3.62
+iter:   8 09:08:46   -51.651017   -7.37  -4.02c
+iter:   9 09:08:52   -51.651028c  -7.58c -4.13c
+iter:  10 09:08:58   -51.651025c  -7.61c -4.27c -1.92c
+
+Converged after 10 iterations.
+
+Dipole moment: (-0.000000, 0.000015, 15.829041) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.586481
+Potential:      -51.751519
+External:        +0.000000
+XC:             -48.258328
+Entropy (-ST):   -0.051275
+Local:           -0.202021
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.676663
+Extrapolated:   -51.651025
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.12814    1.99999
+  0    26      0.29231    1.99994
+  0    27      1.66754    0.06871
+  0    28      4.48708    0.00000
+
+  1    25      0.06704    1.99999
+  1    26      0.39201    1.99984
+  1    27      1.65975    0.07407
+  1    28      4.88621    0.00000
+
+
+Fermi level: 1.33393
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000   -0.06885
+  1 Br    0.00000   -0.00000   -0.10482
+  2 Br    0.00000   -0.00000    0.09734
+  3 Br    0.00000   -0.00000   -0.02554
+  4 C     0.00000   -0.00000   -0.10405
+  5 N    -0.04135   -0.00000   -0.04224
+  6 N     0.04135    0.00000   -0.04224
+  7 H     0.00000   -0.00000    0.07856
+  8 H     0.01867    0.00013    0.04125
+  9 H     0.01867   -0.00013    0.04125
+ 10 H    -0.01867    0.00013    0.04125
+ 11 H    -0.01867   -0.00013    0.04125
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.004734    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.150424    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.346108    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.987372    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.362024    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.800431    2.970000    2.647468    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.139569    2.970000    2.647468    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.472783    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.222795    3.763751    3.039193    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.222795    2.176249    3.039193    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.717205    3.763751    3.039193    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.717205    2.176249    3.039193    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:09:05   -51.650697   -4.27
+iter:   2 09:09:10   -51.650940   -5.70  -3.00
+iter:   3 09:09:16   -51.651985   -5.29  -3.12
+iter:   4 09:09:21   -51.651902   -6.63  -3.70
+iter:   5 09:09:26   -51.651894   -6.02  -3.77
+iter:   6 09:09:31   -51.651965   -7.27  -4.06c
+iter:   7 09:09:36   -51.651977   -6.53  -4.09c
+iter:   8 09:09:41   -51.651958c  -7.39  -4.27c
+iter:   9 09:09:47   -51.651967c  -7.68c -4.54c
+iter:  10 09:09:53   -51.651962c  -8.35c -4.61c -2.39c
+
+Converged after 10 iterations.
+
+Dipole moment: (-0.000000, 0.000015, 15.926342) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.316982
+Potential:      -51.551863
+External:        +0.000000
+XC:             -48.190149
+Entropy (-ST):   -0.051422
+Local:           -0.201221
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.677673
+Extrapolated:   -51.651962
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.12850    1.99999
+  0    26      0.29247    1.99994
+  0    27      1.66808    0.06904
+  0    28      4.49205    0.00000
+
+  1    25      0.06731    1.99999
+  1    26      0.39219    1.99984
+  1    27      1.66029    0.07442
+  1    28      4.89263    0.00000
+
+
+Fermi level: 1.33497
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000   -0.06601
+  1 Br   -0.00000    0.00000   -0.10363
+  2 Br    0.00000   -0.00000    0.09082
+  3 Br    0.00000    0.00000   -0.02294
+  4 C     0.00000   -0.00000    0.00544
+  5 N     0.00215   -0.00000   -0.01957
+  6 N    -0.00215   -0.00000   -0.01957
+  7 H     0.00000   -0.00000   -0.05414
+  8 H     0.01758   -0.00268    0.03660
+  9 H     0.01758    0.00268    0.03660
+ 10 H    -0.01758   -0.00268    0.03660
+ 11 H    -0.01758    0.00268    0.03660
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .------Br------.  
+    /|              |  
+   Br|              |  
+  /  Br             |  
+ *   |    H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   Sn-------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000    0.002093    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.151520    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.335734    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.986155    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.359224    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.799294    2.970000    2.645544    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.140706    2.970000    2.645544    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.473098    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.223337    3.764106    3.039269    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.223337    2.175894    3.039269    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.716663    3.764106    3.039269    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.716663    2.175894    3.039269    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:10:00   -51.651788   -4.12
+iter:   2 09:10:05   -51.652016   -5.51  -3.08
+iter:   3 09:10:11   -51.652815   -5.54  -3.18
+iter:   4 09:10:16   -51.652729   -6.69  -3.63
+iter:   5 09:10:21   -51.652755   -6.02  -3.72
+iter:   6 09:10:26   -51.652815   -7.44c -4.05c
+iter:   7 09:10:31   -51.652806   -6.77  -4.08c
+iter:   8 09:10:37   -51.652798c  -7.68c -4.32c
+iter:   9 09:10:43   -51.652804c  -7.92c -4.54c -2.18c
+
+Converged after 9 iterations.
+
+Dipole moment: (-0.000000, 0.000015, 16.040326) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.105915
+Potential:      -51.392066
+External:        +0.000000
+XC:             -48.140732
+Entropy (-ST):   -0.051683
+Local:           -0.200079
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.678645
+Extrapolated:   -51.652804
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.12932    1.99999
+  0    26      0.29181    1.99994
+  0    27      1.66966    0.06957
+  0    28      4.50214    0.00000
+
+  1    25      0.06822    1.99999
+  1    26      0.39131    1.99984
+  1    27      1.66187    0.07500
+  1    28      4.90567    0.00000
+
+
+Fermi level: 1.33735
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.05899
+  1 Br    0.00000    0.00000   -0.10430
+  2 Br   -0.00000    0.00000    0.06260
+  3 Br   -0.00000    0.00000   -0.02206
+  4 C    -0.00000   -0.00000    0.09211
+  5 N     0.02842    0.00000    0.00499
+  6 N    -0.02842   -0.00000    0.00499
+  7 H     0.00000   -0.00000   -0.14465
+  8 H     0.01325   -0.00617    0.03169
+  9 H     0.01325    0.00617    0.03169
+ 10 H    -0.01325   -0.00617    0.03169
+ 11 H    -0.01325    0.00617    0.03169
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.003394    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.161369    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.330878    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.984224    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.356330    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.797659    2.970000    2.644487    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.142341    2.970000    2.644487    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.472487    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.224330    3.764023    3.042764    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.224330    2.175977    3.042764    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.715670    3.764023    3.042764    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.715670    2.175977    3.042765    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:10:50   -51.653972   -3.85
+iter:   2 09:10:55   -51.654133   -5.13  -3.18
+iter:   3 09:11:01   -51.654662   -5.83  -3.23
+iter:   4 09:11:06   -51.654628   -6.65  -3.45
+iter:   5 09:11:11   -51.654566   -6.02  -3.56
+iter:   6 09:11:16   -51.654603   -7.30  -4.01c
+iter:   7 09:11:21   -51.654586c  -7.00  -4.06c
+iter:   8 09:11:27   -51.654578c  -8.04c -4.29c
+iter:   9 09:11:33   -51.654579c  -7.62c -4.49c -1.94c
+
+Converged after 9 iterations.
+
+Dipole moment: (-0.000000, 0.000015, 16.557694) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.023498
+Potential:      -51.342743
+External:        +0.000000
+XC:             -48.107739
+Entropy (-ST):   -0.051384
+Local:           -0.201904
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.680271
+Extrapolated:   -51.654579
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.12794    1.99999
+  0    26      0.28989    1.99995
+  0    27      1.67429    0.06875
+  0    28      4.51015    0.00000
+
+  1    25      0.06703    1.99999
+  1    26      0.38878    1.99985
+  1    27      1.66658    0.07406
+  1    28      4.91627    0.00000
+
+
+Fermi level: 1.34075
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000   -0.04970
+  1 Br   -0.00000   -0.00000   -0.10044
+  2 Br    0.00000   -0.00000    0.04905
+  3 Br   -0.00000   -0.00000   -0.02241
+  4 C    -0.00000    0.00000    0.16259
+  5 N     0.05622    0.00000    0.01720
+  6 N    -0.05622   -0.00000    0.01720
+  7 H    -0.00000   -0.00000   -0.20911
+  8 H     0.00648   -0.00924    0.02155
+  9 H     0.00648    0.00924    0.02155
+ 10 H    -0.00648   -0.00924    0.02155
+ 11 H    -0.00648    0.00924    0.02155
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              Br 
+ *   |    H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.020519    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.194160    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.319192    ( 0.0000,  0.0000,  0.0000)
+   3 Br    -0.000000   -0.000000    2.978153    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.350002    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.794444    2.970000    2.642307    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.145556    2.970000    2.642307    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.467503    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226792    3.762342    3.054254    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226792    2.177658    3.054254    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713208    3.762342    3.054254    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713208    2.177658    3.054254    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:11:40   -51.659804   -2.94
+iter:   2 09:11:45   -51.659811   -4.24  -2.81
+iter:   3 09:11:50   -51.659249   -4.40  -2.83
+iter:   4 09:11:56   -51.659307   -5.25  -3.18
+iter:   5 09:12:01   -51.659535   -5.21  -3.22
+iter:   6 09:12:06   -51.659465   -5.86  -3.47
+iter:   7 09:12:11   -51.659330   -6.73  -3.64
+iter:   8 09:12:16   -51.659322   -6.93  -3.86
+iter:   9 09:12:21   -51.659363c  -6.86  -3.98
+iter:  10 09:12:27   -51.659358c  -7.55c -4.39c
+iter:  11 09:12:33   -51.659358c  -8.61c -4.61c -3.36c
+
+Converged after 11 iterations.
+
+Dipole moment: (-0.000000, 0.000018, 18.125710) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.028712
+Potential:      -51.391139
+External:        +0.000000
+XC:             -48.069896
+Entropy (-ST):   -0.049931
+Local:           -0.202070
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.684324
+Extrapolated:   -51.659358
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.12221    1.99999
+  0    26      0.28093    1.99996
+  0    27      1.69186    0.06504
+  0    28      4.53140    0.00000
+
+  1    25      0.06263    2.00000
+  1    26      0.37659    1.99988
+  1    27      1.68440    0.06990
+  1    28      4.94449    0.00000
+
+
+Fermi level: 1.35257
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000   -0.00000   -0.03967
+  1 Br   -0.00000    0.00000   -0.10738
+  2 Br    0.00000   -0.00000    0.00866
+  3 Br    0.00000   -0.00000   -0.01526
+  4 C     0.00000    0.00000    0.22852
+  5 N     0.10404    0.00000    0.08327
+  6 N    -0.10404   -0.00000    0.08326
+  7 H    -0.00000   -0.00000   -0.24784
+  8 H    -0.00106   -0.01070   -0.01083
+  9 H    -0.00106    0.01070   -0.01083
+ 10 H     0.00106   -0.01070   -0.01083
+ 11 H     0.00106    0.01070   -0.01083
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  Br             |  
+ *   |    H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.045873    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.251852    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.321564    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.970003    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.344253    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.791679    2.970000    2.643493    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.148321    2.970000    2.643493    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.970000    4.459565    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.231049    3.758822    3.074414    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.231049    2.181179    3.074414    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.708951    3.758822    3.074413    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.708951    2.181179    3.074414    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:12:40   -51.672194   -2.57
+iter:   2 09:12:46   -51.670474   -3.92  -2.48
+iter:   3 09:12:51   -51.664663   -4.10  -2.53
+iter:   4 09:12:56   -51.665725   -5.46  -2.77
+iter:   5 09:13:01   -51.665200   -4.45  -2.83
+iter:   6 09:13:06   -51.665047   -5.32  -3.17
+iter:   7 09:13:11   -51.664948   -5.35  -3.25
+iter:   8 09:13:16   -51.664945   -6.38  -3.62
+iter:   9 09:13:21   -51.664973c  -6.59  -3.63
+iter:  10 09:13:26   -51.664982c  -6.44  -3.83
+iter:  11 09:13:32   -51.664988c  -7.49c -4.36c
+iter:  12 09:13:38   -51.664998c  -8.43c -4.41c -2.35c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000001, 0.000023, 20.369781) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.480867
+Potential:      -51.794332
+External:        +0.000000
+XC:             -48.126363
+Entropy (-ST):   -0.046226
+Local:           -0.202057
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.688111
+Extrapolated:   -51.664998
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.10965    1.99999
+  0    26      0.26736    1.99997
+  0    27      1.72244    0.05674
+  0    28      4.54493    0.00000
+
+  1    25      0.05125    2.00000
+  1    26      0.35734    1.99992
+  1    27      1.71542    0.06074
+  1    28      4.96696    0.00000
+
+
+Fermi level: 1.36908
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.01794
+  1 Br    0.00000    0.00000   -0.10112
+  2 Br    0.00000   -0.00000   -0.00798
+  3 Br    0.00000   -0.00000   -0.01594
+  4 C     0.00000    0.00000    0.27996
+  5 N     0.08908    0.00000    0.10949
+  6 N    -0.08908   -0.00000    0.10949
+  7 H    -0.00000   -0.00000   -0.18470
+  8 H    -0.01327   -0.00336   -0.05429
+  9 H    -0.01327    0.00336   -0.05429
+ 10 H     0.01327   -0.00336   -0.05429
+ 11 H     0.01327    0.00336   -0.05429
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.054044    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.275094    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.330692    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.967544    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.345911    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.791857    2.970000    2.646678    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.148143    2.970000    2.646678    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969999    4.456021    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.232094    3.757010    3.081630    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.232094    2.182991    3.081630    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.707906    3.757010    3.081630    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.707906    2.182990    3.081630    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:13:45   -51.672645   -3.41
+iter:   2 09:13:51   -51.671313   -4.87  -2.71
+iter:   3 09:13:56   -51.667720   -4.65  -2.78
+iter:   4 09:14:01   -51.668474   -6.07  -3.17
+iter:   5 09:14:06   -51.667862   -5.06  -3.17
+iter:   6 09:14:12   -51.667907   -6.31  -3.54
+iter:   7 09:14:17   -51.667824   -6.02  -3.60
+iter:   8 09:14:22   -51.667822   -6.64  -3.95
+iter:   9 09:14:27   -51.667829c  -7.32  -4.01c
+iter:  10 09:14:33   -51.667835c  -6.87  -4.04c
+iter:  11 09:14:39   -51.667844c  -8.42c -4.58c
+iter:  12 09:14:45   -51.667846c  -9.27c -4.71c -3.14c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000001, 0.000025, 21.068594) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +48.938515
+Potential:      -52.156448
+External:        +0.000000
+XC:             -48.225806
+Entropy (-ST):   -0.044594
+Local:           -0.201810
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.690143
+Extrapolated:   -51.667846
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.10268    1.99999
+  0    26      0.26200    1.99997
+  0    27      1.73051    0.05339
+  0    28      4.54067    0.00000
+
+  1    25      0.04395    2.00000
+  1    26      0.35015    1.99993
+  1    27      1.72366    0.05706
+  1    28      4.96550    0.00000
+
+
+Fermi level: 1.37088
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.01753
+  1 Br    0.00000   -0.00000   -0.09760
+  2 Br   -0.00000   -0.00000    0.00900
+  3 Br    0.00000   -0.00000   -0.01532
+  4 C    -0.00000    0.00000    0.18068
+  5 N     0.06752    0.00000    0.08080
+  6 N    -0.06751   -0.00000    0.08080
+  7 H    -0.00000   -0.00000   -0.03412
+  8 H    -0.02110    0.01419   -0.05893
+  9 H    -0.02110   -0.01419   -0.05893
+ 10 H     0.02110    0.01419   -0.05893
+ 11 H     0.02110   -0.01419   -0.05893
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.059768    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.294535    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.340801    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.965767    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.350849    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.793452    2.970000    2.650912    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.146548    2.970000    2.650912    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969999    4.454632    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.231875    3.755465    3.085839    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.231875    2.184536    3.085840    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.708125    3.755465    3.085839    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.708125    2.184536    3.085840    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:14:52   -51.675111   -3.52
+iter:   2 09:14:57   -51.673793   -5.02  -2.74
+iter:   3 09:15:03   -51.670240   -4.69  -2.81
+iter:   4 09:15:08   -51.670913   -6.14  -3.26
+iter:   5 09:15:13   -51.670308   -5.25  -3.25
+iter:   6 09:15:18   -51.670408   -6.63  -3.64
+iter:   7 09:15:24   -51.670315   -6.21  -3.69
+iter:   8 09:15:29   -51.670321   -6.56  -3.96
+iter:   9 09:15:35   -51.670314c  -7.47c -4.10c
+iter:  10 09:15:40   -51.670326c  -7.09  -4.13c
+iter:  11 09:15:47   -51.670329c  -8.46c -4.63c -1.75c
+
+Converged after 11 iterations.
+
+Dipole moment: (-0.000001, 0.000027, 21.537898) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.406482
+Potential:      -52.519640
+External:        +0.000000
+XC:             -48.334376
+Entropy (-ST):   -0.043191
+Local:           -0.201200
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.691924
+Extrapolated:   -51.670329
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.09588    1.99999
+  0    26      0.25780    1.99997
+  0    27      1.73480    0.05051
+  0    28      4.53276    0.00000
+
+  1    25      0.03642    2.00000
+  1    26      0.34470    1.99993
+  1    27      1.72810    0.05392
+  1    28      4.95985    0.00000
+
+
+Fermi level: 1.36949
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000   -0.01800
+  1 Br    0.00000   -0.00000   -0.09642
+  2 Br    0.00000   -0.00000    0.03281
+  3 Br   -0.00000   -0.00000   -0.01739
+  4 C     0.00000   -0.00000    0.02151
+  5 N     0.02235   -0.00000    0.05227
+  6 N    -0.02235    0.00000    0.05227
+  7 H    -0.00000   -0.00000    0.15366
+  8 H    -0.01897    0.02988   -0.05735
+  9 H    -0.01897   -0.02988   -0.05735
+ 10 H     0.01896    0.02988   -0.05735
+ 11 H     0.01897   -0.02988   -0.05735
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.065129    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.311699    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.345679    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.963765    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.355414    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.794760    2.970000    2.654603    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.145240    2.970000    2.654603    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969999    4.456015    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.231471    3.754919    3.088009    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.231471    2.185082    3.088010    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.708529    3.754919    3.088009    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.708529    2.185082    3.088010    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:15:54   -51.674762   -3.76
+iter:   2 09:15:59   -51.674136   -5.21  -2.95
+iter:   3 09:16:04   -51.672357   -5.18  -3.02
+iter:   4 09:16:09   -51.672672   -6.55  -3.44
+iter:   5 09:16:15   -51.672437   -5.79  -3.44
+iter:   6 09:16:20   -51.672397   -7.11  -3.85
+iter:   7 09:16:25   -51.672382   -6.69  -3.89
+iter:   8 09:16:31   -51.672363c  -7.16  -4.17c
+iter:   9 09:16:37   -51.672385c  -7.59c -4.34c
+iter:  10 09:16:43   -51.672379c  -8.55c -4.68c -2.44c
+
+Converged after 10 iterations.
+
+Dipole moment: (-0.000001, 0.000029, 21.893870) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.675807
+Potential:      -52.729322
+External:        +0.000000
+XC:             -48.397239
+Entropy (-ST):   -0.042181
+Local:           -0.200536
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.693470
+Extrapolated:   -51.672379
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.09092    1.99999
+  0    26      0.25579    1.99997
+  0    27      1.73731    0.04842
+  0    28      4.52759    0.00000
+
+  1    25      0.03043    2.00000
+  1    26      0.34252    1.99993
+  1    27      1.73073    0.05162
+  1    28      4.95846    0.00000
+
+
+Fermi level: 1.36766
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.01625
+  1 Br   -0.00000   -0.00000   -0.09447
+  2 Br    0.00000   -0.00000    0.04896
+  3 Br   -0.00000   -0.00000   -0.01982
+  4 C     0.00000   -0.00000   -0.05590
+  5 N    -0.01163    0.00000    0.03244
+  6 N     0.01163    0.00000    0.03244
+  7 H    -0.00000   -0.00000    0.24923
+  8 H    -0.01471    0.03580   -0.05458
+  9 H    -0.01470   -0.03580   -0.05458
+ 10 H     0.01470    0.03580   -0.05458
+ 11 H     0.01471   -0.03580   -0.05458
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-----Br------.  
+    /|              |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.086199    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000000   -0.374181    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.351379    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000000    2.955149    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.371082    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.798425    2.970000    2.666799    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.141575    2.970000    2.666799    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969998    4.465091    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.230222    3.754461    3.093451    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.230221    2.185540    3.093452    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.709778    3.754461    3.093451    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.709779    2.185540    3.093452    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:16:50   -51.687074   -2.73
+iter:   2 09:16:55   -51.685180   -4.14  -2.53
+iter:   3 09:17:01   -51.679523   -4.34  -2.59
+iter:   4 09:17:06   -51.680620   -5.60  -2.96
+iter:   5 09:17:11   -51.679653   -4.93  -2.94
+iter:   6 09:17:16   -51.679521   -6.06  -3.37
+iter:   7 09:17:22   -51.679504   -5.83  -3.42
+iter:   8 09:17:27   -51.679420   -6.14  -3.72
+iter:   9 09:17:32   -51.679526   -6.47  -3.84
+iter:  10 09:17:37   -51.679478   -7.58c -4.18c
+iter:  11 09:17:44   -51.679474c  -8.44c -4.51c
+iter:  12 09:17:50   -51.679479c  -7.98c -4.55c -2.09c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000001, 0.000038, 22.833949) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +50.294445
+Potential:      -53.210733
+External:        +0.000000
+XC:             -48.543126
+Entropy (-ST):   -0.039110
+Local:           -0.200510
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.699034
+Extrapolated:   -51.679479
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.07476    1.99999
+  0    26      0.25096    1.99997
+  0    27      1.74447    0.04226
+  0    28      4.51326    0.00000
+
+  1    25      0.00981    2.00000
+  1    26      0.33891    1.99993
+  1    27      1.73835    0.04487
+  1    28      4.96454    0.00000
+
+
+Fermi level: 1.36091
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000   -0.00893
+  1 Br    0.00000   -0.00000   -0.09127
+  2 Br   -0.00000   -0.00000    0.07903
+  3 Br    0.00000   -0.00000   -0.02804
+  4 C    -0.00000   -0.00001   -0.23102
+  5 N    -0.09740    0.00000   -0.00482
+  6 N     0.09741    0.00000   -0.00482
+  7 H     0.00000   -0.00000    0.44881
+  8 H    -0.00289    0.04547   -0.04360
+  9 H    -0.00288   -0.04547   -0.04359
+ 10 H     0.00288    0.04547   -0.04360
+ 11 H     0.00288   -0.04547   -0.04359
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H   C   H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.147650    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.547620    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.970000   -0.353578    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.929603    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.406864    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.803860    2.970000    2.696638    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.136140    2.970000    2.696638    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969997    4.491904    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.228171    3.754841    3.109988    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.228170    2.185161    3.109991    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.711829    3.754841    3.109988    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.711830    2.185161    3.109992    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:17:57   -51.715648   -1.92
+iter:   2 09:18:02   -51.711088   -3.34  -2.20
+iter:   3 09:18:07   -51.695058   -3.62  -2.24
+iter:   4 09:18:13   -51.697216   -4.91  -2.58
+iter:   5 09:18:18   -51.694754   -4.25  -2.56
+iter:   6 09:18:23   -51.694589   -5.16  -2.98
+iter:   7 09:18:28   -51.694570   -5.10  -3.05
+iter:   8 09:18:33   -51.694475   -5.54  -3.35
+iter:   9 09:18:38   -51.694636   -6.08  -3.49
+iter:  10 09:18:43   -51.694584   -6.15  -3.70
+iter:  11 09:18:48   -51.694532   -6.46  -3.74
+iter:  12 09:18:54   -51.694534c  -7.74c -4.17c
+iter:  13 09:19:00   -51.694530c  -7.62c -4.20c -1.78c
+
+Converged after 13 iterations.
+
+Dipole moment: (-0.000003, 0.000061, 23.247238) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +51.342841
+Potential:      -54.019407
+External:        +0.000000
+XC:             -48.795659
+Entropy (-ST):   -0.031217
+Local:           -0.206697
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.710139
+Extrapolated:   -51.694530
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03199    2.00000
+  0    26      0.24288    1.99997
+  0    27      1.77480    0.02842
+  0    28      4.45744    0.00000
+
+  1    25     -0.04421    2.00000
+  1    26      0.33712    1.99992
+  1    27      1.76984    0.02985
+  1    28      4.88852    0.00000
+
+
+Fermi level: 1.35086
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.02346
+  1 Br    0.00000   -0.00000   -0.07671
+  2 Br    0.00000   -0.00000    0.12134
+  3 Br   -0.00000   -0.00000   -0.05402
+  4 C    -0.00000   -0.00002   -0.45935
+  5 N    -0.23673    0.00000   -0.05787
+  6 N     0.23673    0.00001   -0.05787
+  7 H     0.00000   -0.00001    0.72046
+  8 H     0.02022    0.05100   -0.03020
+  9 H     0.02022   -0.05099   -0.03018
+ 10 H    -0.02022    0.05100   -0.03020
+ 11 H    -0.02022   -0.05099   -0.03018
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.219898    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.747620    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.341103    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.897995    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.970000    3.445928    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.806959    2.970000    2.729652    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.133040    2.970000    2.729652    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969994    4.528386    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226318    3.757636    3.126217    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226316    2.182368    3.126223    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713682    3.757636    3.126217    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713684    2.182368    3.126223    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:19:07   -51.721488   -1.82
+iter:   2 09:19:13   -51.719078   -3.22  -2.21
+iter:   3 09:19:18   -51.707346   -3.73  -2.25
+iter:   4 09:19:23   -51.707441   -4.97  -2.54
+iter:   5 09:19:28   -51.706763   -4.26  -2.58
+iter:   6 09:19:33   -51.706398   -5.20  -2.98
+iter:   7 09:19:38   -51.706660   -4.95  -3.02
+iter:   8 09:19:43   -51.706499   -6.17  -3.37
+iter:   9 09:19:48   -51.706517   -6.16  -3.54
+iter:  10 09:19:53   -51.706537c  -6.05  -3.65
+iter:  11 09:19:58   -51.706524c  -7.24  -3.97
+iter:  12 09:20:04   -51.706515c  -7.65c -4.13c
+iter:  13 09:20:10   -51.706523c  -7.72c -4.17c -1.80c
+
+Converged after 13 iterations.
+
+Dipole moment: (-0.000006, 0.000091, 22.173959) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +51.958084
+Potential:      -54.464121
+External:        +0.000000
+XC:             -48.972844
+Entropy (-ST):   -0.024963
+Local:           -0.215161
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.719004
+Extrapolated:   -51.706523
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.01541    2.00000
+  0    26      0.24090    1.99997
+  0    27      1.81922    0.01797
+  0    28      4.36229    0.00000
+
+  1    25     -0.02477    2.00000
+  1    26      0.34969    1.99991
+  1    27      1.81539    0.01866
+  1    28      4.72593    0.00000
+
+
+Fermi level: 1.34890
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.06925
+  1 Br    0.00000   -0.00000   -0.02881
+  2 Br    0.00000   -0.00000    0.14009
+  3 Br    0.00000   -0.00000   -0.09509
+  4 C    -0.00000   -0.00002   -0.52224
+  5 N    -0.29803    0.00001   -0.10167
+  6 N     0.29803    0.00001   -0.10167
+  7 H     0.00000   -0.00002    0.77580
+  8 H     0.03533    0.04455   -0.01745
+  9 H     0.03534   -0.04453   -0.01742
+ 10 H    -0.03534    0.04454   -0.01745
+ 11 H    -0.03534   -0.04453   -0.01743
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.243903    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.810909    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.306587    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.883356    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969999    3.462521    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.806079    2.970000    2.741130    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.133921    2.970000    2.741130    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969993    4.553875    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.224913    3.763502    3.120160    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.224912    2.176503    3.120168    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.715087    3.763502    3.120160    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.715088    2.176503    3.120168    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:20:17   -51.719045   -2.52
+iter:   2 09:20:23   -51.718756   -3.87  -2.53
+iter:   3 09:20:28   -51.718242   -4.07  -2.56
+iter:   4 09:20:33   -51.717822   -5.45  -2.81
+iter:   5 09:20:38   -51.717063   -4.56  -2.85
+iter:   6 09:20:44   -51.717434   -5.42  -3.28
+iter:   7 09:20:49   -51.717389   -5.10  -3.29
+iter:   8 09:20:54   -51.717281   -6.66  -3.70
+iter:   9 09:20:59   -51.717273   -6.43  -3.81
+iter:  10 09:21:04   -51.717279c  -6.68  -3.86
+iter:  11 09:21:10   -51.717276c  -7.68c -4.35c
+iter:  12 09:21:16   -51.717283c  -8.56c -4.48c -2.39c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000008, 0.000107, 21.683645) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +51.212566
+Potential:      -53.856355
+External:        +0.000000
+XC:             -48.845967
+Entropy (-ST):   -0.025933
+Local:           -0.214560
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.730249
+Extrapolated:   -51.717283
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03362    2.00000
+  0    26      0.24796    1.99997
+  0    27      1.81765    0.01799
+  0    28      4.32280    0.00000
+
+  1    25     -0.01328    2.00000
+  1    26      0.37378    1.99988
+  1    27      1.81440    0.01858
+  1    28      4.66633    0.00000
+
+
+Fermi level: 1.34744
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000    0.08228
+  1 Br    0.00000   -0.00001    0.00276
+  2 Br    0.00000   -0.00000    0.10037
+  3 Br    0.00000   -0.00000   -0.10394
+  4 C    -0.00000   -0.00002   -0.33100
+  5 N    -0.16919    0.00001   -0.09495
+  6 N     0.16919    0.00001   -0.09494
+  7 H     0.00000   -0.00003    0.45594
+  8 H     0.02313    0.02715    0.01050
+  9 H     0.02313   -0.02712    0.01053
+ 10 H    -0.02313    0.02714    0.01050
+ 11 H    -0.02313   -0.02712    0.01053
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.224144    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.748402    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.259287    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.884931    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969999    3.453382    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.802481    2.970000    2.729586    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.137518    2.970000    2.729586    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969992    4.560813    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.225255    3.769376    3.100496    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.225253    2.170629    3.100504    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.714745    3.769376    3.100496    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.714747    2.170629    3.100505    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:21:23   -51.732997   -2.45
+iter:   2 09:21:28   -51.728398   -3.93  -2.21
+iter:   3 09:21:33   -51.722861   -3.75  -2.29
+iter:   4 09:21:38   -51.722121   -4.69  -2.66
+iter:   5 09:21:44   -51.720830   -4.18  -2.76
+iter:   6 09:21:49   -51.721339   -5.26  -3.08
+iter:   7 09:21:54   -51.721218   -5.10  -3.12
+iter:   8 09:21:59   -51.721029   -6.13  -3.48
+iter:   9 09:22:04   -51.721081   -6.25  -3.59
+iter:  10 09:22:09   -51.721046c  -6.74  -3.69
+iter:  11 09:22:14   -51.721041c  -7.12  -4.21c
+iter:  12 09:22:20   -51.721050c  -7.45c -4.23c
+iter:  13 09:22:26   -51.721043c  -8.62c -4.63c -2.87c
+
+Converged after 13 iterations.
+
+Dipole moment: (-0.000009, 0.000112, 21.537641) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.619449
+Potential:      -52.620297
+External:        +0.000000
+XC:             -48.495250
+Entropy (-ST):   -0.031154
+Local:           -0.209368
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.736621
+Extrapolated:   -51.721043
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.02777    2.00000
+  0    26      0.25829    1.99996
+  0    27      1.78181    0.02567
+  0    28      4.35070    0.00000
+
+  1    25     -0.02809    2.00000
+  1    26      0.38922    1.99986
+  1    27      1.77865    0.02648
+  1    28      4.71171    0.00000
+
+
+Fermi level: 1.34755
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.06570
+  1 Br    0.00000   -0.00001   -0.02178
+  2 Br   -0.00000   -0.00000    0.00632
+  3 Br   -0.00000   -0.00000   -0.07779
+  4 C    -0.00000   -0.00001   -0.00722
+  5 N     0.03731    0.00000    0.00771
+  6 N    -0.03731   -0.00000    0.00771
+  7 H     0.00000   -0.00003   -0.04873
+  8 H    -0.00559   -0.00010    0.03187
+  9 H    -0.00559    0.00012    0.03191
+ 10 H     0.00559   -0.00010    0.03187
+ 11 H     0.00559    0.00012    0.03191
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.237405    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.784801    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.262623    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.878950    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969999    3.454423    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.802046    2.970000    2.732790    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.137954    2.970000    2.732790    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969992    4.560456    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226090    3.767947    3.109836    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226089    2.172059    3.109845    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713910    3.767947    3.109836    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713911    2.172059    3.109845    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:22:33   -51.725063   -3.21
+iter:   2 09:22:38   -51.724533   -4.60  -2.78
+iter:   3 09:22:44   -51.722682   -4.74  -2.83
+iter:   4 09:22:49   -51.722997   -6.17  -3.11
+iter:   5 09:22:54   -51.722893   -5.19  -3.16
+iter:   6 09:22:59   -51.722787   -6.07  -3.55
+iter:   7 09:23:04   -51.722787   -6.14  -3.60
+iter:   8 09:23:09   -51.722780c  -6.81  -3.92
+iter:   9 09:23:14   -51.722801c  -7.15  -3.99
+iter:  10 09:23:19   -51.722800c  -7.20  -4.17c
+iter:  11 09:23:25   -51.722795c  -8.54c -4.65c
+iter:  12 09:23:31   -51.722793c  -9.18c -4.70c -2.69c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000008, 0.000121, 21.382427) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.896125
+Potential:      -52.846977
+External:        +0.000000
+XC:             -48.545950
+Entropy (-ST):   -0.029403
+Local:           -0.211290
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.737494
+Extrapolated:   -51.722793
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03472    2.00000
+  0    26      0.25149    1.99997
+  0    27      1.80107    0.02285
+  0    28      4.33505    0.00000
+
+  1    25     -0.01803    2.00000
+  1    26      0.38196    1.99988
+  1    27      1.79799    0.02356
+  1    28      4.68653    0.00000
+
+
+Fermi level: 1.35504
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.08071
+  1 Br    0.00000   -0.00001   -0.00787
+  2 Br    0.00000   -0.00000    0.00627
+  3 Br    0.00000   -0.00001   -0.08750
+  4 C    -0.00000   -0.00001    0.00716
+  5 N    -0.00331   -0.00000    0.00495
+  6 N     0.00331   -0.00000    0.00495
+  7 H     0.00000   -0.00003   -0.00796
+  8 H    -0.00098    0.00096    0.01445
+  9 H    -0.00099   -0.00094    0.01449
+ 10 H     0.00098    0.00096    0.01445
+ 11 H     0.00099   -0.00094    0.01449
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     Sn-------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H         |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn     0.000000   -0.000000   -0.238758    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000001   -0.792598    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.264568    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000001    2.876313    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969999    3.453887    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.801373    2.970000    2.733386    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.138627    2.970000    2.733386    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969991    4.559697    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226212    3.767684    3.112793    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226211    2.172322    3.112803    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713787    3.767685    3.112793    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713789    2.172322    3.112803    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:23:38   -51.723603   -4.33
+iter:   2 09:23:43   -51.723529   -5.66  -3.36
+iter:   3 09:23:49   -51.723209   -5.82  -3.40
+iter:   4 09:23:54   -51.723283   -7.28  -3.64
+iter:   5 09:23:59   -51.723335   -6.38  -3.71
+iter:   6 09:24:04   -51.723294c  -6.97  -4.07c
+iter:   7 09:24:09   -51.723291c  -7.24  -4.14c
+iter:   8 09:24:15   -51.723294c  -8.37c -4.50c
+iter:   9 09:24:21   -51.723299c  -8.24c -4.56c -2.45c
+
+Converged after 9 iterations.
+
+Dipole moment: (-0.000008, 0.000132, 21.337088) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.890320
+Potential:      -52.844739
+External:        +0.000000
+XC:             -48.542783
+Entropy (-ST):   -0.028924
+Local:           -0.211635
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.737761
+Extrapolated:   -51.723299
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03559    2.00000
+  0    26      0.24968    1.99997
+  0    27      1.80570    0.02216
+  0    28      4.33002    0.00000
+
+  1    25     -0.01630    2.00000
+  1    26      0.38032    1.99988
+  1    27      1.80261    0.02284
+  1    28      4.67979    0.00000
+
+
+Fermi level: 1.35653
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.07483
+  1 Br   -0.00000   -0.00001   -0.00029
+  2 Br   -0.00000   -0.00000    0.01259
+  3 Br   -0.00000   -0.00001   -0.08211
+  4 C     0.00000   -0.00001    0.01570
+  5 N    -0.00188    0.00000   -0.00015
+  6 N     0.00188    0.00000   -0.00014
+  7 H     0.00000   -0.00003   -0.00165
+  8 H     0.00079   -0.00200    0.00859
+  9 H     0.00079    0.00203    0.00863
+ 10 H    -0.00079   -0.00200    0.00859
+ 11 H    -0.00079    0.00203    0.00863
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H     Sn  |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000    0.000000   -0.233129    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000002   -0.790980    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969999   -0.265519    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000002    2.870566    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969998    3.449716    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.799930    2.970000    2.731608    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.140070    2.970000    2.731608    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969989    4.555466    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226488    3.766923    3.116951    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226486    2.173085    3.116964    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713512    3.766924    3.116951    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713514    2.173085    3.116964    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:24:28   -51.724422   -3.73
+iter:   2 09:24:33   -51.724359   -5.02  -3.05
+iter:   3 09:24:39   -51.723932   -4.94  -3.08
+iter:   4 09:24:44   -51.723989   -6.31  -3.45
+iter:   5 09:24:49   -51.724190   -6.29  -3.50
+iter:   6 09:24:54   -51.724145   -6.42  -3.76
+iter:   7 09:24:59   -51.724098   -6.64  -3.83
+iter:   8 09:25:05   -51.724106c  -7.88c -4.29c
+iter:   9 09:25:11   -51.724116c  -7.91c -4.36c -2.28c
+
+Converged after 9 iterations.
+
+Dipole moment: (-0.000007, 0.000169, 21.248351) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.723647
+Potential:      -52.723967
+External:        +0.000000
+XC:             -48.500845
+Entropy (-ST):   -0.028573
+Local:           -0.208664
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.738403
+Extrapolated:   -51.724116
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03330    2.00000
+  0    26      0.24497    1.99997
+  0    27      1.81083    0.02185
+  0    28      4.32691    0.00000
+
+  1    25     -0.01682    2.00000
+  1    26      0.37472    1.99990
+  1    27      1.80762    0.02256
+  1    28      4.67857    0.00000
+
+
+Fermi level: 1.36027
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.05073
+  1 Br    0.00000   -0.00001   -0.00170
+  2 Br   -0.00000   -0.00000    0.00641
+  3 Br   -0.00000   -0.00001   -0.05839
+  4 C    -0.00000   -0.00000    0.03796
+  5 N    -0.00029    0.00000    0.01650
+  6 N     0.00029    0.00000    0.01650
+  7 H    -0.00000   -0.00004    0.00179
+  8 H     0.00536   -0.00751   -0.00576
+  9 H     0.00535    0.00754   -0.00571
+ 10 H    -0.00536   -0.00751   -0.00576
+ 11 H    -0.00535    0.00754   -0.00570
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H     Sn  |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000    0.000000   -0.229946    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000003   -0.802644    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969998   -0.262645    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000002    2.860405    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969997    3.451832    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.799798    2.970000    2.733654    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.140202    2.970000    2.733654    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969985    4.557452    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226515    3.766988    3.119106    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226512    2.173024    3.119123    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713485    3.766988    3.119106    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713488    2.173024    3.119123    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:25:18   -51.725706   -4.01
+iter:   2 09:25:23   -51.725571   -5.44  -3.11
+iter:   3 09:25:29   -51.724947   -5.12  -3.14
+iter:   4 09:25:34   -51.725048   -6.70  -3.47
+iter:   5 09:25:39   -51.725149   -6.17  -3.51
+iter:   6 09:25:44   -51.725098   -6.81  -3.86
+iter:   7 09:25:49   -51.725095   -6.66  -3.95
+iter:   8 09:25:55   -51.725096c  -8.19c -4.30c
+iter:   9 09:26:01   -51.725106c  -7.61c -4.39c -2.02c
+
+Converged after 9 iterations.
+
+Dipole moment: (-0.000006, 0.000227, 20.984602) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.600575
+Potential:      -52.625766
+External:        +0.000000
+XC:             -48.474301
+Entropy (-ST):   -0.028208
+Local:           -0.211511
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.739210
+Extrapolated:   -51.725106
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.03257    2.00000
+  0    26      0.24246    1.99997
+  0    27      1.81581    0.02119
+  0    28      4.31207    0.00000
+
+  1    25     -0.01632    2.00000
+  1    26      0.37379    1.99990
+  1    27      1.81263    0.02187
+  1    28      4.66198    0.00000
+
+
+Fermi level: 1.36215
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn    0.00000    0.00000    0.03193
+  1 Br   -0.00000   -0.00001    0.00591
+  2 Br   -0.00000   -0.00001    0.00237
+  3 Br    0.00000   -0.00001   -0.03902
+  4 C     0.00000    0.00000    0.03433
+  5 N     0.00709    0.00000    0.02308
+  6 N    -0.00709    0.00000    0.02308
+  7 H    -0.00000   -0.00006    0.00516
+  8 H     0.00576   -0.00701   -0.00876
+  9 H     0.00574    0.00705   -0.00868
+ 10 H    -0.00576   -0.00701   -0.00876
+ 11 H    -0.00574    0.00705   -0.00868
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H     Sn  |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000    0.000000   -0.220036    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000004   -0.815450    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969997   -0.258864    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000004    2.843509    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969996    3.458803    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.801239    2.970000    2.738668    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.138761    2.970000    2.738668    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969977    4.564175    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226442    3.767882    3.118668    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226438    2.172136    3.118694    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713557    3.767882    3.118667    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713562    2.172136    3.118695    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:26:08   -51.727988   -3.37
+iter:   2 09:26:14   -51.727632   -4.72  -2.83
+iter:   3 09:26:19   -51.726051   -4.50  -2.87
+iter:   4 09:26:24   -51.726195   -6.00  -3.21
+iter:   5 09:26:29   -51.726369   -5.60  -3.25
+iter:   6 09:26:34   -51.726286   -6.18  -3.58
+iter:   7 09:26:39   -51.726275   -5.75  -3.64
+iter:   8 09:26:44   -51.726281c  -7.52c -3.95
+iter:   9 09:26:49   -51.726276c  -6.65  -4.03c
+iter:  10 09:26:54   -51.726281c  -7.38  -4.20c
+iter:  11 09:27:00   -51.726283c  -8.38c -4.67c
+iter:  12 09:27:06   -51.726287c  -9.27c -4.74c -2.81c
+
+Converged after 12 iterations.
+
+Dipole moment: (-0.000003, 0.000349, 20.540335) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.411359
+Potential:      -52.461080
+External:        +0.000000
+XC:             -48.451569
+Entropy (-ST):   -0.027991
+Local:           -0.211002
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.740282
+Extrapolated:   -51.726287
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.02884    2.00000
+  0    26      0.24232    1.99997
+  0    27      1.81833    0.02056
+  0    28      4.28792    0.00000
+
+  1    25     -0.01885    2.00000
+  1    26      0.37714    1.99989
+  1    27      1.81523    0.02120
+  1    28      4.63580    0.00000
+
+
+Fermi level: 1.36161
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000    0.01029
+  1 Br    0.00000   -0.00002    0.01316
+  2 Br    0.00000   -0.00001    0.00785
+  3 Br   -0.00000   -0.00002   -0.01959
+  4 C     0.00000   -0.00000    0.02017
+  5 N    -0.00923    0.00001    0.00896
+  6 N     0.00923    0.00000    0.00896
+  7 H    -0.00000   -0.00009    0.00919
+  8 H     0.00296   -0.00484   -0.00098
+  9 H     0.00293    0.00490   -0.00087
+ 10 H    -0.00296   -0.00484   -0.00099
+ 11 H    -0.00293    0.00490   -0.00087
+
+System changes: positions 
+
+Initializing position-dependent things.
+
+Density initialized from wave functions
+     .--------------.  
+    /|      Br      |  
+   Br|              |  
+  /  |              |  
+ *   Br   H     Sn  |  
+ |   | H  C    H    |  
+ |   |H N    NH     |  
+ |   .--------------.  
+ |  /              /   
+ | /              /    
+ |/              /     
+ *--------------*      
+
+Atomic positions and initial magnetic moments
+
+Positions:
+   0 Sn    -0.000000    0.000000   -0.210391    ( 0.0000,  0.0000,  0.0000)
+   1 Br     2.970000   -0.000006   -0.815766    ( 0.0000,  0.0000,  0.0000)
+   2 Br     0.000000    2.969997   -0.254717    ( 0.0000,  0.0000,  0.0000)
+   3 Br     0.000000   -0.000005    2.832751    ( 0.0000,  0.0000,  0.0000)
+   4 C      2.970000    2.969995    3.462130    ( 0.0000,  0.0000,  0.0000)
+   5 N      1.801692    2.970001    2.740949    ( 0.0000,  0.0000,  0.0000)
+   6 N      4.138308    2.970000    2.740950    ( 0.0000,  0.0000,  0.0000)
+   7 H      2.970000    2.969970    4.567456    ( 0.0000,  0.0000,  0.0000)
+   8 H      1.226125    3.768484    3.117330    ( 0.0000,  0.0000,  0.0000)
+   9 H      1.226119    2.171539    3.117365    ( 0.0000,  0.0000,  0.0000)
+  10 H      4.713875    3.768485    3.117330    ( 0.0000,  0.0000,  0.0000)
+  11 H      4.713881    2.171539    3.117366    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes    5.940000    0.000000    0.000000    30     0.1980
+  2. axis:    yes    0.000000    5.940000    0.000000    30     0.1980
+  3. axis:    yes    0.000000    0.000000    5.940000    30     0.1980
+
+  Lengths:   5.940000   5.940000   5.940000
+  Angles:   90.000000  90.000000  90.000000
+
+Effective grid spacing dv^(1/3) = 0.1980
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens  force
+iter:   1 09:27:13   -51.726941   -3.76
+iter:   2 09:27:18   -51.726827   -5.14  -3.02
+iter:   3 09:27:24   -51.726257   -4.63  -3.06
+iter:   4 09:27:29   -51.726284   -6.23  -3.49
+iter:   5 09:27:34   -51.726390   -6.12  -3.53
+iter:   6 09:27:39   -51.726370   -6.58  -3.75
+iter:   7 09:27:44   -51.726330   -6.34  -3.91
+iter:   8 09:27:50   -51.726331c  -7.92c -4.15c
+iter:   9 09:27:55   -51.726348c  -6.65  -4.20c
+iter:  10 09:28:02   -51.726341c  -7.66c -4.39c -1.76c
+
+Converged after 10 iterations.
+
+Dipole moment: (-0.000002, 0.000457, 20.238033) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -384770.958430)
+
+Kinetic:        +49.246005
+Potential:      -52.320495
+External:        +0.000000
+XC:             -48.427296
+Entropy (-ST):   -0.028313
+Local:           -0.210398
+SIC:             +0.000000
+--------------------------
+Free energy:    -51.740497
+Extrapolated:   -51.726341
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0    25      0.02523    2.00000
+  0    26      0.24317    1.99997
+  0    27      1.81578    0.02088
+  0    28      4.27718    0.00000
+
+  1    25     -0.02196    2.00000
+  1    26      0.38002    1.99989
+  1    27      1.81271    0.02153
+  1    28      4.62522    0.00000
+
+
+Fermi level: 1.36062
+
+No gap
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Sn   -0.00000    0.00000   -0.00831
+  1 Br    0.00000   -0.00002    0.01563
+  2 Br    0.00000   -0.00001    0.00832
+  3 Br   -0.00000   -0.00002   -0.00487
+  4 C     0.00000   -0.00001    0.00678
+  5 N     0.00060    0.00000    0.00058
+  6 N    -0.00060   -0.00000    0.00058
+  7 H    -0.00000   -0.00012    0.00910
+  8 H    -0.00046   -0.00047    0.00692
+  9 H    -0.00049    0.00056    0.00706
+ 10 H     0.00046   -0.00047    0.00691
+ 11 H     0.00049    0.00056    0.00707
+
+Writing to /home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_pbe/FASnBr3/01_relax/relax.gpw (mode='')
+
+Timing:                                      incl.     excl.
+-------------------------------------------------------------------
+Density initialized from wave functions:    15.001    15.000   0.6% |
+ Symmetrize density:                         0.001     0.001   0.0% |
+Forces:                                     37.932    37.932   1.4% ||
+Hamiltonian:                                 8.139     0.050   0.0% |
+ Atomic:                                     3.009     1.203   0.0% |
+  XC Correction:                             1.806     1.806   0.1% |
+ Calculate atomic Hamiltonians:              1.908     1.908   0.1% |
+ Communicate:                                0.002     0.002   0.0% |
+ Initialize Hamiltonian:                     0.000     0.000   0.0% |
+ Poisson:                                    0.056     0.056   0.0% |
+ XC 3D grid:                                 3.114     3.114   0.1% |
+LCAO initialization:                         4.216     0.331   0.0% |
+ LCAO eigensolver:                           0.261     0.001   0.0% |
+  Calculate projections:                     0.004     0.004   0.0% |
+  DenseAtomicCorrection:                     0.009     0.009   0.0% |
+  Distribute overlap matrix:                 0.000     0.000   0.0% |
+  Orbital Layouts:                           0.006     0.006   0.0% |
+  Potential matrix:                          0.238     0.238   0.0% |
+  Sum over cells:                            0.003     0.003   0.0% |
+ LCAO to grid:                               3.056     3.056   0.1% |
+ Set positions (LCAO WFS):                   0.569     0.089   0.0% |
+  Basic WFS set positions:                   0.001     0.001   0.0% |
+  Basis functions set positions:             0.000     0.000   0.0% |
+  P tci:                                     0.224     0.224   0.0% |
+  ST tci:                                    0.234     0.234   0.0% |
+  mktci:                                     0.022     0.022   0.0% |
+PWDescriptor:                                0.012     0.012   0.0% |
+Redistribute:                                0.118     0.118   0.0% |
+SCF-cycle:                                2478.335   213.719   7.9% |--|
+ Davidson:                                1910.641   372.305  13.8% |-----|
+  Apply H:                                 268.727   262.810   9.8% |---|
+   HMM T:                                    5.918     5.918   0.2% |
+  Subspace diag:                           374.073     0.516   0.0% |
+   calc_h_matrix:                          314.364    46.006   1.7% ||
+    Apply H:                               268.359   262.437   9.8% |---|
+     HMM T:                                  5.922     5.922   0.2% |
+   diagonalize:                              2.546     2.546   0.1% |
+   rotate_psi:                              56.647    56.647   2.1% ||
+  calc. matrices:                          761.052   226.808   8.4% |--|
+   Apply H:                                534.244   522.847  19.4% |-------|
+    HMM T:                                  11.397    11.397   0.4% |
+  diagonalize:                              22.576    22.576   0.8% |
+  rotate_psi:                              111.908   111.908   4.2% |-|
+ Density:                                  169.222     0.010   0.0% |
+  Atomic density matrices:                   2.165     2.165   0.1% |
+  Mix:                                      29.010    29.010   1.1% |
+  Multipole moments:                         0.144     0.144   0.0% |
+  Pseudo density:                          137.892   137.885   5.1% |-|
+   Symmetrize density:                       0.007     0.007   0.0% |
+ Forces:                                    77.139    77.139   2.9% ||
+ Hamiltonian:                               97.498     0.580   0.0% |
+  Atomic:                                   36.132    14.445   0.5% |
+   XC Correction:                           21.687    21.687   0.8% |
+  Calculate atomic Hamiltonians:            22.948    22.948   0.9% |
+  Communicate:                               0.020     0.020   0.0% |
+  Poisson:                                   0.679     0.679   0.0% |
+  XC 3D grid:                               37.139    37.139   1.4% ||
+ Orthonormalize:                            10.117     0.043   0.0% |
+  calc_s_matrix:                             1.875     1.875   0.1% |
+  inverse-cholesky:                          0.067     0.067   0.0% |
+  projections:                               5.809     5.809   0.2% |
+  rotate_psi_s:                              2.322     2.322   0.1% |
+Set symmetry:                                0.000     0.000   0.0% |
+Other:                                     147.772   147.772   5.5% |-|
+-------------------------------------------------------------------
+Total:                                              2691.527 100.0%
+
+Memory usage: 487.98 MiB
+Date: Sat May  9 09:30:17 2026

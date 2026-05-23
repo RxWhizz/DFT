@@ -1,8 +1,4 @@
-"""Potential energy surface (PES) scan along soft phonon modes.
-
-Detects soft modes from the Hessian, scans E(Q) via finite displacement,
-and identifies double-well potentials (saddle points).
-"""
+"""Potential energía surface (PES) scan along soft fonón modes."""
 
 from __future__ import annotations
 
@@ -19,15 +15,15 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PESScanResult:
-    displacements_Ang: np.ndarray    # shape (n_steps,) — Q values in Å
-    energies_eV: np.ndarray          # shape (n_steps,) — E(Q) relative to Q=0
+    displacements_Ang: np.ndarray    # shape (n_steps,) - Q valores en Å
+    energies_eV: np.ndarray          # shape (n_steps,) - E(Q) vs Q=0
     mode_index: int
     eigenvalue_eV_Ang2: float
     double_well_detected: bool
-    barrier_meV: float               # barrier height if double well, else 0
-    saddle_Q_Ang: float              # Q of saddle point, else 0
-    q_min1_Ang: float                # Q of left minimum (0 if no double well)
-    q_min2_Ang: float                # Q of right minimum (0 if no double well)
+    barrier_meV: float               # barrier height si double well, else 0
+    saddle_Q_Ang: float              # Q saddle point, else 0
+    q_min1_Ang: float                # Q left minimum (0 si no double well)
+    q_min2_Ang: float                # Q right minimum (0 si no double well)
     atoms_min1: Optional[Atoms]
     atoms_min2: Optional[Atoms]
     flags: list[str] = field(default_factory=list)
@@ -37,19 +33,9 @@ def detect_soft_modes(
     hessian_npy: str | Path,
     threshold: float = 0.05,
 ) -> list[tuple[int, float, np.ndarray]]:
-    """Recompute eigenvectors from the Hessian and return quasi-zero/negative modes.
-
-    Args:
-        hessian_npy: Path to hessian.npy (shape 3N×3N, eV/Å²).
-        threshold: Eigenvalue cutoff in eV/Å². The default matches the Hessian
-            numerical floor used in the stability classifier; modes above it are
-            positive-curvature vibrations and do not trigger the expensive PES scan.
-
-    Returns:
-        List of (mode_index, eigenvalue, eigenvector_3N) sorted by eigenvalue.
-    """
+    """Recompute eigenvectors desde Hessiano y devuelve quasi-zero/negative modes."""
     H = np.load(str(hessian_npy))
-    eigs, evecs = np.linalg.eigh(H)   # evecs[:, i] is eigenvector i
+    eigs, evecs = np.linalg.eigh(H)
     soft = [
         (i, float(eigs[i]), evecs[:, i])
         for i in range(len(eigs))
@@ -63,25 +49,14 @@ def _detect_double_well(
     energies_rel: np.ndarray,
     barrier_threshold_meV: float = 10.0,
 ) -> tuple[bool, float, float, float, float]:
-    """Detect a double-well potential from a 1D energy scan.
-
-    Algorithm:
-      1. Find the global maximum (candidate saddle point).
-      2. Find the minimum to the left of the maximum.
-      3. Find the minimum to the right of the maximum.
-      4. Compute barrier relative to the higher of the two minima.
-      5. Classify as double well if barrier > threshold and saddle is interior.
-
-    Returns:
-        (detected, barrier_meV, q_saddle, q_min1, q_min2)
-    """
+    """Detect double-well potential desde 1D energía scan."""
     n = len(energies_rel)
     if n < 5:
         return False, 0.0, 0.0, q_values[0], q_values[-1]
 
     i_max = int(np.argmax(energies_rel))
 
-    # Saddle must not be at the boundary
+    # Saddle debe no be en boundary
     if i_max == 0 or i_max == n - 1:
         return False, 0.0, 0.0, q_values[0], q_values[-1]
 
@@ -114,26 +89,7 @@ def scan_pes_1d(
     eigenvalue: float = 0.0,
     barrier_threshold_meV: float = 10.0,
 ) -> PESScanResult:
-    """Scan E(Q) by displacing atoms ±amplitude Å along the eigenvector.
-
-    Caching: each point is saved to E_NNN.npy to allow restarts.
-    The eigenvector is normalized to unit norm before use.
-    The reference energy E(Q=0) is stored in E_ref.npy.
-
-    Args:
-        atoms: Relaxed Atoms object (reference geometry).
-        factory: GPAWCalculatorFactory instance.
-        eigenvector: Shape (3N,) — soft mode eigenvector.
-        n_steps: Number of displacement points in [-amplitude, +amplitude].
-        amplitude: Maximum displacement in Å.
-        work_dir: Directory for cached energies and GPAW logs.
-        mode_index: Index of the mode (for labeling).
-        eigenvalue: Eigenvalue of the mode in eV/Å².
-        barrier_threshold_meV: Minimum barrier to classify as double well.
-
-    Returns:
-        PESScanResult with E(Q) curve and double-well analysis.
-    """
+    """Scan E(Q) by displacing atoms ±amplitude Å along eigenvector."""
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -141,7 +97,7 @@ def scan_pes_1d(
     evec_norm = eigenvector / np.linalg.norm(eigenvector)
     q_values = np.linspace(-amplitude, amplitude, n_steps)
 
-    # Reference energy at Q=0
+    # Reference energía en Q=0
     E_ref_cache = work_dir / "E_ref.npy"
     if not E_ref_cache.exists():
         logger.info("Computing reference energy at Q=0 …")
@@ -186,7 +142,7 @@ def scan_pes_1d(
         q_values, energies_rel, barrier_threshold_meV
     )
 
-    # Build Atoms objects at the two minima (if double well)
+    # Construye Atoms objetos en two minima (si double well)
     atoms_min1: Optional[Atoms] = None
     atoms_min2: Optional[Atoms] = None
     if detected:

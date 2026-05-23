@@ -1,178 +1,211 @@
-paw_datasets: {}
-# Cs.PBE/Pb.PBE/I.PBE are symlinks to the PBE datasets in
-# ~/.gpaw/gpaw-setups-24.11.0/  (PBE PAW is valid for PBE XC)
-
-cutoff:
-  pw_ecut: 450           # eV — equivalente a ENCUT en VASP
-  convergence_range: [300, 350, 400, 450, 500, 550]
-
-kpoints:
-  bulk_relax: [6, 6, 6]
-  supercell_2x2x2: [3, 3, 3]
-  hse06: [2, 2, 2]
-  bands_npoints: 40      # puntos por segmento en path
-
-relax:
-  xc: PBE
-  mode: PW
-  ecut: 450
-  kpts: [6, 6, 6]
-  convergence:
-    energy: 1.0e-6       # eV
-    forces: 0.01         # eV/Å
-  mixer:
-    type: Mixer
-    beta: 0.05           # mezcla conservadora para haluros blandos
-  maxiter: 333
-  symmetry: on
-
-scf:
-  xc: PBE
-  mode: PW
-  ecut: 450
-  kpts: [6, 6, 6]
-  convergence:
-    energy: 1.0e-8
-  occupations:
-    name: fermi-dirac
-    width: 0.05
-
 bands:
-  kpts_path: "XRMGR"     # path alta simetría cúbico
+  convergence:
+    bands: -10
+  kpts_path: XRMGR
   npoints: 40
-  convergence:
-    bands: -10            # incluir 10 bandas desocupadas
-
-dos:
-  kpts: [12, 12, 12]     # malla densa para DOS
-  npts: 2000
-  width: 0.05            # smearing eV para DOS
-
-soc:
-  # En GPAW el SOC se aplica perturbativamente post-SCF con spinorbit_eigenvalues()
-  # o con modo no-colineal nativo
-  mode: perturbative     # 'perturbative' | 'noncollinear'
-  theta: 0               # ángulo polar cuantización
-  phi: 0                 # ángulo azimutal
-
-hse06:
-  xc: HSE06
-  mode: PW
-  ecut: 450
-  kpts: [2, 2, 2]        # 2x2x2 incluye R=(0.5,0.5,0.5) donde está el gap real de CsPbI3
-  # "auto" calcula nbands = n_occ + int(n_occ * 0.5) desde scf.gpw (50% extra vacías)
-  # int(n_occ*1.3) daba solo 6 vacías para n_occ=22; +50% da 11 vacías — necesario
-  # para que el operador de Fock converja en la banda de conducción.
-  # Sustituir por entero para forzar un valor fijo.
-  nbands: auto
-  eigensolver_niter: 3   # pasos Davidson internos por ciclo SCF (default=1 para híbridos)
-  convergence:
-    energy: 1.0e-6
-    eigenstates: 1.0e-4   # relajado: 4e-8 default inalcanzable bajo Fock oscilante
-    density: 1.0e-4
-  occupations:
-    name: fermi-dirac
-    # Semiconductor/aislado: width mínimo evita ocupaciones artificiales en el gap
-    # Para sistema metálico o con degeneración HOMO-LUMO, subir a 0.05
-    width: 0.01
-  mixer:
-    # MSR1 (MixerSum, Pulay DIIS) con beta bajo: las actualizaciones lentas de densidad
-    # previenen la divergencia del potencial de intercambio exacto entre ciclos SCF
-    beta: 0.01
-    nmaxold: 8            # historia DIIS larga (8 vs 5 default) amortigua oscilaciones Fock
-
-  # --- Sistema aislado: molécula, clúster o nanocristal ---
-  # Si el sistema no es periódico, garantizar al menos 8 Å de vacío:
-  #   atoms.center(vacuum=8.0)
-  # Para sistemas polares o cargados, activar corrección dipolar (opcional):
-  #   from gpaw import PoissonSolver
-  #   poissonsolver = PoissonSolver(dipolelayer='z')   # 'xy' | 'z' según orientación
-
-scan:
-  xc: SCAN
-  mode: PW
-  ecut: 450
-  kpts: [6, 6, 6]       # misma malla que SCF — R-point incluido
-  convergence:
-    energy: 1.0e-6
-    eigenstates: 1.0e-8
-    density: 1.0e-6
-  occupations:
-    name: fermi-dirac
-    width: 0.05
-
-r2scan:
-  xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN   # alias GPAW no existe; usar string LibXC directo
-  mode: PW
-  ecut: 450
-  kpts: [6, 6, 6]
-  convergence:
-    energy: 1.0e-6
-    eigenstates: 1.0e-8
-    density: 1.0e-4         # libxc --fhc activo hace la densidad muy lenta; 1e-4 suficiente para gap
-  occupations:
-    name: fermi-dirac
-    width: 0.05
-
+composition_config: configs/compositions/CsPbI3.yaml
+cutoff:
+  convergence_range:
+  - 300
+  - 350
+  - 400
+  - 450
+  - 500
+  - 550
+  pw_ecut: 450
+dft_u:
+  Sn:
+    orbital: s
+    u_ev: 3.5
 dispersion:
-  method: D3             # DFT-D3(BJ) vía GPAW + dftd3 library
-
-phonons:
-  method: phonopy          # "phonopy" | "ase"
-  delta: 0.02              # Å — small displacement for anharmonic perovskites
-  delta_validation: 0.03   # Å — cross-check displacement
-  supercell: [2, 2, 2]
-  kpath_npoints: 60
-  dos_kpts: [20, 20, 20]
-  scf_convergence:
-    energy: 1.0e-8
-    density: 1.0e-5        # tighter density for accurate forces
-    eigenstates: 1.0e-8    # 1e-8 sufficient for Δ=0.02 Å (Togo et al.); 1e-10 was overkill
-  asr: crystal             # Phonopy ASR: "translational" | "crystal"
-
-pes:
-  soft_mode_threshold_eV_Ang2: 0.05   # quasi-zero/negative Hessian modes activate scan
-  scan_amplitude_Ang: 0.5             # range ±0.5 Å along eigenvector
-  scan_n_steps: 20                    # points in [-A, +A]
-  double_well_barrier_meV: 10         # minimum barrier to classify as double well
-  neb_n_images: 7                     # NEB images (excluding endpoints)
-  neb_fmax_eV_Ang: 0.10              # NEB convergence criterion
-  neb_spring_constant: 0.10           # spring constant in eV/Å²
-  run_neb_if_double_well: true        # auto-launch CI-NEB if double well detected
-
+  method: D3
+dos:
+  kpts:
+  - 12
+  - 12
+  - 12
+  npts: 2000
+  width: 0.05
+hse06:
+  convergence:
+    density: 0.0001
+    eigenstates: 0.0001
+    energy: 1.0e-06
+  ecut: 450
+  eigensolver_niter: 3
+  kpts:
+  - 4
+  - 4
+  - 4
+  mixer:
+    beta: 0.01
+    nmaxold: 8
+  mode: PW
+  nbands: auto
+  occupations:
+    name: fermi-dirac
+    width: 0.01
+  omega: 0.11
+  xc: HSE06
+kpoints:
+  bands_npoints: 40
+  bulk_relax:
+  - 6
+  - 6
+  - 6
+  hse06:
+  - 2
+  - 2
+  - 2
+  supercell_2x2x2:
+  - 3
+  - 3
+  - 3
+oghma_device:
+  absorber_thickness_nm: null
+  executable: null
+  execute: true
+  fast_generation_model: light_constant
+  fast_ion_density: 0.0
+  fast_mode: true
+  fast_vstep: 0.1
+  formula: CsPbI3
+  lockfile: S:\lock0.dat
+  simmode: segment0@jv
+  timeout_s: 600
+  use_xvfb: true
 optical:
-  omega_max_eV: 6.0
+  alpha_sample_eV:
+  - 1.5
+  - 2.0
+  - 2.5
+  - 3.0
   d_omega_eV: 0.025
   eta_eV: 0.1
+  omega_max_eV: 6.0
   onset_threshold_cm1: 1.0e4
-  urbach_energy_meV: 25.0        # smooth sub-gap Urbach tail below onset; <=0 restores hard cutoff
-  scissor_eV: null               # null = auto-detect from HSE06−PBE; float = fixed shift
-  alpha_sample_eV: [1.5, 2.0, 2.5, 3.0]
-
+  scissor_eV: null
+paw_datasets: {}
+pes:
+  double_well_barrier_meV: 10
+  neb_fmax_eV_Ang: 0.1
+  neb_n_images: 7
+  neb_spring_constant: 0.1
+  run_neb_if_double_well: true
+  scan_amplitude_Ang: 0.5
+  scan_n_steps: 20
+  soft_mode_threshold_eV_Ang2: 0.05
+phonons:
+  asr: crystal
+  delta: 0.02
+  delta_validation: 0.03
+  dos_kpts:
+  - 20
+  - 20
+  - 20
+  kpath_npoints: 60
+  method: phonopy
+  scf_convergence:
+    density: 1.0e-05
+    eigenstates: 1.0e-08
+    energy: 1.0e-08
+  supercell:
+  - 2
+  - 2
+  - 2
+r2scan:
+  convergence:
+    density: 0.0001
+    eigenstates: 1.0e-08
+    energy: 1.0e-06
+  ecut: 450
+  kpts:
+  - 6
+  - 6
+  - 6
+  mixer:
+    backend: msr1
+    beta: 0.02
+    nmaxold: 5
+    weight: 100
+  mode: PW
+  occupations:
+    name: fermi-dirac
+    width: 0.25
+  xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN
+relax:
+  convergence:
+    energy: 1.0e-06
+    forces: 0.01
+  ecut: 450
+  kpts:
+  - 6
+  - 6
+  - 6
+  maxiter: 333
+  mixer:
+    beta: 0.05
+    type: Mixer
+  mode: PW
+  symmetry: true
+  xc: PBEsol
+relax_sym:
+  convergence:
+    energy: 1.0e-06
+    forces: 0.01
+  ecut: 450
+  kpts:
+  - 6
+  - 6
+  - 6
+  maxiter: 333
+  mixer:
+    beta: 0.05
+    type: Mixer
+  mode: PW
+  symmetry: true
+  xc: PBE
+scan:
+  convergence:
+    density: 1.0e-06
+    eigenstates: 1.0e-08
+    energy: 1.0e-06
+  ecut: 450
+  kpts:
+  - 6
+  - 6
+  - 6
+  mode: PW
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+  xc: SCAN
+scf:
+  convergence:
+    energy: 1.0e-08
+  ecut: 450
+  kpts:
+  - 6
+  - 6
+  - 6
+  mode: PW
+  occupations:
+    name: fermi-dirac
+    width: 0.05
+  xc: PBEsol
+soc:
+  mode: perturbative
+  phi: 0
+  theta: 0
 sq_limit:
-  thickness_nm: 500.0            # nominal film thickness for primary calculation
-  T_K: 300.0                     # device temperature
-  thickness_scan_nm: [100, 200, 300, 400, 500, 750, 1000, 2000]  # sweep for optimal d
-
-oghma_device:
-  # OghmaNano drift-diffusion + optics solver (not ML).
-  # sim/sim.json is auto-generated from the DFT outputs + local perovskite template.
-  # sim/materials/CsPbI3/nk.csv is written from DFT RPA n(ω)/k(ω).
-  # On Windows: oghma_core.exe runs natively; lockfile and sim_root_path are set automatically.
-  # On Linux: requires wine64 + xvfb-run.
-  executable: null               # null = auto-detect: OGHMA_EXECUTABLE env → oghma_core.exe → oghma_core
-  execute: true
-  timeout_s: 600
-  use_xvfb: true                 # Linux only; ignored automatically on Windows
-  simmode: segment0@jv
-  lockfile: 'S:\lock0.dat'       # Linux/Wine only; overridden automatically on Windows
-  fast_mode: true
-  fast_vstep: 0.1                # quick JV smoke test; use 0.02 for production
-  fast_ion_density: 0.0          # disable ion migration for quick smoke tests
-  fast_generation_model: light_constant
-  absorber_thickness_nm: null    # null = use sq_limit.thickness_nm
-  formula: CsPbI3
-
-# Composition-specific parameters (cell constants, bandgap references, PAW datasets).
-# Override with --composition-config on the CLI.
-composition_config: configs/compositions/CsPbI3.yaml
+  T_K: 300.0
+  thickness_nm: 500.0
+  thickness_scan_nm:
+  - 100
+  - 200
+  - 300
+  - 400
+  - 500
+  - 750
+  - 1000
+  - 2000

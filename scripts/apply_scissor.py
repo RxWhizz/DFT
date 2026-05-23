@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Apply the scissor operator correction to a CsPbI3 band structure."""
+"""Aplica scissor operator correction CsPbI3 banda estructura."""
 
 import logging
 import sys
@@ -26,25 +26,25 @@ from dft_cspbi3.postprocessing import get_band_structure, get_bandgap
     "--pbe-gpw",
     required=True,
     type=click.Path(exists=True),
-    help="Path to PBE SCF .gpw file (for χ calculations).",
+    help="Ruta .gpw PBE SCF para cálculos χ.",
 )
 @click.option(
     "--bands-gpw",
     required=True,
     type=click.Path(exists=True),
-    help="Path to bands .gpw file to apply scissor to.",
+    help="Ruta .gpw bandas para aplicar scissor.",
 )
 @click.option(
     "--soc-gpw",
     default=None,
     type=click.Path(exists=True),
-    help="Path to PBE+SOC .gpw file. If not given, uses literature χSOC.",
+    help="Ruta .gpw PBE+SOC. Si falta, usa χSOC literatura.",
 )
 @click.option(
     "--hse-gpw",
     default=None,
     type=click.Path(exists=True),
-    help="Path to HSE06 .gpw file. If not given, uses literature χHSE.",
+    help="Ruta .gpw HSE06. Si falta, usa χHSE literatura.",
 )
 @click.option(
     "--phase",
@@ -57,24 +57,16 @@ from dft_cspbi3.postprocessing import get_band_structure, get_bandgap
     default="./scissor_results",
     show_default=True,
     type=click.Path(),
-    help="Output directory for corrected band structure plots.",
+    help="Directorio salida bandas corregidas.",
 )
 @click.option(
     "--report",
     is_flag=True,
     default=False,
-    help="Print comparison table vs. experimental values.",
+    help="Imprime tabla vs valores experimentales.",
 )
 def main(pbe_gpw, bands_gpw, soc_gpw, hse_gpw, phase, outdir, report):
-    """Apply scissor correction Eg = E_PBE+D3 + χSOC + χHSE to a band structure.
-
-    Example:
-
-        python apply_scissor.py \\
-            --pbe-gpw calculations/alpha/02_scf/scf.gpw \\
-            --bands-gpw calculations/alpha/03_bands/bands.gpw \\
-            --phase alpha --report
-    """
+    """Aplica scissor correction Eg = E_PBE+D3 + χSOC + χHSE banda estructura."""
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -98,7 +90,7 @@ def main(pbe_gpw, bands_gpw, soc_gpw, hse_gpw, phase, outdir, report):
     if report:
         corrector.report(phase=phase)
 
-    # Load bands and apply scissor
+    # Carga bands y aplica scissor
     bs = get_band_structure(bands_gpw)
     cbm_shift = result.chi_soc + result.chi_hse
     corrector.apply_scissor_to_bands(bs, vbm_shift=0.0, cbm_shift=cbm_shift)
@@ -109,7 +101,7 @@ def main(pbe_gpw, bands_gpw, soc_gpw, hse_gpw, phase, outdir, report):
         output_prefix=f"bands_scissor_{phase}",
         output_dir=out,
     )
-    click.echo(f"\nCorrected band structure saved to {out}/bands_scissor_{phase}.{{png,pdf}}")
+    click.echo(f"\nBandas corregidas en {out}/bands_scissor_{phase}.{{png,pdf}}")
 
 
 if __name__ == "__main__":

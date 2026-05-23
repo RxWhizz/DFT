@@ -1,4 +1,4 @@
-"""SCF convergence validation from GPAW text output and .gpw checkpoints."""
+"""Valida convergencia SCF desde txt/.gpw."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# GPAW 24.x SCF line: "iter:   N  HH:MM:SS  ENERGY  ..."
+# GPAW 24.x SCF línea
 _ITER_RE = re.compile(
     r"^iter:\s+\d+\s+\d+:\d+:\d+\s+([-\d.]+(?:[eE][+-]?\d+)?)",
     re.MULTILINE,
@@ -20,14 +20,12 @@ _CONVERGED_RE = re.compile(r"Converged", re.IGNORECASE)
 _NOT_CONVERGED_RE = re.compile(r"Did not converge", re.IGNORECASE)
 
 
-# ---------------------------------------------------------------------------
 # Data classes
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class SCFReport:
-    """Result of SCF convergence analysis."""
+    """Resultado análisis SCF."""
 
     converged: bool
     iterations: int
@@ -43,7 +41,7 @@ class SCFReport:
 
 @dataclass
 class PhysicalChecks:
-    """Results of basic physical sanity checks on a GPAW calculation."""
+    """Chequeos físicos básicos GPAW."""
 
     energy_negative: bool
     energy_eV: float
@@ -58,9 +56,7 @@ class PhysicalChecks:
         return self.energy_negative and self.occupations_consistent and not self.flags
 
 
-# ---------------------------------------------------------------------------
-# SCF text-output validation
-# ---------------------------------------------------------------------------
+# SCF text-salida validación
 
 
 def validate_scf(
@@ -68,22 +64,7 @@ def validate_scf(
     oscillation_window: int = 6,
     oscillation_threshold_eV: float = 1e-3,
 ) -> SCFReport:
-    """Parse GPAW SCF text log and assess convergence quality.
-
-    Checks performed:
-      - 'Converged' flag present in output
-      - Number of SCF iterations
-      - Energy oscillation in last *oscillation_window* steps
-      - Monotonic convergence vs. non-monotonic behaviour
-
-    Args:
-        txt_file: Path to GPAW output .txt file.
-        oscillation_window: Number of final iterations to inspect for oscillation.
-        oscillation_threshold_eV: |ΔE| above which alternating steps count as oscillation.
-
-    Returns:
-        SCFReport with full diagnostics.
-    """
+    """Parsea log SCF; evalúa convergencia."""
     txt_file = Path(txt_file)
     flags: list[str] = []
 
@@ -108,13 +89,13 @@ def validate_scf(
     iterations = len(energies)
     final_de = abs(energies[-1] - energies[-2]) if len(energies) >= 2 else float("inf")
 
-    # Oscillation: look for alternating signs in energy differences over last window
+    # Oscilacion.
     oscillating = False
     if len(energies) >= oscillation_window:
         tail = np.array(energies[-oscillation_window:])
         diffs = np.diff(tail)
         sign_changes = int(np.sum(np.diff(np.sign(diffs)) != 0))
-        # ≥ half the window alternating AND last |ΔE| still large → oscillating
+        # Mitad ventana alterna + ultimo |ΔE| grande → oscila.
         if sign_changes >= oscillation_window // 2 and final_de > oscillation_threshold_eV:
             oscillating = True
             flags.append("SCF_OSCILLATING")
@@ -129,25 +110,11 @@ def validate_scf(
     )
 
 
-# ---------------------------------------------------------------------------
-# Physical-consistency checks on .gpw checkpoint
-# ---------------------------------------------------------------------------
+# Checks consistencia fisica en checkpoint .gpw.
 
 
 def validate_physical_checks(gpw_file: str | Path) -> PhysicalChecks:
-    """Verify basic physical consistency of a completed GPAW calculation.
-
-    Checks:
-      1. Total energy is negative (bound electronic system).
-      2. Number of valence electrons is positive.
-      3. Occupation numbers sum to N_electrons within 0.01.
-
-    Args:
-        gpw_file: Path to GPAW .gpw checkpoint file.
-
-    Returns:
-        PhysicalChecks dataclass.
-    """
+    """Verifica consistencia física GPAW."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))
@@ -163,12 +130,14 @@ def validate_physical_checks(gpw_file: str | Path) -> PhysicalChecks:
     occ_sum: float = float("nan")
     occ_ok = False
     try:
-        # GPAW returns occupations pre-multiplied by k-point weight,
-        # so summing directly over all k-points gives total electron count.
-        nk = len(calc.get_k_point_weights())
-        occ_sum = float(sum(
-            calc.get_occupation_numbers(kpt=k).sum() for k in range(nk)
-        ))
+        # GPAW ya pondera ocupaciones por peso k.
+        if hasattr(calc, "get_k_point_weights"):
+            nk = len(calc.get_k_point_weights())
+            occ_sum = float(sum(
+                calc.get_occupation_numbers(kpt=k).sum() for k in range(nk)
+            ))
+        else:
+            occ_sum = float(calc.get_occupation_numbers().sum())
         occ_ok = abs(occ_sum - n_elec) < 0.1
         if not occ_ok:
             flags.append(f"OCC_INCONSISTENT:sum={occ_sum:.3f},N_elec={n_elec:.3f}")
@@ -186,20 +155,11 @@ def validate_physical_checks(gpw_file: str | Path) -> PhysicalChecks:
     )
 
 
-# ---------------------------------------------------------------------------
 # Bandgap physical classification
-# ---------------------------------------------------------------------------
 
 
 def classify_electronic_structure(gpw_file: str | Path) -> dict:
-    """Classify the system as metallic, semiconducting, or insulating.
-
-    Args:
-        gpw_file: Path to GPAW .gpw checkpoint.
-
-    Returns:
-        Dict with keys: type, bandgap_eV, homo_eV, lumo_eV, fermi_level_eV.
-    """
+    """Clasifica metal/semiconductor/aislante."""
     from gpaw import GPAW
 
     calc = GPAW(str(gpw_file))

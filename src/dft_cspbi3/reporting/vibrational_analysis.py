@@ -1,4 +1,4 @@
-"""Generate vibrational_analysis.md from Hessian and phonon results."""
+"""Genera vibrational_analysis.md desde Hessian y phonon."""
 
 from __future__ import annotations
 
@@ -17,23 +17,9 @@ def generate_vibrational_report(
     output_dir: str | Path = "./reports",
     filename: str = "vibrational_analysis.md",
 ) -> Path:
-    """Write vibrational_analysis.md and return its path.
-
-    At least one of *hessian_result* or *phonon_result* must be provided.
-
-    Args:
-        hessian_result: HessianResult from validation.hessian.
-        phonon_result:  PhononResult from validation.phonons.
-        stability_report: StabilityReport from validation.stability.
-        phase: Crystal phase label (alpha/gamma/delta).
-        output_dir: Output directory.
-        filename: Report filename.
-
-    Returns:
-        Path to the written report.
-    """
+    """Escribe vibrational_analysis.md; devuelve ruta."""
     if hessian_result is None and phonon_result is None:
-        raise ValueError("At least one of hessian_result or phonon_result must be provided.")
+        raise ValueError("Falta hessian_result o phonon_result.")
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -42,99 +28,91 @@ def generate_vibrational_report(
     lines: list[str] = []
     _h = lines.append
 
-    _h(f"# Vibrational Analysis Report — {phase}")
-    _h(f"\n*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
+    _h(f"# Reporte analisis vibracional — {phase}")
+    _h(f"\n*Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
-    # -----------------------------------------------------------------------
-    # Stability summary
-    # -----------------------------------------------------------------------
+    # Resumen estabilidad.
     if stability_report is not None:
         cls = stability_report.classification.value.upper()
         icon = {"stable": "✅", "metastable": "⚠", "unstable": "❌", "unknown": "❓"}.get(
             stability_report.classification.value, "❓"
         )
-        _h(f"\n## Stability Classification: {icon} {cls}")
+        _h(f"\n## Clasificacion estabilidad: {icon} {cls}")
         _h(f"\n{stability_report.diagnosis}")
         if stability_report.recommendations:
-            _h("\n**Recommendations:**")
+            _h("\n**Recomendaciones:**")
             for rec in stability_report.recommendations:
                 _h(f"- {rec}")
 
-    # -----------------------------------------------------------------------
-    # Hessian section
-    # -----------------------------------------------------------------------
+    # Seccion Hessian.
     if hessian_result is not None:
         h = hessian_result
-        _h("\n## 1. Hessian Matrix Analysis (Γ-point)")
-        _h(f"\n- Atoms: {h.n_atoms}")
+        _h("\n## 1. Analisis matriz Hessian (Γ)")
+        _h(f"\n- Atomos: {h.n_atoms}")
         _h(f"- DOF: {3 * h.n_atoms}")
-        _h(f"- Finite-difference step: {h.delta_Ang:.4f} Å")
+        _h(f"- Paso diferencias finitas: {h.delta_Ang:.4f} Å")
         _h(f"- Initial fmax: {h.fmax_initial_eV_Ang:.4f} eV/Å "
-           f"({'OK' if h.forces_converged else 'WARNING: too large'})")
+           f"({'OK' if h.forces_converged else 'ALERTA: alto'})")
 
-        _h("\n### 1.1 Eigenvalue Spectrum")
-        _h("\n| Mode | Eigenvalue (eV/Å²) | Classification |")
+        _h("\n### 1.1 Espectro autovalores")
+        _h("\n| Modo | Autovalor (eV/Å²) | Clasificacion |")
         _h("|------|--------------------|----------------|")
         for i, ev in enumerate(h.eigenvalues):
             if abs(ev) <= 0.05:
-                cls_str = "translational (zero)"
+                cls_str = "traslacional (cero)"
             elif ev < 0:
-                cls_str = "⚠ **NEGATIVE** (instability)"
+                cls_str = "⚠ **NEGATIVO** (instability)"
             else:
-                cls_str = "positive (stable)"
+                cls_str = "positivo (stable)"
             _h(f"| {i + 1:3d} | {ev:+12.6f} | {cls_str} |")
 
-        _h("\n### 1.2 Summary")
-        _h(f"\n| Property | Value |")
+        _h("\n### 1.2 Resumen")
+        _h(f"\n| Propiedad | Valor |")
         _h("|----------|-------|")
-        _h(f"| Minimum eigenvalue | {h.min_eigenvalue:+.6f} eV/Å² |")
-        _h(f"| Negative eigenvalues | {h.n_negative} |")
-        _h(f"| Near-zero eigenvalues | {h.n_zero} |")
-        stable_str = "✅ Stable minimum" if h.stable else "❌ Saddle point"
-        _h(f"| Assessment | {stable_str} |")
+        _h(f"| Autovalor minimo | {h.min_eigenvalue:+.6f} eV/Å² |")
+        _h(f"| Autovalores negativos | {h.n_negative} |")
+        _h(f"| Autovalores cerca cero | {h.n_zero} |")
+        stable_str = "✅ minimo stable" if h.stable else "❌ punto silla"
+        _h(f"| Evaluacion | {stable_str} |")
 
         if h.flags:
             _h(f"\n**Flags:** `{'`, `'.join(h.flags)}`")
 
-    # -----------------------------------------------------------------------
-    # Phonon section
-    # -----------------------------------------------------------------------
+    # Seccion phonon.
     if phonon_result is not None:
         ph = phonon_result
-        _h("\n## 2. Phonon Frequencies (Supercell Method)")
+        _h("\n## 2. Frecuencias phonon (supercelda)")
         sc = ph.supercell
-        _h(f"\n- Unit cell atoms: {ph.n_atoms_unit_cell}")
+        _h(f"\n- Atomos celda unitaria: {ph.n_atoms_unit_cell}")
         _h(f"- Supercell: {sc[0]}×{sc[1]}×{sc[2]}")
-        _h(f"- Finite-difference step: {ph.delta_Ang:.4f} Å")
-        _h(f"- Expected phonon branches: {3 * ph.n_atoms_unit_cell}")
+        _h(f"- Paso diferencias finitas: {ph.delta_Ang:.4f} Å")
+        _h(f"- Ramas phonon esperadas: {3 * ph.n_atoms_unit_cell}")
 
-        _h("\n### 2.1 Imaginary Modes")
+        _h("\n### 2.1 Modos imaginarios")
         if ph.n_imaginary == 0:
-            _h("\n✅ No imaginary phonon frequencies detected. Structure is dynamically stable.")
+            _h("\n✅ Sin frecuencias phonon imaginarias. Estructura dinamicamente stable.")
         else:
-            _h(f"\n❌ {ph.n_imaginary} imaginary mode(s) detected:")
-            _h(f"\n- Most negative frequency: **{ph.max_imaginary_cm1:.1f} cm⁻¹**")
+            _h(f"\n❌ {ph.n_imaginary} modos imaginarios detectados: instability.")
+            _h(f"\n- Frecuencia mas negativa: **{ph.max_imaginary_cm1:.1f} cm⁻¹**")
 
-        _h("\n### 2.2 Frequency Range")
+        _h("\n### 2.2 Rango frecuencia")
         freqs = ph.frequencies_cm1.flatten()
-        real_freqs = freqs[freqs > 1.0]   # exclude near-zero translational
+        real_freqs = freqs[freqs > 1.0]
         imag_freqs = freqs[freqs < -10.0]
 
-        _h(f"\n| Property | Value |")
+        _h(f"\n| Propiedad | Valor |")
         _h("|----------|-------|")
-        _h(f"| Min real frequency | {real_freqs.min():.1f} cm⁻¹" if real_freqs.size else "| Min real frequency | N/A |")
-        _h(f"| Max real frequency | {real_freqs.max():.1f} cm⁻¹" if real_freqs.size else "| Max real frequency | N/A |")
+        _h(f"| Frecuencia real min | {real_freqs.min():.1f} cm⁻¹" if real_freqs.size else "| Frecuencia real min | N/A |")
+        _h(f"| Frecuencia real max | {real_freqs.max():.1f} cm⁻¹" if real_freqs.size else "| Frecuencia real max | N/A |")
         if imag_freqs.size:
-            _h(f"| Imaginary (worst) | {imag_freqs.min():.1f} cm⁻¹ |")
-        _h(f"| N imaginary (>10 cm⁻¹) | {ph.n_imaginary} |")
+            _h(f"| Imaginaria peor | {imag_freqs.min():.1f} cm⁻¹ |")
+        _h(f"| N imaginarias (>10 cm⁻¹) | {ph.n_imaginary} |")
 
         if ph.flags:
             _h(f"\n**Flags:** `{'`, `'.join(ph.flags)}`")
 
-    # -----------------------------------------------------------------------
-    # Structural diagnosis
-    # -----------------------------------------------------------------------
-    _h("\n## 3. Structural Diagnosis")
+    # Diagnostico estructural.
+    _h("\n## 3. Diagnostico estructural")
 
     all_stable = True
     if hessian_result is not None and not hessian_result.stable:
@@ -144,23 +122,22 @@ def generate_vibrational_report(
 
     if all_stable:
         _h(
-            "\nThe structure passes all vibrational stability checks. "
-            "It represents a true local energy minimum and is suitable for "
-            "subsequent property calculations (DOS, band structure, transport)."
+            "\nEstructura pasa checks vibracionales. "
+            "Representa minimo local stable. "
+            "Apta para DOS, bandas, transporte."
         )
     else:
         _h(
-            "\n⚠ **The structure has one or more dynamic instabilities.** "
-            "Results from electronic structure calculations (band gap, DOS) "
-            "derived from this geometry may be unreliable. "
-            "The instability must be resolved before accepting DFT results."
+            "\n⚠ **Estructura con una o mas instability dinamicas.** "
+            "Bandgap/DOS desde esta geometria pueden fallar. "
+            "Resolver instability antes de aceptar DFT."
         )
         _h(
-            "\n**Possible causes for perovskite halides:**\n"
-            "- Suppressed octahedral tilting (cubic constraint on tilted phase)\n"
-            "- Missing A-site orientational disorder (FA⁺, MA⁺ fixed in average position)\n"
-            "- Wrong phase (e.g. computing δ geometry with α structure)\n"
-            "- Insufficient relaxation (residual forces too large)\n"
+            "\n**Causas posibles en haluros perovskita:**\n"
+            "- Inclinacion octaedrica suprimida\n"
+            "- Desorden sitio A ausente (FA⁺, MA⁺ fijos)\n"
+            "- Fase incorrecta (δ usando estructura α)\n"
+            "- Relajacion insuficiente; fuerzas residuales altas\n"
         )
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""DFT-CsPbI3 pipeline CLI.
-
-Usage examples
---------------
-# Full workflow with validation and reports:
-    python main.py run --phase alpha --validate --report
-
-# Include SOC and phonons:
-    python main.py run --phase gamma --soc --phonons --validate --report
-
-# Only convergence tests:
-    python main.py run --phase alpha --convergence-test --report
-
-# Check status of an existing calculation:
-    python main.py status --phase alpha --workdir ./calculations
-
-# Generate reports from existing .gpw files:
-    python main.py report --phase alpha --workdir ./calculations
-"""
+"""DFT-CsPbI3 pipeline CLI."""
 
 from __future__ import annotations
 
@@ -27,9 +9,7 @@ from pathlib import Path
 
 import click
 
-# ---------------------------------------------------------------------------
 # Logging setup
-# ---------------------------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,22 +19,18 @@ logging.basicConfig(
 logger = logging.getLogger("dft_cspbi3.main")
 
 
-# ---------------------------------------------------------------------------
 # CLI root
-# ---------------------------------------------------------------------------
 
 
 @click.group()
-@click.option("--debug", is_flag=True, help="Enable DEBUG logging.")
+@click.option("--debug", is_flag=True, help="Activa logs DEBUG.")
 def cli(debug: bool) -> None:
-    """DFT pipeline for CsPbI3 halide perovskite using GPAW."""
+    """Pipeline DFT CsPbI3 con GPAW."""
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
 
-# ---------------------------------------------------------------------------
-# run command
-# ---------------------------------------------------------------------------
+# ejecuta command
 
 
 @cli.command()
@@ -63,74 +39,73 @@ def cli(debug: bool) -> None:
     default="alpha",
     type=str,
     show_default=True,
-    help="Crystal phase to simulate (alpha/gamma/delta for CsPbI3, or any name with --composition-config).",
+    help="Fase cristalina (alpha/gamma/delta) o nombre con --composition-config.",
 )
 @click.option(
     "--config",
     default="configs/default_params.yaml",
     show_default=True,
     type=click.Path(),
-    help="Path to YAML parameter file.",
+    help="Ruta YAML parámetros.",
 )
 @click.option(
     "--composition-config",
     default=None,
     type=click.Path(),
-    help="YAML with composition-specific params (structures, bandgap refs). "
-         "Defaults to value in default_params.yaml.",
+    help="YAML por composición: estructuras, refs gap. Default desde default_params.yaml.",
 )
 @click.option(
     "--workdir",
     default="./calculations",
     show_default=True,
     type=click.Path(),
-    help="Root directory for calculation subdirectories.",
+    help="Directorio raíz cálculos.",
 )
 @click.option(
     "--steps",
     default="relax,scf,bands,dos",
     show_default=True,
-    help="Comma-separated DFT steps to execute.",
+    help="Pasos DFT separados por coma.",
 )
-@click.option("--soc", is_flag=True, help="Apply perturbative SOC after SCF.")
-@click.option("--hse06", is_flag=True, help="Run HSE06 hybrid functional calculation.")
+@click.option("--soc", is_flag=True, help="Aplica SOC perturbativo tras SCF.")
+@click.option("--hse06", is_flag=True, help="Ejecuta funcional híbrido HSE06.")
 @click.option(
     "--convergence-test",
     is_flag=True,
-    help="Run Ecut and k-mesh convergence tests before main workflow.",
+    help="Corre convergencia Ecut y malla k antes del workflow.",
 )
 @click.option(
     "--phonons",
     is_flag=True,
-    help="Compute phonon dispersion via supercell finite-displacement method.",
+    help="Calcula dispersión fonónica por supercelda.",
 )
 @click.option(
     "--validate",
     is_flag=True,
-    help="Run scientific validation suite after DFT steps.",
+    help="Ejecuta validación científica tras DFT.",
 )
 @click.option(
     "--report",
     is_flag=True,
-    help="Generate Markdown reports in <workdir>/<phase>/reports/.",
+    help="Genera reportes Markdown en <workdir>/<phase>/reports/.",
 )
 @click.option(
     "--dry-run",
     is_flag=True,
-    help="Prepare inputs without executing GPAW calculations.",
+    help="Prepara entradas sin ejecutar GPAW.",
 )
 @click.option(
     "--phonon-supercell",
     default="2,2,2",
     show_default=True,
-    help="Supercell for phonon calculation (e.g. '2,2,2').",
+    help="Supercelda fonones, ej. '2,2,2'.",
 )
 @click.option(
     "--force-threshold",
     default=0.05,
     show_default=True,
     type=float,
-    help="Max force (eV/Å) before Hessian/phonon calculation is allowed.",
+    help="Fuerza max (eV/Å) antes de Hessiano/fonones.",
 )
 def run(
     phase: str,
@@ -148,7 +123,7 @@ def run(
     phonon_supercell: str,
     force_threshold: float,
 ) -> None:
-    """Execute the complete DFT pipeline for one crystal phase."""
+    """Ejecuta pipeline DFT completo por fase."""
     from dft_cspbi3 import DFTWorkflow, GPAWCalculatorFactory, StructureBuilder
 
     config_path = Path(config)
@@ -159,18 +134,16 @@ def run(
     click.echo(f"  DFT pipeline  |  phase={phase}  |  dry_run={dry_run}")
     click.echo(f"{'='*60}\n")
 
-    # --- Convergence tests (optional, run before main workflow) ---
     if convergence_test:
         _run_convergence_tests(phase, config_path, work_root, report_dir)
 
-    # --- Build step list ---
+    # Construye step list
     step_list = [s.strip() for s in steps.split(",") if s.strip()]
     if soc and "soc" not in step_list:
         step_list.append("soc")
     if hse06 and "hse06" not in step_list:
         step_list.append("hse06")
 
-    # --- Main DFT workflow ---
     wf = DFTWorkflow(
         phase=phase,
         config_path=config_path if config_path.exists() else None,
@@ -179,15 +152,15 @@ def run(
         dry_run=dry_run,
     )
 
-    click.echo(f"Steps to execute: {step_list}")
+    click.echo(f"Pasos: {step_list}")
     wf.run(steps=step_list)
     wf.get_status()
 
     if dry_run:
-        click.echo("\nDry run complete — no GPAW calculations were executed.")
+        click.echo("\nDry-run completo. GPAW no ejecutado.")
         return
 
-    # --- Phonons / Hessian (optional) ---
+    # Phonons / Hessiano (opcional)
     hessian_result = None
     phonon_result = None
     if phonons:
@@ -199,7 +172,7 @@ def run(
             force_threshold=force_threshold,
         )
 
-    # --- Scientific validation ---
+    # Scientific validación
     validation_results: dict = {}
     if validate:
         validation_results = _run_validation(
@@ -211,7 +184,7 @@ def run(
         )
         _print_validation_summary(validation_results)
 
-    # --- Report generation ---
+    # Report generación
     if report:
         _generate_all_reports(
             phase=phase,
@@ -222,14 +195,12 @@ def run(
             phonon_result=phonon_result,
             report_dir=report_dir,
         )
-        click.echo(f"\nReports written to: {report_dir}")
+        click.echo(f"\nReportes escritos en: {report_dir}")
 
-    click.echo("\nPipeline complete.\n")
+    click.echo("\nPipeline completo.\n")
 
 
-# ---------------------------------------------------------------------------
-# status command
-# ---------------------------------------------------------------------------
+# estado command
 
 
 @cli.command()
@@ -237,7 +208,7 @@ def run(
 @click.option("--workdir", default="./calculations", type=click.Path())
 @click.option("--config", default="configs/default_params.yaml", type=click.Path())
 def status(phase: str, workdir: str, config: str) -> None:
-    """Print the status of a workflow (DONE / PENDING for each step)."""
+    """Nota técnica."""
     from dft_cspbi3 import DFTWorkflow
 
     wf = DFTWorkflow(phase=phase, config_path=Path(config) if Path(config).exists() else None,
@@ -245,9 +216,7 @@ def status(phase: str, workdir: str, config: str) -> None:
     wf.get_status()
 
 
-# ---------------------------------------------------------------------------
-# report command (standalone, on existing .gpw files)
-# ---------------------------------------------------------------------------
+# reporte command (standalone, en existente.gpw archivos)
 
 
 @cli.command("report")
@@ -255,9 +224,9 @@ def status(phase: str, workdir: str, config: str) -> None:
 @click.option("--workdir", default="./calculations", type=click.Path())
 @click.option("--config", default="configs/default_params.yaml", type=click.Path())
 @click.option("--soc", is_flag=True)
-@click.option("--with-vibrational", is_flag=True, help="Include vibrational report if .npy files exist.")
+@click.option("--with-vibrational", is_flag=True, help="Incluye reporte vibracional si hay .npy.")
 def report_cmd(phase: str, workdir: str, config: str, soc: bool, with_vibrational: bool) -> None:
-    """Generate all Markdown reports from existing calculation outputs."""
+    """Genera all Markdown reportes desde existente cálculo salidas."""
     work_root = Path(workdir)
     report_dir = work_root / phase / "reports"
     config_path = Path(config)
@@ -278,12 +247,10 @@ def report_cmd(phase: str, workdir: str, config: str, soc: bool, with_vibrationa
         phonon_result=None,
         report_dir=report_dir,
     )
-    click.echo(f"Reports written to: {report_dir}")
+    click.echo(f"Reportes escritos en: {report_dir}")
 
 
-# ---------------------------------------------------------------------------
 # Internal helpers
-# ---------------------------------------------------------------------------
 
 
 def _run_convergence_tests(
@@ -296,7 +263,7 @@ def _run_convergence_tests(
     from dft_cspbi3.convergence import run_both
     from dft_cspbi3.plotting import plot_convergence
 
-    click.echo("\n[convergence] Running Ecut and k-mesh convergence tests …")
+    click.echo("\n[convergencia] Corriendo Ecut y malla k...")
     atoms = StructureBuilder.load_phase(phase)
     conv_dir = work_root / phase / "convergence"
 
@@ -313,7 +280,7 @@ def _run_convergence_tests(
                      "ecut_conv", output_dir=report_dir)
     plot_convergence(df_kpts, "nkpts_total", "ΔE (meV/atom)", 1.0, "k-mesh convergence",
                      "kpts_conv", output_dir=report_dir)
-    click.echo("[convergence] Done.")
+    click.echo("[convergencia] Listo.")
 
 
 def _run_vibrational(
@@ -329,12 +296,12 @@ def _run_vibrational(
     sc_ints = tuple(int(x) for x in supercell_str.split(","))
     assert len(sc_ints) == 3, f"Supercell must be 'a,b,c' format, got: {supercell_str}"
 
-    click.echo(f"\n[vibrational] Loading relaxed structure for phase={phase} …")
+    click.echo(f"\n[vibracional] Cargando estructura relajada fase={phase}...")
     factory = GPAWCalculatorFactory(config_path if config_path.exists() else None)
 
     relax_gpw = work_root / phase / "01_relax" / "relax.gpw"
     if not relax_gpw.exists():
-        click.echo(f"  ERROR: relax.gpw not found at {relax_gpw}. Run 'relax' step first.")
+        click.echo(f"  ERROR: relax.gpw no existe en {relax_gpw}. Ejecuta paso 'relax' primero.")
         return None, None
 
     from gpaw import GPAW
@@ -345,8 +312,8 @@ def _run_vibrational(
     hess_dir = vib_dir / "hessian"
     phon_dir = vib_dir / "phonons"
 
-    # --- Hessian ---
-    click.echo("[vibrational] Computing Hessian (finite differences) …")
+    # Hessiano
+    click.echo("[vibracional] Calculando Hessiano (diferencias finitas)...")
     hess_calc = factory.create("scf", txt=str(hess_dir / "hess.txt"))
     hessian_result = compute_hessian(
         atoms=atoms,
@@ -357,8 +324,8 @@ def _run_vibrational(
     )
     click.echo(f"  {hessian_result.summary}")
 
-    # --- Phonons ---
-    click.echo(f"[vibrational] Computing phonons (supercell {sc_ints}) …")
+    # Phonons
+    click.echo(f"[vibracional] Calculando fonones (supercelda {sc_ints})...")
     phon_calc = factory.create("scf", txt=str(phon_dir / "phon.txt"))
     phonon_result = compute_phonons(
         atoms=atoms,
@@ -390,7 +357,7 @@ def _run_validation(
     phase_dir = work_root / phase
     results: dict = {}
 
-    # SCF validation
+    # SCF validación
     scf_txt = phase_dir / "02_scf" / "scf.txt"
     scf_gpw = phase_dir / "02_scf" / "scf.gpw"
 
@@ -408,7 +375,7 @@ def _run_validation(
             f"type={results['electronic_structure'].get('type', '?')}"
         )
 
-    # SOC validation
+    # SOC validación
     soc_dir = phase_dir / "05_soc"
     if soc_enabled or soc_was_applied(soc_dir):
         eig_npy = soc_dir / "soc_eigenvalues.npy"
@@ -421,7 +388,7 @@ def _run_validation(
                 f"plausible={soc.chi_soc_plausible}"
             )
 
-    # Hessian / phonon
+    # Hessiano / fonón
     if hessian_result is not None:
         results["hessian_result"] = hessian_result
     if phonon_result is not None:
@@ -431,7 +398,7 @@ def _run_validation(
 
 
 def _print_validation_summary(results: dict) -> None:
-    click.echo("\n--- Validation Summary ---")
+    click.echo("\n--- Resumen Validación ---")
     all_flags: list[str] = []
     for key in ("scf_report", "physical_checks", "soc_report"):
         obj = results.get(key)
@@ -439,9 +406,9 @@ def _print_validation_summary(results: dict) -> None:
             all_flags.extend(obj.flags)
 
     if not all_flags:
-        click.echo("  ✅ All checks passed — no critical flags.")
+        click.echo("  ✅ Todo OK. Sin flags críticos.")
     else:
-        click.echo(f"  ⚠ {len(all_flags)} flag(s) found:")
+        click.echo(f"  ⚠ flags: {len(all_flags)}")
         for f in all_flags:
             click.echo(f"    • {f}")
     click.echo("-" * 26)
@@ -468,7 +435,7 @@ def _generate_all_reports(
 
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load params from config
+    # Carga params desde config
     factory = GPAWCalculatorFactory(config_path if config_path.exists() else None)
     cfg = factory.config
     xc = cfg.get("scf", {}).get("xc", "PBEsol")
@@ -484,7 +451,7 @@ def _generate_all_reports(
         "fmax": 0.01,
     }
 
-    # Collect electronic structure info
+    # Collect electronic estructura info
     es = validation_results.get("electronic_structure", {})
     pc = validation_results.get("physical_checks")
 
@@ -537,9 +504,7 @@ def _guess_natoms(phase: str) -> int:
     return {"alpha": 5, "gamma": 20, "delta": 20}.get(phase, 5)
 
 
-# ---------------------------------------------------------------------------
 # Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     cli()

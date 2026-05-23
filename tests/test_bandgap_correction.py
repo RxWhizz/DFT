@@ -1,4 +1,4 @@
-"""Tests for ScissorCorrection — validates arithmetic with known literature values."""
+"""Tests ScissorCorrection; aritmética literatura."""
 
 import sys
 from pathlib import Path
@@ -38,28 +38,24 @@ def corrector_custom():
 
 
 class TestScissorArithmetic:
-    """Verify the scissor formula with values from published literature.
-
-    Reference: Brivio et al., Phys. Rev. B 89, 155204 (2014)
-               Sutton et al., ACS Energy Lett. 3, 1787 (2018)
-    """
+    """Verify scissor formula con valores desde published literature."""
 
     def test_corrected_gap_formula(self, corrector):
-        """Eg_corr = E_PBE+D3 + χSOC + χHSE must give correct sum."""
+        """Eg_corr = E_PBE+D3 + χSOC + χHSE."""
         e_pbe_d3 = 1.44
         chi_soc = 0.60 - 1.44   # = -0.84 eV
         chi_hse = 1.76 - 1.44   # = +0.32 eV
         result = corrector.corrected_gap(e_pbe_d3, chi_soc, chi_hse)
-        expected = 1.44 + (-0.84) + 0.32  # = 0.92 eV
+        expected = 1.44 + (-0.84) + 0.32  # esperado = 0.92 eV
         assert pytest.approx(result, abs=1e-6) == expected
 
     def test_chi_soc_negative_for_lead(self, corrector):
-        """SOC dramatically reduces the PbI3-based gap — χSOC must be negative."""
+        """SOC reduce gap PbI3; χSOC < 0."""
         chi_soc = corrector.corrected_gap(0.0, -0.84, 0.0)
         assert chi_soc < 0
 
     def test_chi_hse_positive(self, corrector):
-        """HSE06 opens the gap relative to PBE — χHSE must be positive."""
+        """HSE06 abre gap vs PBE; χHSE > 0."""
         chi_hse = 1.76 - 1.44
         assert chi_hse > 0
 
@@ -68,14 +64,14 @@ class TestScissorArithmetic:
         assert isinstance(result, float)
 
     def test_corrected_gap_additivity(self, corrector):
-        """Scissor is strictly additive — order of corrections is irrelevant."""
+        """Scissor aditivo; orden irrelevante."""
         e = 1.44
         soc = -0.84
         hse = 0.32
         assert corrector.corrected_gap(e, soc, hse) == corrector.corrected_gap(e, hse, soc)
 
     def test_zero_corrections(self, corrector):
-        """With zero corrections, result equals PBE+D3 gap."""
+        """With zero corrections, resultado equals PBE+D3 gap."""
         assert corrector.corrected_gap(1.55, 0.0, 0.0) == pytest.approx(1.55)
 
 
@@ -109,7 +105,7 @@ class TestScissorResult:
 
 class TestApplyScissorToBands:
     def _make_mock_bs(self, energies_below, energies_above, ef=0.0):
-        """Create a minimal mock BandStructure."""
+        """Crea minimal mock BandStructure."""
         import numpy as np
         bs = MagicMock()
         bs.energies = np.concatenate([energies_below, energies_above])
@@ -148,15 +144,15 @@ class TestApplyScissorToBands:
 
 class TestReferenceValues:
     def test_default_experimental_gap(self, corrector):
-        """Default experimental α-CsPbI3 gap is 1.73 eV."""
+        """Gap experimental α-CsPbI3 = 1.73 eV."""
         assert corrector.REFERENCE["experimental_alpha"] == pytest.approx(1.73)
 
     def test_pbe_soc_gap(self, corrector):
-        """PBE+SOC gap is ~0.60 eV — dramatic SOC reduction in Pb systems."""
+        """PBE+SOC ≈ 0.60 eV; SOC Pb fuerte."""
         assert corrector.REFERENCE["pbe_soc"] == pytest.approx(0.60)
 
     def test_hse06_gap(self, corrector):
-        """HSE06 gap without SOC should be close to experiment."""
+        """HSE06 sin SOC cerca experimento."""
         assert corrector.REFERENCE["hse06_no_soc"] == pytest.approx(1.76)
 
     def test_custom_reference(self):

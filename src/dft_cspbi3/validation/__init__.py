@@ -1,16 +1,4 @@
-"""Scientific validation package for the DFT-CsPbI3 pipeline.
-
-Modules
--------
-scf         — Parse GPAW text output; check SCF convergence and physical consistency.
-soc         — Validate perturbative SOC application via spinorbit_eigenvalues().
-hessian     — Compute 3N×3N Hessian via central finite differences; classify stability.
-phonons     — Supercell phonon calculation with ASE+GPAW; detect imaginary modes.
-stability   — Classify structures as STABLE / METASTABLE / UNSTABLE.
-
-All validation functions return typed dataclasses so results can be inspected
-programmatically and serialised to the reporting package.
-"""
+"""Scientific validación package para DFT-CsPbI3 pipeline."""
 
 from .scf import (
     SCFReport,
@@ -59,11 +47,11 @@ __all__ = [
     "compute_hessian",
     "check_forces",
     "load_hessian_from_cache",
-    # phonons
+    # fonones
     "PhononResult",
     "compute_phonons",
     "frequencies_at_gamma",
-    # stability
+    # estabilidad
     "StabilityClass",
     "StabilityReport",
     "classify_from_phonons",

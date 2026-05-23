@@ -1,7 +1,4 @@
-"""Electronic structure analysis: gap type, effective masses, DOS near gap.
-
-All functions read from existing .gpw checkpoints — no new GPAW calculations needed.
-"""
+"""Electronic estructura analysis."""
 
 from __future__ import annotations
 
@@ -14,21 +11,21 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# ħ²/m₀ in eV·Å² — used to convert band curvature to effective mass
+# ħ²/m₀ en eV·Å² - usado convert banda curvature effective mass
 _HBAR2_OVER_M0_EV_ANG2 = 7.6199   # eV·Å²
 
 
 @dataclass
 class GapTypeResult:
-    """Direct vs indirect band gap classification."""
+    """Direct vs indirect banda gap classification."""
 
-    gap_type: str                       # "direct" or "indirect"
+    gap_type: str
     gap_eV: float
-    vbm_kpt_frac: Optional[np.ndarray]  # VBM k-point in fractional coords
-    cbm_kpt_frac: Optional[np.ndarray]  # CBM k-point in fractional coords
+    vbm_kpt_frac: Optional[np.ndarray]
+    cbm_kpt_frac: Optional[np.ndarray]
     vbm_kpt_label: str = ""
     cbm_kpt_label: str = ""
-    direct_gap_eV: Optional[float] = None  # minimum direct gap (even if gap is indirect)
+    direct_gap_eV: Optional[float] = None
     flags: list[str] = field(default_factory=list)
 
     @property
@@ -45,12 +42,12 @@ class GapTypeResult:
 
 @dataclass
 class EffectiveMassResult:
-    """Parabolic effective masses at CBM and VBM."""
+    """Parabolic effective masses en CBM y VBM."""
 
-    m_e: Optional[float]    # electron effective mass at CBM in units of m₀
-    m_h: Optional[float]    # hole effective mass at VBM in units of m₀ (positive)
+    m_e: Optional[float]    # electron effective mass en CBM en units m₀
+    m_h: Optional[float]    # hole effective mass en VBM en units m₀ (positive)
     m_reduced: Optional[float]  # reduced mass 1/m_r = 1/m_e + 1/m_h
-    n_kpts_fit: int = 5     # number of k-points used in parabolic fit (each side)
+    n_kpts_fit: int = 5
     flags: list[str] = field(default_factory=list)
 
     @property
@@ -69,14 +66,13 @@ class EffectiveMassResult:
 
 @dataclass
 class DosNearGapResult:
-    """DOS near the Fermi level — proxy for defect tolerance."""
-
-    dos_in_gap_states_per_eV: float    # states/eV integrated ±window around EF
-    window_eV: float                   # integration window used
+    """DOS cerca EF = proxy defectos."""
+    dos_in_gap_states_per_eV: float    # states/eV integrated ±window cerca EF
+    window_eV: float
     vbm_eV: float
     cbm_eV: float
     gap_eV: float
-    defect_tolerant: bool              # True if in-gap DOS below threshold
+    defect_tolerant: bool              # True si en-gap DOS bajo umbral
     flags: list[str] = field(default_factory=list)
 
     @property
@@ -85,23 +81,11 @@ class DosNearGapResult:
         return f"{status}: {self.dos_in_gap_states_per_eV:.4f} states/eV in ±{self.window_eV} eV window"
 
 
-# ---------------------------------------------------------------------------
 # Gap type classification
-# ---------------------------------------------------------------------------
 
 
 def classify_gap_type(bands_gpw: str | Path) -> GapTypeResult:
-    """Determine if the band gap is direct or indirect.
-
-    Loads the band structure from a bands.gpw file, finds the VBM and CBM
-    k-points, and compares their fractional coordinates.
-
-    Args:
-        bands_gpw: Path to a bands-step .gpw file.
-
-    Returns:
-        GapTypeResult with gap type, VBM/CBM k-points, and the minimum direct gap.
-    """
+    """Determina gap directo/indirecto."""
     from gpaw import GPAW
 
     flags: list[str] = []
@@ -110,21 +94,21 @@ def classify_gap_type(bands_gpw: str | Path) -> GapTypeResult:
     try:
         n_electrons = calc.get_number_of_electrons()
         n_bands = calc.get_number_of_bands()
-        n_occupied = int(round(n_electrons / 2))   # spin-paired
+        n_occupied = int(round(n_electrons / 2))
 
         kpts = calc.get_bz_k_points()              # (nk, 3) fractional
         nk = len(kpts)
 
-        # Eigenvalues: shape (nspins, nk, nbands) in eV
+        # Eigenvalues
         eigs = np.array([
             [calc.get_eigenvalues(kpt=ik, spin=0) for ik in range(nk)]
         ])  # shape (1, nk, nbands)
 
         ef = calc.get_fermi_level()
 
-        # VBM: highest occupied band top
-        vb_energies = eigs[0, :, n_occupied - 1]   # (nk,)
-        cb_energies = eigs[0, :, n_occupied]        # (nk,)
+        # VBM
+        vb_energies = eigs[0, :, n_occupied - 1]
+        cb_energies = eigs[0, :, n_occupied]
 
         vbm_k = int(np.argmax(vb_energies))
         cbm_k = int(np.argmin(cb_energies))
@@ -133,12 +117,12 @@ def classify_gap_type(bands_gpw: str | Path) -> GapTypeResult:
         cbm_e = float(cb_energies[cbm_k])
         gap = cbm_e - vbm_e
 
-        # Minimum direct gap: same k-point
-        direct_gaps = cb_energies - vb_energies     # (nk,)
+        # Minimum direct gap
+        direct_gaps = cb_energies - vb_energies
         min_direct_gap = float(np.min(direct_gaps))
         min_direct_k = int(np.argmin(direct_gaps))
 
-        # Classify: direct if VBM and CBM are at the same k-point
+        # Clasifica
         k_dist = np.linalg.norm(kpts[vbm_k] - kpts[cbm_k])
         gap_type = "direct" if k_dist < 0.05 else "indirect"
 
@@ -174,31 +158,14 @@ def classify_gap_type(bands_gpw: str | Path) -> GapTypeResult:
     return result
 
 
-# ---------------------------------------------------------------------------
 # Effective masses
-# ---------------------------------------------------------------------------
 
 
 def compute_effective_masses(
     bands_gpw: str | Path,
     n_fit: int = 2,
 ) -> EffectiveMassResult:
-    """Compute electron and hole effective masses via parabolic fit.
-
-    Fits E(k) = E₀ + ħ²k²/(2m*) to the band structure near the CBM and VBM
-    using the n_fit k-points on each side of the extremum.
-
-    n_fit=2 keeps the fit inside the parabolic regime near R (~0.025 Å⁻¹
-    for the M→R segment spacing of 0.013 Å⁻¹).  Larger values include
-    non-parabolic points and overestimate m*.
-
-    Args:
-        bands_gpw: Path to a bands-step .gpw file with a k-path calculation.
-        n_fit: Number of k-points on each side of the extremum for the fit.
-
-    Returns:
-        EffectiveMassResult in units of the free electron mass m₀.
-    """
+    """Calcula electron y hole effective masses via parabolic fit."""
     from gpaw import GPAW
 
     flags: list[str] = []
@@ -209,8 +176,8 @@ def compute_effective_masses(
         n_occupied = int(round(n_electrons / 2))
 
         kpts = calc.get_bz_k_points()           # (nk, 3) fractional
-        cell = calc.atoms.cell                   # ASE cell
-        rec = np.linalg.inv(cell.T) * 2 * np.pi  # reciprocal lattice (rows = b vectors) in Å⁻¹
+        cell = calc.atoms.cell
+        rec = np.linalg.inv(cell.T) * 2 * np.pi  # reciprocal lattice (filas = b vectors) en Å⁻¹
         nk = len(kpts)
 
         eigs = np.array([
@@ -226,7 +193,7 @@ def compute_effective_masses(
         m_e = _fit_mass(cb, kpts, rec, cbm_k, n_fit, flags, label="CBM")
         m_h = _fit_mass(-vb, kpts, rec, vbm_k, n_fit, flags, label="VBM")
         if m_h is not None:
-            m_h = abs(m_h)   # hole mass is positive
+            m_h = abs(m_h)
 
         m_reduced = None
         if m_e is not None and m_h is not None and (m_e + m_h) > 0:
@@ -260,9 +227,9 @@ def _fit_mass(
     flags: list[str],
     label: str,
 ) -> Optional[float]:
-    """Fit parabola to energies near extremum_k along each direction and return harmonic mean m*."""
+    """Fit parabola energies cerca extremum_k along each direction y devuelve harmonic mean m*."""
     nk = len(energies)
-    # Take n_fit points on each side
+    # Take n_fit points en each lado
     i_start = max(0, extremum_k - n_fit)
     i_end = min(nk, extremum_k + n_fit + 1)
     if i_end - i_start < 3:
@@ -270,17 +237,17 @@ def _fit_mass(
         return None
 
     k_slice = kpts_frac[i_start:i_end]            # (m, 3) fractional
-    e_slice = energies[i_start:i_end]             # (m,)
+    e_slice = energies[i_start:i_end]
 
-    # Convert to Cartesian in Å⁻¹
-    k_cart = k_slice @ rec                         # (m, 3) in Å⁻¹
+    # Convert Cartesian en Å⁻¹
+    k_cart = k_slice @ rec                         # (m, 3) en Å⁻¹
     k0 = k_cart[extremum_k - i_start]
-    dk = k_cart - k0                               # displacement from extremum
+    dk = k_cart - k0
 
-    # Scalar k-distance along path
-    k_dist = np.linalg.norm(dk, axis=1)            # (m,)
+    # Scalar k-distance along ruta
+    k_dist = np.linalg.norm(dk, axis=1)
 
-    # Exclude exact extremum (k_dist = 0) for numerical fit
+    # Exclude exact extremum (k_dist = 0) para numerical fit
     mask = k_dist > 1e-6
     if mask.sum() < 3:
         flags.append(f"DEGENERATE_KPATH_{label}")
@@ -289,8 +256,8 @@ def _fit_mass(
     k_fit = k_dist[mask]
     e_fit = e_slice[mask] - e_slice[extremum_k - i_start]
 
-    # Fit E = a*k² through origin (intercept forced to zero — valid at the extremum)
-    # Weighted least squares: a = Σ(k²·E) / Σ(k⁴)
+    # Fit E = *k² through origin (intercept forced zero - valid en extremum)
+    # Weighted least squares
     try:
         k2 = k_fit ** 2
         a = float(np.dot(k2, e_fit) / np.dot(k2, k2))
@@ -306,9 +273,7 @@ def _fit_mass(
         return None
 
 
-# ---------------------------------------------------------------------------
-# Fine k-path effective masses (non-SCF)
-# ---------------------------------------------------------------------------
+# Fine k-ruta effective masses (non-SCF)
 
 
 def compute_effective_masses_nscf(
@@ -319,47 +284,30 @@ def compute_effective_masses_nscf(
     n_fit: int = 5,
     dk_AA: float = 0.005,
 ) -> EffectiveMassResult:
-    """Effective masses from a fine k-path non-SCF calculation around the band extrema.
-
-    Builds a 3-direction k-grid (kx, ky, kz) around the CBM/VBM k-point with
-    spacing dk_AA (Å⁻¹), runs GPAW with fixdensity=True, then fits parabolas.
-
-    Unlike compute_effective_masses(), this does NOT depend on the resolution of
-    the existing band-path calculation — it uses its own fine k-sampling.
-    scf_gpw must exist; wavefunctions in it are not required (fixdensity diagonalises
-    H[ρ] at the new k-points from the stored density).
-
-    Args:
-        scf_gpw:       Converged SCF .gpw file (density must be stored).
-        cbm_kpt_frac:  CBM k-point in fractional coordinates (e.g. [0.5,0.5,0.5]).
-        vbm_kpt_frac:  VBM k-point in fractional coordinates.
-        step_dir:      Directory for output files (fine_kpts.gpw, effmass.txt).
-        n_fit:         Points each side of extremum for parabolic fit.
-        dk_AA:         k-step in Å⁻¹ for the fine grid.
-    """
+    """Masas efectivas desde ruta k fina."""
     from gpaw import GPAW
 
     step_dir = Path(step_dir)
     fine_gpw = step_dir / "effmass_fine.gpw"
     flags: list[str] = []
 
-    # --- get lattice parameter to convert dk_AA → fractional ----------------
+    # get lattice parámetro convert dk_AA → fractional
     calc_gs = GPAW(str(scf_gpw), txt=None)
     cell = calc_gs.atoms.cell
-    rec = np.linalg.inv(cell.T) * 2 * np.pi   # rows are reciprocal lattice vectors (Å⁻¹)
-    # For a cubic cell, |b| = 2π/a along each direction
+    rec = np.linalg.inv(cell.T) * 2 * np.pi   # filas reciprocal lattice vectors (Å⁻¹)
+    # For cubic celda, |b| = 2π/ along each direction
     b_norms = np.linalg.norm(rec, axis=1)
-    dk_frac_per_dir = dk_AA / b_norms          # fractional step per reciprocal direction
+    dk_frac_per_dir = dk_AA / b_norms
     calc_gs.__del__()
 
-    # --- build fine k-point list around CBM ----------------------------------
+    # construye fine k-point list cerca CBM
     if not fine_gpw.exists():
         k0 = np.asarray(cbm_kpt_frac, dtype=float)
-        kpts: list[list[float]] = [k0.tolist()]     # extremum itself
+        kpts: list[list[float]] = [k0.tolist()]
         for d in range(3):
             step = np.zeros(3)
             step[d] = dk_frac_per_dir[d]
-            for n in range(1, n_fit + 2):           # n_fit+1 on each side for safety
+            for n in range(1, n_fit + 2):           # n_fit+1 por lado
                 kpts.append((k0 + n * step).tolist())
                 kpts.append((k0 - n * step).tolist())
 
@@ -378,7 +326,7 @@ def compute_effective_masses_nscf(
         calc_fine.write(str(fine_gpw))
         logger.info("Fine k-path saved: %s", fine_gpw)
 
-    # --- fit effective masses from fine k-path -------------------------------
+    # fit effective masses desde fine k-ruta
     try:
         calc_fine = GPAW(str(fine_gpw), txt=None)
         kpts_frac = calc_fine.get_bz_k_points()
@@ -414,9 +362,7 @@ def compute_effective_masses_nscf(
         return EffectiveMassResult(m_e=None, m_h=None, m_reduced=None, flags=flags)
 
 
-# ---------------------------------------------------------------------------
-# SOC-corrected effective masses from fine k-path
-# ---------------------------------------------------------------------------
+# SOC-corrected effective masses desde fine k-ruta
 
 
 def compute_effective_masses_soc(
@@ -425,18 +371,7 @@ def compute_effective_masses_soc(
     theta: float = 0.0,
     phi: float = 0.0,
 ) -> EffectiveMassResult:
-    """Effective masses from perturbative SOC applied to the fine k-path .gpw.
-
-    Uses soc_eigenstates() on effmass_fine.gpw (already on a fine k-grid around R).
-    After SOC, the triply-degenerate PBE CBM at R splits; the true light electron
-    mass is extracted from the lowest spinor conduction band.
-
-    Args:
-        fine_gpw: Path to effmass_fine.gpw (fine k-path non-SCF calculation).
-        n_fit:    Points on each side of extremum for parabolic fit.
-        theta:    Polar angle of spin quantisation axis (degrees).
-        phi:      Azimuthal angle of spin quantisation axis (degrees).
-    """
+    """Effective masses desde perturbative SOC applied fine k-ruta.gpw."""
     from gpaw import GPAW
     from gpaw.spinorbit import soc_eigenstates
 
@@ -444,7 +379,7 @@ def compute_effective_masses_soc(
     try:
         calc = GPAW(str(fine_gpw), txt=None)
         nb = calc.get_number_of_bands()
-        ne = int(calc.get_number_of_electrons())  # 44 for CsPbI₃ — NOT ne//2
+        ne = int(calc.get_number_of_electrons())  # 44 para CsPbI₃ - NOT ne//2
         kpts_frac = calc.get_bz_k_points()
         cell = calc.atoms.cell
         rec = np.linalg.inv(cell.T) * 2 * np.pi
@@ -453,9 +388,9 @@ def compute_effective_masses_soc(
         eigs = soc_result.eigenvalues()   # shape (nk, 2*nb)
         calc.__del__()
 
-        # After SOC doubling: ne electrons fill the ne lowest spinor levels
-        cb = eigs[:, ne]        # first conduction spinor band
-        vb = eigs[:, ne - 1]    # last valence spinor band
+        # After SOC doubling
+        cb = eigs[:, ne]
+        vb = eigs[:, ne - 1]
 
         cbm_k = int(np.argmin(cb))
         vbm_k = int(np.argmax(vb))
@@ -479,9 +414,7 @@ def compute_effective_masses_soc(
         return EffectiveMassResult(m_e=None, m_h=None, m_reduced=None, flags=flags)
 
 
-# ---------------------------------------------------------------------------
-# DOS near gap
-# ---------------------------------------------------------------------------
+# DOS cerca gap
 
 
 def analyze_dos_near_gap(
@@ -489,20 +422,7 @@ def analyze_dos_near_gap(
     window_eV: float = 0.2,
     threshold_states_per_eV: float = 0.01,
 ) -> DosNearGapResult:
-    """Integrate DOS within ±window_eV of the band edges to detect in-gap states.
-
-    A large DOS within the gap indicates trap states or metallic character.
-    This serves as a proxy for defect tolerance in perovskite absorbers.
-
-    Args:
-        dos_gpw: Path to a DOS-step .gpw file with dense k-mesh.
-        window_eV: Integration window around each band edge (eV).
-        threshold_states_per_eV: Threshold below which the material is
-            considered defect-tolerant (no in-gap states).
-
-    Returns:
-        DosNearGapResult.
-    """
+    """Integra DOS cerca bordes de banda."""
     from gpaw import GPAW
     from gpaw.dos import DOSCalculator
 
@@ -514,7 +434,7 @@ def analyze_dos_near_gap(
         n_electrons = calc.get_number_of_electrons()
         n_occupied = int(round(n_electrons / 2))
 
-        # Estimate VBM and CBM from eigenvalues
+        # Estimate VBM y CBM desde eigenvalues
         nk = len(calc.get_bz_k_points())
         all_vb = [calc.get_eigenvalues(kpt=ik, spin=0)[n_occupied - 1] for ik in range(nk)]
         all_cb = [calc.get_eigenvalues(kpt=ik, spin=0)[n_occupied] for ik in range(nk)]
@@ -522,12 +442,12 @@ def analyze_dos_near_gap(
         cbm = float(np.min(all_cb))
         gap = cbm - vbm
 
-        # Compute DOS using GPAW's DOSCalculator
+        # Calcula DOS usa GPAW's DOSCalculator
         dos_calc = DOSCalculator.from_calculator(str(dos_gpw), soc=False)
         energies_eV = np.linspace(vbm - 0.5, cbm + 0.5, 2000)
         dos_values = dos_calc.raw_dos(energies_eV, spin=0, width=0.05)
 
-        # Integrate in-gap states: energies strictly between VBM and CBM
+        # Integrate en-gap states
         in_gap_mask = (energies_eV > vbm + window_eV) & (energies_eV < cbm - window_eV)
         if in_gap_mask.sum() == 0:
             in_gap_dos = 0.0

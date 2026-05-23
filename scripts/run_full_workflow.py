@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""CLI script to run a full DFT workflow for CsPbI3 phases using GPAW."""
+"""Nota técnica."""
 
 import logging
 import sys
@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("run_full_workflow")
 
-# Ensure src is importable when running from the repo root
+# Ensure src importable when corriendo desde repo root
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from dft_cspbi3 import DFTWorkflow
@@ -32,53 +32,43 @@ from dft_cspbi3 import DFTWorkflow
     "--steps",
     default="relax,scf,bands,dos,soc",
     show_default=True,
-    help="Comma-separated list of workflow steps to execute.",
+    help="Pasos workflow separados por coma.",
 )
 @click.option(
     "--config",
     default="configs/default_params.yaml",
     show_default=True,
     type=click.Path(exists=True, dir_okay=False),
-    help="Path to YAML configuration file.",
+    help="Ruta YAML configuración.",
 )
 @click.option(
     "--workdir",
     default="./calculations",
     show_default=True,
     type=click.Path(),
-    help="Root directory for calculation subdirectories.",
+    help="Directorio raíz cálculos.",
 )
 @click.option(
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Prepare input files without executing GPAW calculations.",
+    help="Prepara inputs sin ejecutar GPAW.",
 )
 @click.option(
     "--cores",
     default=1,
     show_default=True,
     type=int,
-    help="Number of MPI cores for GPAW parallelization.",
+    help="Núcleos MPI para GPAW.",
 )
 @click.option(
     "--status",
     is_flag=True,
     default=False,
-    help="Print current workflow status table and exit.",
+    help="Imprime estado workflow y sale.",
 )
 def main(phase, steps, config, workdir, dry_run, cores, status):
-    """Run a complete DFT workflow for CsPbI3 (α, γ, or δ phase) using GPAW.
-
-    Example:
-
-        python run_full_workflow.py --phase alpha --steps relax,scf,bands
-
-        mpirun -n 8 gpaw python run_full_workflow.py --phase alpha --cores 8
-
-    Steps available: relax, scf, bands, dos, soc, hse06, optical, sq_limit,
-    oghma_device, score
-    """
+    """Nota técnica."""
     if cores > 1:
         logger.info(
             "Running with %d MPI cores. Launch via: mpirun -n %d gpaw python %s",
@@ -103,14 +93,14 @@ def main(phase, steps, config, workdir, dry_run, cores, status):
     )
 
     if dry_run:
-        click.echo("[DRY RUN] Workflow steps to execute:")
+        click.echo("[DRY RUN] Pasos workflow:")
         for s in step_list:
             click.echo(f"  - {s}")
 
     workflow.run(steps=step_list)
     workflow.get_status()
 
-    click.echo(f"\nWorkflow complete. Results in: {workflow.work_dir}")
+    click.echo(f"\nWorkflow listo. Resultados en: {workflow.work_dir}")
 
 
 if __name__ == "__main__":

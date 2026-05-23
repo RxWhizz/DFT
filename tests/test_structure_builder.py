@@ -1,9 +1,9 @@
-"""Tests for StructureBuilder — verifies geometry and symmetry of CsPbI3 phases."""
+"""Tests StructureBuilder; geometría fases CsPbI3."""
 
 import numpy as np
 import pytest
 
-# StructureBuilder is importable without GPAW installed
+# StructureBuilder importable sin GPAW instalado
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -16,7 +16,7 @@ class TestAlphaCubic:
         self.atoms = StructureBuilder.build_alpha()
 
     def test_atom_count(self):
-        """α-CsPbI3 primitive cell must have exactly 5 atoms."""
+        """α-CsPbI3: celda primitiva = 5 átomos."""
         assert len(self.atoms) == 5
 
     def test_chemical_formula(self):
@@ -26,7 +26,7 @@ class TestAlphaCubic:
         assert symbols.count("I") == 3
 
     def test_lattice_parameter(self):
-        """Cubic a₀ should match the experimental α-CsPbI3 reference."""
+        """a0 cúbico coincide referencia experimental."""
         cell = self.atoms.get_cell()
         lengths = np.sqrt((cell**2).sum(axis=1))
         assert pytest.approx(lengths[0], abs=0.01) == 6.2965
@@ -34,7 +34,7 @@ class TestAlphaCubic:
         assert pytest.approx(lengths[2], abs=0.01) == 6.2965
 
     def test_cubic_angles(self):
-        """Cell angles must be 90° for the cubic phase."""
+        """Ángulos cúbicos = 90°."""
         cell = self.atoms.get_cell()
         a, b, c = cell[0], cell[1], cell[2]
         angle_ab = np.degrees(np.arccos(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))))
@@ -56,7 +56,7 @@ class TestAlphaCubic:
         assert pytest.approx(lengths[0], abs=0.01) == 6.30
 
     def test_volume(self):
-        """Volume should be close to a₀³."""
+        """Volumen ≈ a0³."""
         vol = self.atoms.get_volume()
         expected = 6.2965**3
         assert pytest.approx(vol, rel=0.01) == expected
@@ -73,7 +73,7 @@ class TestGammaOrthorhombic:
         self.atoms = StructureBuilder.build_gamma()
 
     def test_atom_count(self):
-        """γ-CsPbI3 unit cell must have 20 atoms (4 formula units)."""
+        """γ-CsPbI3: celda = 20 átomos."""
         assert len(self.atoms) == 20
 
     def test_chemical_composition(self):
@@ -85,7 +85,7 @@ class TestGammaOrthorhombic:
     def test_lattice_parameters(self):
         cell = self.atoms.get_cell()
         lengths = np.sqrt((cell**2).sum(axis=1))
-        # a ≈ 8.855, b ≈ 8.579, c ≈ 12.47 Å
+        # ≈ 8.855, b ≈ 8.579, c ≈ 12.47 Å
         assert pytest.approx(lengths[0], abs=0.05) == 8.855
         assert pytest.approx(lengths[1], abs=0.05) == 8.579
         assert pytest.approx(lengths[2], abs=0.05) == 12.47
@@ -115,7 +115,7 @@ class TestBetaTetragonal:
         self.atoms = StructureBuilder.build_beta()
 
     def test_atom_count(self):
-        """β-CsPbI3 conventional tetragonal cell must have 10 atoms."""
+        """β-CsPbI3: celda tetragonal = 10 átomos."""
         assert len(self.atoms) == 10
 
     def test_chemical_composition(self):
@@ -148,7 +148,7 @@ class TestDeltaOrthorhombic:
         self.atoms = StructureBuilder.build_delta()
 
     def test_atom_count(self):
-        """δ-CsPbI3 unit cell must have 20 atoms."""
+        """δ-CsPbI3: celda = 20 átomos."""
         assert len(self.atoms) == 20
 
     def test_chemical_composition(self):
@@ -181,7 +181,7 @@ class TestSupercell:
 
 class TestSerialisation:
     def test_round_trip(self, tmp_path):
-        """Atoms written to JSON and read back should be identical."""
+        """JSON ida/vuelta conserva átomos."""
         atoms = StructureBuilder.build_alpha()
         json_path = tmp_path / "alpha.json"
         StructureBuilder.save_json(atoms, json_path)

@@ -1,32 +1,4 @@
-"""Point-defect formation energies for CsPbI₃ using DFT supercell method.
-
-Supported intrinsic defects:
-  V_I   — iodine vacancy (dominant donor, mobile)
-  I_i   — iodine interstitial (dominant acceptor, mobile)
-  V_Pb  — lead vacancy (deep acceptor)
-  V_Cs  — cesium vacancy (shallow acceptor)
-  Pb_I  — lead-on-iodine antisite (deep donor)
-  I_Pb  — iodine-on-lead antisite (deep acceptor)
-
-Formation energy formalism (Zhang & Northrup 1991):
-  E_f(q, E_F) = E_DFT(defect, q) − E_DFT(host)
-                ± Σ n_α μ_α  +  q × E_F  +  E_corr(q)
-
-where:
-  n_α  = ±1 (removed/added atom of species α)
-  μ_α  = chemical potential of species α (relative to elemental reference)
-  E_F  = Fermi level (0 = VBM, E_g = CBM)
-  E_corr = Freysoldt/Makov-Payne finite-size correction (requires ε∞)
-
-Geometry strategy (hybrid MACE + DFT, ~4× faster than pure DFT):
-  1. MACE-MP-0 relaxation of defect geometry (seconds)
-  2. GPAW DFT single-point on MACE geometry (energy only, ~1 h per charge state)
-
-Finite-size correction:
-  Simplified Makov-Payne monopole term: E_MP = q² α_M / (2 ε L)
-  where α_M = Madelung constant, ε = ε∞ (from LO-TO), L = supercell length.
-  For ε∞ = 3.647 (CsPbI₃ computed value).
-"""
+"""Point-defect formation energies para CsPbI₃ usa DFT supercell método."""
 
 from __future__ import annotations
 
@@ -39,36 +11,35 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Madelung constant for simple cubic lattice (used as approximation for the
-# cubic 2×2×2 supercell; exact value requires Ewald summation)
-_MADELUNG_SC = 2.8373   # dimensionless
+# Madelung constant para simple cubic lattice (usado as approximation para
+# cubic 2×2×2 supercell
+_MADELUNG_SC = 2.8373
 
-# Default ε∞ from computed LO-TO result
+# Default ε∞ desde computed LO-TO resultado
 _EPS_INF_DEFAULT = 3.647
 
 # eV/Å (Hartree/Bohr conversion factors absorbed into formula)
-_EV_A_TO_SI = 1.0   # energies already in eV, lengths in Å
+_EV_A_TO_SI = 1.0   # energies already en eV, lengths en Å
 
-# Elemental reference energies [eV/atom] — DFT-PBE standard state
-# These must be replaced with values computed at the same level of theory
-# (same GPAW settings, same PAW datasets) for quantitative results.
-# Values below are placeholder order-of-magnitude estimates.
+# Elemental reference energies [eV/atom] - DFT-PBE estándar state
+# These debe be replaced con valores computed en mismo level theory
+# (mismo GPAW settings, mismo PAW datasets) para quantitative resultados
 _ELEMENTAL_REFS_EV: dict[str, float] = {
-    "Cs":  -0.85,   # bcc Cs metal
-    "Pb":  -3.70,   # fcc Pb metal
+    "Cs":  -0.85,
+    "Pb":  -3.70,
     "I":   -1.49,   # I₂ molecule per I atom (½ × E(I₂))
 }
 
-# Chemical potential limits for CsPbI₃ (Cs-rich / I-rich extremes)
-# μ_α = μ_α^elemental + Δμ_α,  Δμ_α bounded by stability constraints
-# Full convex-hull analysis needed for precise limits; simplified here.
+# Chemical potential limits para CsPbI₃ (Cs-rich / I-rich extremes)
+# μ_α = μ_α^elemental + Δμ_α, Δμ_α bounded by estabilidad constraints
+# Full convex-hull analysis needed para precise limits
 _DELTA_MU_RANGES: dict[str, tuple[float, float]] = {
-    "Cs": (-2.0, 0.0),   # (I-rich, Cs-rich)
+    "Cs": (-2.0, 0.0),
     "Pb": (-2.5, 0.0),
     "I":  (-1.5, 0.0),
 }
 
-# Defect configurations: (name, removed_atoms, added_atoms, default_charges)
+# Defect configurations
 _DEFECT_CONFIGS: list[tuple[str, dict, dict, tuple]] = [
     ("V_I",   {"I": 1},  {},       (0, +1)),
     ("I_i",   {},        {"I": 1}, (0, -1)),
@@ -81,21 +52,21 @@ _DEFECT_CONFIGS: list[tuple[str, dict, dict, tuple]] = [
 
 @dataclass
 class DefectResult:
-    """Formation energy and electronic level for one (defect, charge) pair."""
+    """Formation energía y electronic level para one (defect, charge) pair."""
 
     defect_name: str
     charge: int
-    E_formation_eV: float                # at E_F = VBM (midgap for display)
-    E_formation_midgap_eV: float         # at E_F = E_gap / 2
-    transition_level_eV: Optional[float] # charge transition level relative to VBM
-    E_dft_defect_eV: float               # raw DFT total energy
-    E_corr_eV: float                     # Freysoldt / Makov-Payne correction
-    mace_relaxed: bool                   # True if geometry pre-relaxed with MACE
+    E_formation_eV: float
+    E_formation_midgap_eV: float         # en E_F = E_gap / 2
+    transition_level_eV: Optional[float]
+    E_dft_defect_eV: float               # raw DFT total energía
+    E_corr_eV: float
+    mace_relaxed: bool
     flags: list[str] = field(default_factory=list)
 
     @property
     def deep_trap(self) -> bool:
-        """True if transition level is more than 0.2 eV from band edges."""
+        """True si transition level more than 0.2 eV desde banda edges."""
         if self.transition_level_eV is None:
             return False
         return 0.2 < self.transition_level_eV
@@ -116,22 +87,10 @@ def build_defect_supercell(
     supercell_matrix: tuple[int, int, int] = (2, 2, 2),
     interstitial_site: Optional[np.ndarray] = None,
 ) -> tuple:
-    """Create a supercell with one point defect.
-
-    Args:
-        atoms: Relaxed primitive cell (ASE Atoms).
-        defect_name: One of "V_I", "I_i", "V_Pb", "V_Cs", "Pb_I", "I_Pb".
-        supercell_matrix: Supercell expansion.
-        interstitial_site: Fractional coordinates of interstitial site (for I_i).
-            If None, uses the body-centre of the conventional cell [0.5, 0.5, 0.5].
-
-    Returns:
-        (supercell, removed_idx) where removed_idx is the index of the removed atom
-        (−1 if only an atom was added).
-    """
+    """Crea supercell con one point defect."""
     from ase import Atoms as _Atoms
 
-    # Build supercell
+    # Construye supercell
     sc = atoms.repeat(supercell_matrix)
     n, m, l_ = supercell_matrix
 
@@ -151,7 +110,7 @@ def build_defect_supercell(
         if len(indices) < count:
             raise RuntimeError(f"Not enough {elem} atoms in supercell to remove {count}")
         to_remove = indices[:count]
-        # Remove in reverse order to keep indices valid
+        # Remove en reverse orden keep indices valid
         for idx in sorted(to_remove, reverse=True):
             del sc[idx]
             removed_idx = idx
@@ -181,10 +140,7 @@ def mace_relax_defect(
     fmax: float = 0.05,
     max_steps: int = 300,
 ):
-    """Relax defect geometry using MACE-MP-0 (fast pre-relaxation).
-
-    Returns the relaxed Atoms object. Raises ImportError if mace-torch is missing.
-    """
+    """Relax defect geometry usa MACE-MP-0 (fast pre-relaxation)."""
     try:
         from mace.calculators import mace_mp
         from ase.optimize import BFGS
@@ -215,22 +171,7 @@ def compute_formation_energy(
     eps_inf: float = _EPS_INF_DEFAULT,
     supercell_length_Ang: float = 12.36,
 ) -> tuple[float, float]:
-    """Compute defect formation energy.
-
-    Args:
-        E_defect_eV: DFT total energy of defect supercell [eV].
-        E_host_eV: DFT total energy of pristine supercell [eV].
-        charge: Defect charge state (integer).
-        removed_atoms: {elem: count} atoms removed from host.
-        added_atoms: {elem: count} atoms added to host.
-        fermi_level_eV: Fermi level relative to VBM [eV].
-        delta_mu: Chemical potential offsets {elem: Δμ} [eV]. Defaults to 0 (elemental refs).
-        eps_inf: High-frequency dielectric constant for Makov-Payne correction.
-        supercell_length_Ang: Supercell lattice parameter [Å] for Makov-Payne term.
-
-    Returns:
-        (E_f, E_corr) formation energy and finite-size correction in eV.
-    """
+    """Calcula defect formation energía."""
     if delta_mu is None:
         delta_mu = {}
 
@@ -238,14 +179,14 @@ def compute_formation_energy(
     mu_correction = 0.0
     for elem, count in removed_atoms.items():
         mu = _ELEMENTAL_REFS_EV.get(elem, 0.0) + delta_mu.get(elem, 0.0)
-        mu_correction -= count * mu   # sign: we removed atoms, so + E_f
+        mu_correction -= count * mu
     for elem, count in added_atoms.items():
         mu = _ELEMENTAL_REFS_EV.get(elem, 0.0) + delta_mu.get(elem, 0.0)
-        mu_correction += count * mu   # we added atoms, so − E_f
+        mu_correction += count * mu
 
     # Makov-Payne monopole correction (eV)
     if charge != 0:
-        # E_MP = q² × α_M / (2 ε ε₀ L) in SI; in eV·Å units:
+        # E_MP = q² × α_M / (2 ε ε₀ L) en SI
         # E_MP [eV] = q² × 14.4 eV·Å × α_M / (2 ε L)
         E_corr = (charge ** 2) * 14.4 * _MADELUNG_SC / (2 * eps_inf * supercell_length_Ang)
     else:
@@ -261,10 +202,7 @@ def gpaw_single_point(
     work_dir: Path,
     label: str = "defect",
 ) -> float:
-    """Run a GPAW single-point SCF on the given geometry.
-
-    Returns the DFT total energy [eV].
-    """
+    """Ejecuta GPAW único-point SCF en dado geometry."""
     from gpaw import GPAW
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -295,33 +233,14 @@ def compute_all_defects(
     delta_mu: Optional[dict[str, float]] = None,
     defect_names: Optional[list[str]] = None,
 ) -> list[DefectResult]:
-    """Compute formation energies for all intrinsic defects.
-
-    Strategy: MACE geometry relaxation + GPAW DFT single-point (energy).
-
-    Args:
-        atoms: Relaxed primitive cell.
-        factory: GPAWCalculatorFactory (for DFT single-points).
-        work_dir: Root directory for defect calculations.
-        E_host_eV: DFT total energy of pristine supercell. If None, computed here.
-        host_gpw: Path to existing pristine supercell .gpw (avoids recomputing).
-        bandgap_eV: PBE band gap for transition level reference.
-        eps_inf: High-frequency dielectric constant (LO-TO result).
-        supercell_matrix: Supercell expansion for defect calculations.
-        use_mace_geometry: Pre-relax geometry with MACE before DFT single-point.
-        delta_mu: Chemical potential offsets {elem: Δμ}.
-        defect_names: Subset of defects to compute (default: all 6).
-
-    Returns:
-        List of DefectResult, one per (defect, charge) combination.
-    """
+    """Calcula formation energies para all intrinsic defects."""
     work_dir = Path(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
     if defect_names is None:
         defect_names = [name for name, _, _, _ in _DEFECT_CONFIGS]
 
-    # Host supercell energy
+    # Host supercell energía
     if E_host_eV is None:
         if host_gpw is not None and Path(host_gpw).exists():
             from gpaw import GPAW as _GPAW
@@ -377,8 +296,8 @@ def compute_all_defects(
                     supercell_length_Ang=L_Ang,
                 )
 
-                # Charge transition level: E_F where E_f(q) = E_f(q-1)
-                # Simplified: CTL(q/q-1) = [E_f(q, E_F=0) − E_f(q-1, E_F=0)] / 1 (difference per charge unit)
+                # Charge transition level
+                # Simplified
                 ctl = None
                 if charge != 0:
                     E_f_neutral, _ = compute_formation_energy(
@@ -386,7 +305,7 @@ def compute_all_defects(
                         fermi_level_eV=0.0, delta_mu=delta_mu,
                         eps_inf=eps_inf, supercell_length_Ang=L_Ang,
                     )
-                    ctl = E_f_neutral - E_f_vbm   # first-order estimate
+                    ctl = E_f_neutral - E_f_vbm
 
                 res = DefectResult(
                     defect_name=def_name,
@@ -416,7 +335,7 @@ def compute_all_defects(
 
 
 def save_defect_results(results: list[DefectResult], work_dir: Path) -> None:
-    """Save defect results to a text table."""
+    """Guarda defect resultados text tabla."""
     work_dir = Path(work_dir)
     lines = [
         "defect | charge | E_f(VBM) eV | E_f(midgap) eV | CTL eV | MACE | flags",

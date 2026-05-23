@@ -1,64 +1,4 @@
-# OghmaNano Debug Context — Estado al 2026-05-09
-
-## Estado actual en Windows nativo
-
-OghmaNano ya compila/corre en el ecosistema nuevo y se esta usando una venv
-dedicada en Windows: `generador fv\.venv`. El bloqueo de Wine descrito abajo
-queda como bitacora historica; el camino activo es ejecutar
-`oghma_core.exe` directamente en modo worker.
-
-Comando worker estable:
-```powershell
-& "C:\Program Files (x86)\OghmaNano\oghma_core.exe" `
-  --sim-root-path "C:\Users\LUIS\Documents\GitHub\DFT\generador fv\calculations\alpha\14_oghma_device\sim" `
-  --gui --html `
-  --simmode segment0@jv `
-  --lockfile "C:\Users\LUIS\Documents\GitHub\DFT\generador fv\calculations\alpha\14_oghma_device\sim\lock0.dat"
-```
-
-La corrida actual genero `sim_info.dat`, `jv.csv`, `optical_output/`,
-snapshots y `debug_outputs/`. Se rerunio con sweep JV fino y malla refinada:
-- JV: Vstart = 0.0 V, Vstop = 1.2 V, Vstep = 0.01 V
-- Malla electrica y: 120 puntos
-- Malla optica y: 300 puntos
-- Solver electrico: maxelectricalitt = 500, maxelectricalitt_ramp = 500,
-  max_newton_iterations = 500
-
-El resumen numerico defensivo tras generar los `.npy` opticos con cola Urbach
-sub-gap y alinear el stack con el template Oghma es:
-- PCE = 13.90685 %
-- Voc = 0.8953726 V
-- Jsc = -21.9942765 mA/cm2, convertido desde el valor Oghma en A/m2
-- FF = 0.7061798
-
-Chequeo JV/PV:
-- `jv.csv` tiene 116 puntos, con paso mediano ~0.01002 V.
-- La potencia firmada debe calcularse como `P = -V*J` sin truncar por signo.
-  Es positiva en el cuadrante fotovoltaico, cruza por cero en Voc y se vuelve
-  negativa bajo inyeccion directa despues de Voc.
-- La curva de potencia positiva tiene un solo maximo: 13.90685 mW/cm2 en
-  Vmpp ~0.68629 V.
-- Voc interpolado desde el cruce J=0: ~0.8953726 V.
-
-Estado del diagnostico:
-- `G_y.csv` llega a ~1047 nm y el stack declarado mide 1050 nm.
-- El pico principal de generacion esta en ~255 nm, dentro del absorbedor
-  declarado entre 250 y 750 nm.
-- Los `.npy` opticos requeridos existen en `calculations/alpha/11_optical/`.
-  Metodo usado: `dielectric_function.csv` RPA -> n/k desde sqrt(epsilon) ->
-  alpha desde `4*pi*k/lambda`, con cola Urbach sub-gap suave bajo Eg = 1.5858 eV.
-  Parametro actual: Eu = 25 meV. El corte duro `alpha=0` bajo Eg ya no se usa.
-- Los archivos en `sim/snapshots/` son snapshots del barrido JV. No son
-  transitorios temporales; todos los tiempos registrados son identicos.
-
-Siguiente pulido recomendado: si se busca ajuste publicable, calibrar Eu
-contra datos experimentales de CsPbI3 o hacer un barrido de sensibilidad
-15-30 meV. La ruptura visible anterior de P(V) ya no aparece con sweep fino y
-convencion de signo corregida.
-
----
-
-# OghmaNano Debug Context — Estado al 2026-05-07
+# Contexto debug OghmaNano — Estado 2026-05-07
 
 ## El problema original
 `prepare_oghma_device_step()` en `oghma_device.py` llama a `subprocess.run([runner])` **sin argumentos** → oghma_core arranca en **modo servidor** (espera conexiones GUI por IPC y sale con código 1 tras timeout). Nunca corría simulaciones.
@@ -77,7 +17,7 @@ La GUI usa `server_base.py → server_add_cmd_line_job()` para lanzar workers co
 oghma_core.exe <sim_path> --simmode segment0@jv --lockfile lock0.dat
 ```
 
-## Cómo invocar correctamente (worker mode)
+## Invocacion correcta (modo worker)
 ```bash
 # Necesita Xvfb obligatoriamente (aunque sea headless)
 Xvfb :96 -screen 0 1024x768x24 &
@@ -183,7 +123,7 @@ Para una prueba rápida, simplificar a:
 - `ion_density=0`
 - Modo `equilibrium@equilibrium` primero para verificar estabilidad
 
-## Fix pendiente en oghma_device.py
+## Fix pendiente en `oghma_device.py`
 1. **Líneas 162-172**: cambiar `subprocess.run([runner])` a worker mode con xvfb-run + args
 2. **Método `_wine_env()`**: eliminar `DISPLAY: ""` (xvfb-run lo seteará automáticamente)
 3. **Método `write_oghma_sim_dir()`**: aplicar simplificaciones opcionales al JSON (ion_density=0, Vstep=0.05 para modo fast)
@@ -229,7 +169,7 @@ Tambien se verifico que el template stock instalado `/usr/share/oghma_data/devic
 - Desactivar `Au` cambia el error a `big_box`.
 - Convertir `Au` en capa activa generica evita el error de `Au`, pero aparece validacion de borde `No object at ...`, por la caja global/margen de mundo.
 
-### Actualizacion — 2026-05-08: Decision de migrar a Windows
+### Actualizacion — 2026-05-08: decision migrar a Windows
 
 **El error "Au covering the electrical mesh" persiste sin importar:**
 - `obj_type` de Au (contact / other / active)
