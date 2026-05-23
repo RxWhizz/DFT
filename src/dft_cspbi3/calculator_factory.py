@@ -12,7 +12,7 @@ from ase.dft.kpoints import bandpath
 CONFIG_PATH = Path(__file__).parent.parent.parent / "configs" / "default_params.yaml"
 
 # Valid cálculo types
-CALC_TYPES = ("relax", "scf", "bands", "dos", "soc", "hse06", "scan", "r2scan")
+CALC_TYPES = ("relax", "relax_sym", "scf", "bands", "dos", "soc", "hse06", "scan", "r2scan")
 
 
 def _load_config(config_path: str | Path = CONFIG_PATH) -> dict:
@@ -55,6 +55,7 @@ class GPAWCalculatorFactory:
 
         builders = {
             "relax": self._relax_params,
+            "relax_sym": self._relax_sym_params,
             "scf": self._scf_params,
             "bands": lambda: self._bands_params(atoms),
             "dos": self._dos_params,
@@ -66,7 +67,9 @@ class GPAWCalculatorFactory:
         kwargs = builders[calc_type]()
         kwargs["txt"] = txt
         kwargs.setdefault("parallel", {"domain": 1})
-        kwargs.setdefault("setups", self._paw_setups())
+        # r²SCAN uses Hubbard U corrections when dft_u is configured
+        use_u = calc_type == "r2scan"
+        kwargs.setdefault("setups", self._paw_setups_u() if use_u else self._paw_setups())
 
         if params_override:
             kwargs.update(params_override)
@@ -79,6 +82,46 @@ class GPAWCalculatorFactory:
     def _paw_setups(self) -> dict[str, str]:
         """Mapea simbolos a datasets PAW."""
         return {sym: dataset for sym, dataset in self._paw.items()}
+
+    def _paw_setups_u(self) -> dict[str, str]:
+        """PAW datasets + correcciones Hubbard U (Dudarev) desde config dft_u.
+        GPAW syntax: ':s,3.5' → U=3.5 eV en orbital s (Dudarev scheme).
+        """
+        base = dict(self._paw_setups())
+        for element, u_cfg in self.config.get("dft_u", {}).items():
+            orbital = u_cfg.get("orbital", "d")
+            u_ev = float(u_cfg.get("u_ev", 0.0))
+            if u_ev > 0:
+                base[element] = f":{orbital},{u_ev}"
+        return base
+
+    def _relax_sym_params(self) -> dict:
+        """Parámetros para relajación sym-constrained.
+        Lee de config['relax_sym'] (PBE XC — datasets disponibles para C/N/H del catión FA).
+        """
+        _, Mixer, PW, _ = _gpaw_symbols()
+        p = self.config.get("relax_sym", self.config["relax"])
+        mixer_cfg = p.get("mixer", {})
+        sym = p.get("symmetry", "on")
+        params = {
+            "mode": PW(p.get("ecut", 450)),
+            "xc": p.get("xc", "PBE"),
+            "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
+            "convergence": {
+                "energy": p["convergence"].get("energy", 1e-6),
+                "forces": p["convergence"].get("forces", 0.01),
+            },
+            "mixer": Mixer(
+                beta=mixer_cfg.get("beta", 0.05),
+                nmaxold=5,
+                weight=50.0,
+            ),
+            "maxiter": p.get("maxiter", 333),
+        }
+        # 'off' is the only valid GPAW symmetry string; omitting the key uses the default (on)
+        if sym not in ("on", True):
+            params["symmetry"] = "off"
+        return params
 
     def _relax_params(self) -> dict:
         _, Mixer, PW, _ = _gpaw_symbols()
@@ -191,7 +234,8 @@ class GPAWCalculatorFactory:
             params["nbands"] = int(nbands_cfg)
         niter = p.get("eigensolver_niter")
         if niter:
-            params["eigensolver"] = {"name": "dav", "niter": int(niter)}
+            from gpaw.eigensolvers import Davidson
+            params["eigensolver"] = Davidson(niter=int(niter))
         return params
 
     def _scan_params(self) -> dict:
@@ -215,10 +259,31 @@ class GPAWCalculatorFactory:
         }
 
     def _r2scan_params(self) -> dict:
-        _, _, PW, _ = _gpaw_symbols()
+        from gpaw.eigensolvers import Davidson
+        _, Mixer, PW, _ = _gpaw_symbols()
         p = self.config["r2scan"]
         occ = p.get("occupations", {})
         conv = p.get("convergence", {})
+        mixer_cfg = p.get("mixer", {})
+        backend = mixer_cfg.get("backend", "pulay")
+
+        # msr1 and similar backends must be passed as a dict (resolved via
+        # get_mixer_from_keywords internally by GPAW); Pulay/Broyden can use objects.
+        legacy_backends = {"pulay", "broyden", "fft"}
+        if backend in legacy_backends:
+            if backend == "broyden":
+                from gpaw.mixer import BroydenMixer
+                MixerCls = BroydenMixer
+            else:
+                MixerCls = Mixer
+            mixer: dict | object = MixerCls(
+                beta=mixer_cfg.get("beta", 0.05),
+                nmaxold=mixer_cfg.get("nmaxold", 8),
+                weight=mixer_cfg.get("weight", 100.0),
+            )
+        else:
+            mixer = {k: v for k, v in mixer_cfg.items()}
+
         return {
             "mode": PW(p.get("ecut", 450)),
             "xc": p.get("xc", "MGGA_X_R2SCAN+MGGA_C_R2SCAN"),
@@ -226,10 +291,12 @@ class GPAWCalculatorFactory:
             "convergence": {
                 "energy": conv.get("energy", 1e-6),
                 "eigenstates": conv.get("eigenstates", 1e-8),
-                "density": conv.get("density", 1e-6),
+                "density": conv.get("density", 1e-4),
             },
             "occupations": {
                 "name": occ.get("name", "fermi-dirac"),
                 "width": occ.get("width", 0.05),
             },
+            "eigensolver": Davidson(niter=4),
+            "mixer": mixer,
         }

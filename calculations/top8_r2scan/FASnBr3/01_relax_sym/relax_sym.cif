@@ -1,0 +1,37 @@
+data_image0
+_chemical_formula_structural       SnBr3CN2H5
+_chemical_formula_sum              "Sn1 Br3 C1 N2 H5"
+_cell_length_a       5.94
+_cell_length_b       5.94
+_cell_length_c       5.94
+_cell_angle_alpha    90.0
+_cell_angle_beta     90.0
+_cell_angle_gamma    90.0
+
+_space_group_name_H-M_alt    "P 1"
+_space_group_IT_number       1
+
+loop_
+  _space_group_symop_operation_xyz
+  'x, y, z'
+
+loop_
+  _atom_site_type_symbol
+  _atom_site_label
+  _atom_site_symmetry_multiplicity
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_occupancy
+  Sn  Sn1       1.0  0.0  0.0  0.9640268195402069  1.0000
+  Br  Br1       1.0  0.5  0.0  0.8667053160750944  1.0000
+  Br  Br2       1.0  0.0  0.5  0.9579225093511233  1.0000
+  Br  Br3       1.0  0.0  0.0  0.47421230211269033  1.0000
+  C   C1        1.0  0.5  0.5  0.5831502496482662  1.0000
+  N   N1        1.0  0.30342714408929605  0.5  0.4617344564861247  1.0000
+  N   N2        1.0  0.6965728559107041  0.5  0.4617344564861247  1.0000
+  H   H1        1.0  0.5  0.5  0.7692782297441614  1.0000
+  H   H2        1.0  0.20650676538243973  0.6343758846067744  0.52524931019097  1.0000
+  H   H3        1.0  0.20650676538243973  0.36562411539322553  0.52524931019097  1.0000
+  H   H4        1.0  0.79349323461756  0.6343758846067744  0.52524931019097  1.0000
+  H   H5        1.0  0.79349323461756  0.36562411539322553  0.52524931019097  1.0000

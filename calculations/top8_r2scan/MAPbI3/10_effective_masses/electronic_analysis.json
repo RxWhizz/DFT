@@ -1,0 +1,31 @@
+{
+  "gap_type": "direct",
+  "gap_eV": 1.864326055573787,
+  "direct_gap_eV": null,
+  "vbm_kpt_frac": [
+    0.49999999999999994,
+    0.49999999999999994,
+    0.49999999999999994
+  ],
+  "cbm_kpt_frac": [
+    0.49999999999999994,
+    0.49999999999999994,
+    0.49999999999999994
+  ],
+  "m_e_m0": 4.946998969563641,
+  "m_h_m0": 0.21308353773591415,
+  "m_reduced_m0": 0.2042843385002774,
+  "m_e_soc_m0": 1.264115593535898,
+  "m_h_soc_m0": 1.2959284178401433,
+  "m_reduced_soc_m0": 0.6399121709698594,
+  "flags_gap": [],
+  "flags_masses": [],
+  "flags_masses_soc": [],
+  "tolerance_factor": 0.8218291203171083,
+  "octahedral_factor": 0.5409090909090909,
+  "mean_bx_bond_Ang": 3.140552411179378,
+  "bx_bond_variance": 5.634335845047643e-12,
+  "mean_bxb_angle_deg": null,
+  "tilt_angle_deg": null,
+  "flags_structural": []
+}

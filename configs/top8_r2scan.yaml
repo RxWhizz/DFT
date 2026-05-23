@@ -1,0 +1,13 @@
+# r²SCAN setup for top-8 perovskite recalculation.
+#
+# Use as a composition-config overlay on default_params.yaml:
+#   python main.py run --phase MAPbI3 \
+#     --config configs/default_params.yaml \
+#     --composition-config configs/top8_r2scan.yaml \
+#     --workdir calculations/top8_r2scan \
+#     --steps r2scan,soc_r2scan,r2scan_bands,effective_masses,score
+#
+# Inherits all r²SCAN parameters from default_params.yaml (xc, ecut, kpts, bands.kpts_path=XRMGR).
+# Only overrides structures_dir so the workflow finds the top8 structure files.
+
+structures_dir: structures/top8

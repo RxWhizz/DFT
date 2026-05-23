@@ -178,8 +178,25 @@ def compute_born_charges(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calcula Born effective charges Z* y dielectric tensor ε_∞."""
     from gpaw import GPAW
-    from gpaw.borncharges import displace_atom, _all_disp
+    from gpaw.borncharges import displace_atom
     from gpaw.borncharges import born_charges as _gpaw_born_charges
+    try:
+        from gpaw.borncharges import _all_disp
+    except ImportError:
+        def _all_disp(atoms, delta):
+            """Inlined from gpaw 25.7.0 (removed in master)."""
+            def _all_avs(atoms):
+                for ia in range(len(atoms)):
+                    for iv in range(3):
+                        for sign in [-1, 1]:
+                            yield (ia, iv, sign)
+            result = {}
+            for dd, (ia, iv, sign) in enumerate(_all_avs(atoms)):
+                sym_v = 'xyz'[iv]
+                sym_s = ' +-'[sign]
+                label = f'disp_{dd:03d}_{ia}{sym_v}{sym_s}'
+                result[label] = (ia, iv, sign, delta)
+            return result
     from gpaw.berryphase import polarization_phase
     from gpaw.external import static_polarizability
     from gpaw.mpi import world

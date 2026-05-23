@@ -1,0 +1,28 @@
+{
+  "total_score": 48.43823179984228,
+  "grade": "C",
+  "components": {
+    "bandgap": 0.3255909237747995,
+    "gap_type": 1.0,
+    "stability": 0.5,
+    "transport": 0.019897247031486043,
+    "exciton": 0.5,
+    "defects": 0.5
+  },
+  "inputs": {
+    "bandgap_eV": 1.864326055573787,
+    "gap_type": "direct",
+    "delta_Hf_eV": null,
+    "m_e_m0": 1.264115593535898,
+    "m_h_m0": 1.2959284178401433,
+    "eps_r": null,
+    "exciton_binding_meV": null
+  },
+  "pv_metrics": null,
+  "disqualified": false,
+  "flags": [
+    "DIELECTRIC_MISSING:exciton_approx",
+    "IN_GAP_DOS_MISSING"
+  ],
+  "summary": "PV Score: 48.4/100 [C]"
+}

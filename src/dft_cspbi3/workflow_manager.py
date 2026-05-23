@@ -14,7 +14,7 @@ import numpy as np
 from ase.io import read, write
 from ase.optimize import BFGS
 from gpaw import GPAW, Mixer
-from gpaw.mixer import MixerSum
+from gpaw.mixer import MixerSum, BroydenMixer
 
 from .calculator_factory import GPAWCalculatorFactory
 from .structure_builder import StructureBuilder
@@ -35,12 +35,15 @@ def _compute_scissor(hse_gpw: Path, bands_gpw: Path) -> float:
     return _gap(hse_gpw) - _gap(bands_gpw)
 
 STEP_ORDER = [
-    "relax", "scf", "bands", "dos", "soc",
+    "relax", "relax_sym", "scf", "bands", "dos", "soc",
+    "soc_pbe",            # SOC perturbativo sobre PBE ground state (alternativa a soc_hse06 cuando HSE06 bug)
     "scan",               # SCAN meta-GGA SCF - mejor gap que PBE sin HSE06
     "scan_soc",           # SCAN + SOC autoconsistente (spinors=True, 2-componentes Pauli)
-    "soc_scan",           # SOC perturbativo sobre SCAN (PBE-proxy augmentation)
+    "soc_scan",           # SOC perturbativo sobre SCAN (ignore_xc_potential=True)
     "r2scan",             # r²SCAN meta-GGA SCF - SCAN regularizado, mejor convergencia
-    "soc_r2scan",         # SOC perturbativo sobre r²SCAN (PBE-proxy augmentation)
+    "soc_r2scan",         # SOC perturbativo sobre r²SCAN (ignore_xc_potential=True)
+    # r2scan_bands removed: GPAW 25.7.0 MGGA does not support fixdensity; VBM/CBM k-points
+    # are read directly from the SCF MP grid via r2scan_bandgap.json instead.
     "hse06",
     "hse06_nonscf",       # non-SCF HSE06@PBE
     "soc_hse06",          # SOC applied post-HSE06 (requiere hse06.gpw o hse06_nonscf.gpw)
@@ -55,6 +58,7 @@ STEP_ORDER = [
 ]
 STEP_DIRS = {
     "relax": "01_relax",
+    "relax_sym": "01_relax_sym",
     "scf": "02_scf",
     "bands": "03_bands",
     "dos": "04_dos",
@@ -68,6 +72,7 @@ STEP_DIRS = {
     "hse06_nonscf": "06_hse06",
     "hse06_scissor": "06_hse06",
     "soc_hse06": "05_soc",
+    "soc_pbe": "05_soc",
     "hessian": "07_vibrational/hessian",
     "phonons": "07_vibrational/phonons",
     "pes": "07_vibrational/pes",
@@ -80,6 +85,7 @@ STEP_DIRS = {
     "score": "12_score",
 }
 STEP_DONE_FILES = {
+    "relax_sym": "relax_sym.gpw",
     "soc": "soc_eigenvalues.npy",
     "soc_scan": "soc_scan_eigenvalues.npy",
     "soc_r2scan": "soc_r2scan_eigenvalues.npy",
@@ -94,6 +100,28 @@ STEP_DONE_FILES = {
     "oghma_device": "oghma_device_result.json",
     "score": "solar_score.json",
 }
+
+
+def _is_m_point(kpt: np.ndarray, tol: float = 0.02) -> bool:
+    """True if kpt is the M-point [0.5, 0.5, 0.0] in fractional coordinates."""
+    target = np.array([0.5, 0.5, 0.0])
+    return bool(np.allclose(np.abs(kpt), target, atol=tol))
+
+
+def _is_cubic_structure(relax_gpw: Path, tol_lengths: float = 0.05, tol_angles: float = 1.0) -> bool:
+    """True if the relaxed structure has cubic symmetry (equal lattice params, 90° angles)."""
+    try:
+        calc = GPAW(str(relax_gpw), txt=None)
+        atoms = calc.get_atoms()
+        calc.__del__()
+        cell = atoms.get_cell()
+        a, b, c = (float(np.linalg.norm(cell[i])) for i in range(3))
+        angles = atoms.cell.angles()  # [alpha, beta, gamma] in degrees
+        lengths_equal = abs(a - b) < tol_lengths and abs(b - c) < tol_lengths
+        angles_right = all(abs(ang - 90.0) < tol_angles for ang in angles)
+        return lengths_equal and angles_right
+    except Exception:
+        return False
 
 
 class DFTWorkflow:
@@ -192,6 +220,35 @@ class DFTWorkflow:
         opt.run(fmax=self.factory.config["relax"]["convergence"]["forces"])
         calc.write(str(gpw_out))
         write(str(step_dir / "relaxed.cif"), atoms)
+
+    def _run_relax_sym(self, step_dir: Path) -> None:
+        """Relajación con FixSymmetry — preserva grupo espacial cúbico durante BFGS.
+        Evita el tilting octaédrico causado por orientación asimétrica del catión FA+.
+        Requiere spglib (ya instalado como dependencia de ASE).
+        """
+        from ase.constraints import FixSymmetry
+
+        gpw_out = step_dir / "relax_sym.gpw"
+        if gpw_out.exists():
+            logger.info("relax_sym.gpw existe, omitiendo")
+            return
+        if self.dry_run:
+            logger.info("Dry run: correría relax_sym con FixSymmetry")
+            return
+
+        atoms = self._load_initial_structure()
+        atoms.set_constraint(FixSymmetry(atoms))
+        calc = self.factory.create("relax_sym", txt=str(step_dir / "relax_sym.txt"))
+        atoms.calc = calc
+        opt = BFGS(
+            atoms,
+            trajectory=str(step_dir / "relax_sym.traj"),
+            logfile=str(step_dir / "relax_sym.log"),
+        )
+        opt.run(fmax=self.factory.config["relax"]["convergence"]["forces"])
+        calc.write(str(gpw_out))
+        write(str(step_dir / "relax_sym.cif"), atoms)
+        logger.info("relax_sym completo (grupo espacial preservado): %s", gpw_out)
 
     def _load_initial_structure(self):
         """Carga estructura inicial para fases internas o genericas."""
@@ -395,7 +452,6 @@ class DFTWorkflow:
     def _run_soc_scan(self, step_dir: Path) -> None:
         """SOC perturbativo sobre estado fundamental SCAN."""
         from gpaw.spinorbit import soc_eigenstates
-        from gpaw.xc import XC as _XC
         scan_gpw = step_dir / "scan.gpw"
         done_flag = step_dir / "soc_scan_eigenvalues.npy"
 
@@ -412,19 +468,14 @@ class DFTWorkflow:
         nb = calc.get_number_of_bands()
         ne = int(calc.get_number_of_electrons())
 
-        # Proxy
-        _orig_xc = calc.hamiltonian.xc
-        calc.hamiltonian.xc = _XC("PBE")
-        try:
-            soc_cfg = self.factory.config.get("soc", {})
-            result = soc_eigenstates(
-                calc,
-                n2=nb,
-                theta=soc_cfg.get("theta", 0.0),
-                phi=soc_cfg.get("phi", 0.0),
-            )
-        finally:
-            calc.hamiltonian.xc = _orig_xc
+        soc_cfg = self.factory.config.get("soc", {})
+        result = soc_eigenstates(
+            calc,
+            n2=nb,
+            theta=soc_cfg.get("theta", 0.0),
+            phi=soc_cfg.get("phi", 0.0),
+            ignore_xc_potential=True,
+        )
 
         eigs = result.eigenvalues()
         np.save(str(done_flag), eigs)
@@ -435,39 +486,91 @@ class DFTWorkflow:
         cbm = float(np.min(eigs[:, ne]))
         gap = cbm - vbm
         logger.info(
-            "SCAN+SOC (PBE-proxy augmentation) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
+            "SCAN+SOC (ignore_xc_potential=True) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
             gap, vbm, cbm,
         )
         logger.info("SCAN+SOC eigenvalues saved to %s", done_flag)
 
+    @staticmethod
+    def _save_r2scan_bandgap(step_dir: Path, calc: object) -> None:
+        """Compute and save r2scan_bandgap.json from an already-converged calculator."""
+        import json as _json
+        from ase.dft.bandgap import bandgap
+        gap, p1, p2 = bandgap(calc)
+        logger.info("r²SCAN band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+        # p1/p2 are (spin, kpt_index, band_index); kpt_index can be None for metallic/edge cases
+        vbm_k = int(p1[1]) if (p1 is not None and p1[1] is not None) else None
+        cbm_k = int(p2[1]) if (p2 is not None and p2[1] is not None) else None
+        direct = (vbm_k is not None and cbm_k is not None and vbm_k == cbm_k)
+        # Save fractional k-point coordinates from the live calculator's IBZ array.
+        # This avoids reloading the GPW file later (which fails in MPI context).
+        ibz_kpts = calc.get_ibz_k_points()  # (nk, 3) array; kpt_index is into this array
+        vbm_kpt_frac = ibz_kpts[vbm_k].tolist() if (vbm_k is not None and vbm_k < len(ibz_kpts)) else None
+        cbm_kpt_frac = ibz_kpts[cbm_k].tolist() if (cbm_k is not None and cbm_k < len(ibz_kpts)) else None
+        _bg_data = {
+            "gap_eV": float(gap),
+            "gap_type": "direct" if direct else "indirect",
+            "vbm_kpt_index": vbm_k,
+            "cbm_kpt_index": cbm_k,
+            "vbm_kpt_frac": vbm_kpt_frac,
+            "cbm_kpt_frac": cbm_kpt_frac,
+            "functional": "r2SCAN",
+        }
+        (step_dir / "r2scan_bandgap.json").write_text(_json.dumps(_bg_data, indent=2))
+
     def _run_r2scan(self, step_dir: Path) -> None:
         """r²SCAN meta-GGA SCF."""
-        from ase.dft.bandgap import bandgap
         gpw_out = step_dir / "r2scan.gpw"
+        bg_json = step_dir / "r2scan_bandgap.json"
+
+        # Regenerate JSON if missing or if it lacks fractional k-point coordinates
         if gpw_out.exists():
-            logger.info("r2scan.gpw exists, skipping")
+            needs_regen = not bg_json.exists()
+            if bg_json.exists():
+                import json as _json_check
+                _d = _json_check.loads(bg_json.read_text())
+                if _d.get("vbm_kpt_frac") is None or _d.get("cbm_kpt_frac") is None:
+                    needs_regen = True
+                    logger.info("r2scan_bandgap.json missing fractional k-points; regenerating")
+            if needs_regen:
+                logger.info("r2scan.gpw exists; regenerating r2scan_bandgap.json")
+                calc = GPAW(str(gpw_out), txt=None)
+                self._save_r2scan_bandgap(step_dir, calc)
+            else:
+                logger.info("r2scan.gpw and r2scan_bandgap.json exist, skipping")
             return
 
-        relax_gpw = self.work_dir / "01_relax" / "relax.gpw"
+        relax_sym_gpw = self._step_dir("relax_sym") / "relax_sym.gpw"
+        relax_gpw     = self._step_dir("relax")     / "relax.gpw"
+        source_gpw    = relax_sym_gpw if relax_sym_gpw.exists() else relax_gpw
+        if relax_sym_gpw.exists():
+            logger.info("r²SCAN: usando estructura sym-constrained (relax_sym.gpw)")
+
         if self.dry_run:
-            logger.info("Dry run: would run r²SCAN from %s", relax_gpw)
+            logger.info("Dry run: would run r²SCAN from %s", source_gpw)
             return
-        if not relax_gpw.exists():
-            raise FileNotFoundError("relax.gpw not found. Run step 'relax' first.")
+        if not source_gpw.exists():
+            raise FileNotFoundError(f"relax.gpw not found: {source_gpw}. Run 'relax' (or 'relax_sym') first.")
 
+        pre_gpw = step_dir / "pre_r2scan.gpw"
+        if pre_gpw.exists():
+            # GPAW 25.7 PW-MGGA cannot restart from GGA checkpoint: wfs.initialize
+            # calls hamiltonian.update (which needs τ) before psit_nG is loaded.
+            # pre_r2scan.gpw is retained for master-branch warm start; cold-start here.
+            logger.info("r²SCAN: pre_r2scan.gpw found but MGGA restart not supported in PW mode "
+                        "(GPAW 25.7); using cold start")
+
+        # Always cold-start; factory.create includes Davidson(niter=4) and correct setups.
         calc = self.factory.create("r2scan", txt=str(step_dir / "r2scan.txt"))
-        atoms = GPAW(str(relax_gpw), txt=None).get_atoms()
+        atoms = GPAW(str(source_gpw), txt=None).get_atoms()
         atoms.calc = calc
         atoms.get_potential_energy()
         calc.write(str(gpw_out))
-
-        gap, p1, p2 = bandgap(calc)
-        logger.info("r²SCAN band gap: %.4f eV  VBM=%s CBM=%s", gap, p1, p2)
+        self._save_r2scan_bandgap(step_dir, calc)
 
     def _run_soc_r2scan(self, step_dir: Path) -> None:
-        """SOC perturbativo sobre r²SCAN con PBE-proxy para augmentación PAW."""
+        """SOC perturbativo sobre r²SCAN."""
         from gpaw.spinorbit import soc_eigenstates
-        from gpaw.xc import XC as _XC
         r2scan_gpw = step_dir / "r2scan.gpw"
         done_flag = step_dir / "soc_r2scan_eigenvalues.npy"
 
@@ -484,18 +587,14 @@ class DFTWorkflow:
         nb = calc.get_number_of_bands()
         ne = int(calc.get_number_of_electrons())
 
-        _orig_xc = calc.hamiltonian.xc
-        calc.hamiltonian.xc = _XC("PBE")
-        try:
-            soc_cfg = self.factory.config.get("soc", {})
-            result = soc_eigenstates(
-                calc,
-                n2=nb,
-                theta=soc_cfg.get("theta", 0.0),
-                phi=soc_cfg.get("phi", 0.0),
-            )
-        finally:
-            calc.hamiltonian.xc = _orig_xc
+        soc_cfg = self.factory.config.get("soc", {})
+        result = soc_eigenstates(
+            calc,
+            n2=nb,
+            theta=soc_cfg.get("theta", 0.0),
+            phi=soc_cfg.get("phi", 0.0),
+            ignore_xc_potential=True,
+        )
 
         eigs = result.eigenvalues()
         np.save(str(done_flag), eigs)
@@ -505,10 +604,46 @@ class DFTWorkflow:
         cbm = float(np.min(eigs[:, ne]))
         gap = cbm - vbm
         logger.info(
-            "r²SCAN+SOC (PBE-proxy augmentation) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
+            "r²SCAN+SOC (ignore_xc_potential=True) band gap: %.4f eV  VBM=%.4f  CBM=%.4f",
             gap, vbm, cbm,
         )
         logger.info("r²SCAN+SOC eigenvalues saved to %s", done_flag)
+
+    def _run_r2scan_bands(self, step_dir: Path) -> None:
+        """Non-SCF r²SCAN band structure on XRMGR k-path for VBM/CBM k-point detection."""
+        r2scan_gpw = self._step_dir("r2scan") / "r2scan.gpw"
+        gpw_out = step_dir / "r2scan_bands.gpw"
+
+        if gpw_out.exists():
+            logger.info("r2scan_bands.gpw exists, skipping")
+            return
+        if self.dry_run:
+            logger.info("Dry run: would run r²SCAN non-SCF bands from %s", r2scan_gpw)
+            return
+        if not r2scan_gpw.exists():
+            raise FileNotFoundError(f"r2scan.gpw not found at {r2scan_gpw}. Run step 'r2scan' first.")
+
+        ref_calc = GPAW(str(r2scan_gpw), txt=None)
+        atoms = ref_calc.get_atoms()
+        ref_calc.__del__()
+        bands_cfg = self.factory.config.get("bands", {})
+        path = atoms.cell.bandpath(
+            bands_cfg.get("kpts_path", "XRMGR"),
+            npoints=bands_cfg.get("npoints", 40),
+        )
+        calc = GPAW(
+            str(r2scan_gpw),
+            fixdensity=True,
+            symmetry="off",
+            kpts=path,
+            convergence={"bands": bands_cfg.get("convergence", {}).get("bands", -10)},
+            txt=str(step_dir / "r2scan_bands.txt"),
+        )
+        atoms.calc = calc
+        atoms.get_potential_energy()
+        calc.write(str(gpw_out))
+        calc.band_structure().write(str(step_dir / "r2scan_band_structure.json"))
+        logger.info("r²SCAN band structure saved to %s", gpw_out)
 
     def _run_hse06(self, step_dir: Path) -> None:
         gpw_out = step_dir / "hse06.gpw"
@@ -798,6 +933,51 @@ class DFTWorkflow:
             logger.info("HSE06+SOC band gap: %.4f eV", gap)
         logger.info("HSE06+SOC eigenvalues saved to %s", done_flag)
 
+    def _run_soc_pbe(self, step_dir: Path) -> None:
+        """SOC perturbativo sobre estado fundamental PBE.
+
+        Alternativa a _run_soc_hse06() que falla con GPAW 25.7.0 bug
+        (HybridXC has no attribute calculate_spherical). Lee scf.gpw en vez
+        de hse06.gpw, por lo que es siempre ejecutable después del paso 'scf'.
+        Output: soc_pbe_eigenvalues.npy (distinto del soc_eigenvalues.npy de PBE perturbativo
+        estándar para evitar colisión).
+        """
+        from gpaw.spinorbit import soc_eigenstates
+
+        scf_gpw = self._step_dir("scf") / "scf.gpw"
+        done_flag = step_dir / "soc_pbe_eigenvalues.npy"
+
+        if done_flag.exists():
+            logger.info("soc_pbe_eigenvalues.npy exists, skipping SOC+PBE")
+            return
+        if self.dry_run:
+            logger.info("Dry run: would apply SOC perturbatively to PBE ground state %s", scf_gpw)
+            return
+        if not scf_gpw.exists():
+            raise FileNotFoundError(
+                f"SCF checkpoint not found: {scf_gpw}. Run step 'scf' first."
+            )
+
+        soc_cfg = self.factory.config.get("soc", {})
+        result = soc_eigenstates(
+            str(scf_gpw),
+            theta=float(soc_cfg.get("theta", 0.0)),
+            phi=float(soc_cfg.get("phi", 0.0)),
+        )
+        eigs = result.eigenvalues()
+        np.save(str(done_flag), eigs)
+        np.save(str(step_dir / "soc_pbe_spin_projections.npy"), result.spin_projections())
+
+        # Log gap using SCF Fermi level
+        ref = GPAW(str(scf_gpw), txt=None)
+        ef = ref.get_fermi_level()
+        occupied = eigs[eigs < ef]
+        unoccupied = eigs[eigs >= ef]
+        if len(occupied) and len(unoccupied):
+            gap = float(unoccupied.min() - occupied.max())
+            logger.info("PBE+SOC (perturbative on PBE ground state) band gap: %.4f eV", gap)
+        logger.info("PBE+SOC eigenvalues saved to %s", done_flag)
+
     def _run_hessian(self, step_dir: Path) -> None:
         """Calcula 3N×3N Hessiano via finite differences en relaxed geometry."""
         from .validation import compute_hessian
@@ -961,15 +1141,120 @@ class DFTWorkflow:
             logger.info("electronic_analysis.json exists, skipping")
             return
         if self.dry_run:
-            logger.info("Dry run: would compute effective masses from %s", bands_gpw)
+            logger.info("Dry run: would compute effective masses")
             return
-        if not bands_gpw.exists():
-            raise FileNotFoundError(f"Bands checkpoint not found: {bands_gpw}")
 
-        gap_result = classify_gap_type(bands_gpw)
+        # --- k-point topology: prefer r²SCAN MP-grid k-points from JSON -----------
+        # GPAW 25.7.0 MGGA does not support fixdensity, so non-SCF band-path
+        # calculations are not possible with r²SCAN. Instead, VBM/CBM k-points are
+        # read directly from the SCF Monkhorst-Pack grid stored in r2scan_bandgap.json.
+        r2scan_bg_json = self._step_dir("r2scan") / "r2scan_bandgap.json"
+        r2scan_gpw     = self._step_dir("r2scan") / "r2scan.gpw"
+        vbm_kpt_frac_override: np.ndarray | None = None
+        cbm_kpt_frac_override: np.ndarray | None = None
 
-        # Usa fine non-SCF k-ruta cerca CBM/VBM when SCF gpw disponible;
-        # fall back banda-ruta fit (coarser) otherwise
+        if r2scan_bg_json.exists():
+            try:
+                _bg = json.loads(r2scan_bg_json.read_text())
+                _vbm_frac = _bg.get("vbm_kpt_frac")
+                _cbm_frac = _bg.get("cbm_kpt_frac")
+                if _vbm_frac is not None and _cbm_frac is not None:
+                    vbm_kpt_frac_override = np.array(_vbm_frac)
+                    cbm_kpt_frac_override = np.array(_cbm_frac)
+                    logger.info(
+                        "VBM/CBM k-points from r²SCAN MP grid: VBM=%s CBM=%s",
+                        _vbm_frac, _cbm_frac,
+                    )
+                else:
+                    logger.warning("r2scan_bandgap.json has no fractional k-points — run 'r2scan' step to regenerate")
+            except Exception as _e:
+                logger.warning("Could not read r²SCAN k-points from JSON: %s — falling back to PBE bands", _e)
+
+        if vbm_kpt_frac_override is not None:
+            # Use r²SCAN k-points; build a minimal gap_result compatible object
+            from types import SimpleNamespace
+            _bg_cached = json.loads(r2scan_bg_json.read_text())
+            gap_result = SimpleNamespace(
+                gap_type=_bg_cached.get("gap_type", "unknown"),
+                gap_eV=float(_bg_cached.get("gap_eV", float("nan"))),
+                direct_gap_eV=None,
+                vbm_kpt_frac=vbm_kpt_frac_override,
+                cbm_kpt_frac=cbm_kpt_frac_override,
+                flags=[],
+                summary=f"r²SCAN MP-grid gap={_bg_cached.get('gap_eV', '?'):.4g} eV",
+            )
+        elif r2scan_bg_json.exists():
+            # r²SCAN JSON exists but k-points are null → metallic/zero-gap system
+            _bg_cached = json.loads(r2scan_bg_json.read_text())
+            _gap_ev = float(_bg_cached.get("gap_eV", 0.0))
+            logger.warning(
+                "r²SCAN gap=%.4f eV with null VBM/CBM k-points (metallic/semi-metal); "
+                "effective masses will be NaN", _gap_ev,
+            )
+            # Compute structural metrics even for metallic systems
+            relax_gpw = self._step_dir("relax") / "relax.gpw"
+            struct_result = None
+            if relax_gpw.exists():
+                _calc = GPAW(str(relax_gpw))
+                _atoms = _calc.get_atoms()
+                _calc.__del__()
+                from .analysis.structural import analyze_perovskite_geometry
+                struct_result = analyze_perovskite_geometry(_atoms)
+            out_dict: dict = {
+                "gap_type": _bg_cached.get("gap_type", "unknown"),
+                "gap_eV": _gap_ev,
+                "direct_gap_eV": None,
+                "vbm_kpt_frac": None,
+                "cbm_kpt_frac": None,
+                "m_e_m0": None,
+                "m_h_m0": None,
+                "m_reduced_m0": None,
+                "m_e_soc_m0": None,
+                "m_h_soc_m0": None,
+                "m_reduced_soc_m0": None,
+                "flags_gap": ["metallic_r2scan"],
+                "flags_masses": ["metallic_no_masses"],
+                "flags_masses_soc": ["metallic_no_masses"],
+            }
+            if struct_result is not None:
+                out_dict["tolerance_factor"] = struct_result.tolerance_factor
+                out_dict["octahedral_factor"] = struct_result.octahedral_factor
+                out_dict["mean_bx_bond_Ang"] = struct_result.mean_bx_bond_Ang
+                out_dict["bx_bond_variance"] = struct_result.bx_bond_variance
+                out_dict["mean_bxb_angle_deg"] = struct_result.mean_bxb_angle_deg
+                out_dict["tilt_angle_deg"] = struct_result.tilt_angle_deg
+                out_dict["flags_structural"] = struct_result.flags
+            out_json.write_text(json.dumps(out_dict, indent=2))
+            logger.info("Electronic analysis saved (metallic): gap=%.4f eV", _gap_ev)
+            return
+        else:
+            # Fallback: PBE band path
+            if not bands_gpw.exists():
+                raise FileNotFoundError(f"No r²SCAN JSON k-points and no PBE bands.gpw: {bands_gpw}")
+            gap_result = classify_gap_type(bands_gpw)
+            # D1 Fix: M-point bug for cubic structures
+            relax_gpw_check = self._step_dir("relax") / "relax.gpw"
+            if (
+                gap_result.cbm_kpt_frac is not None
+                and _is_m_point(np.array(gap_result.cbm_kpt_frac))
+                and relax_gpw_check.exists()
+                and _is_cubic_structure(relax_gpw_check)
+            ):
+                logger.warning(
+                    "CBM at M=[0.5,0.5,0.0] for cubic structure; forcing R=[0.5,0.5,0.5] (D1 fix)"
+                )
+                try:
+                    gap_result.cbm_kpt_frac = np.array([0.5, 0.5, 0.5])
+                    gap_result.vbm_kpt_frac = np.array([0.5, 0.5, 0.5])
+                except AttributeError:
+                    gap_result = gap_result._replace(
+                        cbm_kpt_frac=np.array([0.5, 0.5, 0.5]),
+                        vbm_kpt_frac=np.array([0.5, 0.5, 0.5]),
+                    )
+
+        # --- Fine-k NSCF effective masses (always PBE SCF — MGGA fixdensity unsupported) ---
+        # r²SCAN provides the bandgap; masses are computed at the correct k-point
+        # using PBE density (acceptable: masses weakly sensitive to XC near gap edges).
         if scf_gpw.exists() and gap_result.cbm_kpt_frac is not None:
             mass_result = compute_effective_masses_nscf(
                 scf_gpw,
@@ -977,8 +1262,11 @@ class DFTWorkflow:
                 vbm_kpt_frac=gap_result.vbm_kpt_frac,
                 step_dir=step_dir,
             )
-        else:
+        elif gap_result.cbm_kpt_frac is not None and bands_gpw.exists():
             logger.warning("scf.gpw missing — falling back to band-path effective masses")
+            mass_result = compute_effective_masses(bands_gpw)
+        else:
+            logger.warning("No SCF or band path available for effective masses — using r²SCAN band path")
             mass_result = compute_effective_masses(bands_gpw)
 
         # SOC-corrected masses
@@ -1170,6 +1458,20 @@ class DFTWorkflow:
             m_h_soc = em_data.get("m_h_soc_m0")
             kwargs["m_e"] = m_e_soc if m_e_soc is not None else em_data.get("m_e_m0")
             kwargs["m_h"] = m_h_soc if m_h_soc is not None else em_data.get("m_h_m0")
+
+        # r²SCAN bandgap override (better than PBE, lower priority than HSE06 scissor)
+        r2scan_bg_json = self._step_dir("r2scan") / "r2scan_bandgap.json"
+        if r2scan_bg_json.exists():
+            import json as _json_r2
+            r2scan_bg = _json_r2.loads(r2scan_bg_json.read_text())
+            old_gap = kwargs.get("bandgap_eV", float("nan"))
+            kwargs["bandgap_eV"] = float(r2scan_bg["gap_eV"])
+            if "gap_type" in r2scan_bg:
+                kwargs["gap_type"] = r2scan_bg["gap_type"]
+            logger.info(
+                "Score: using r²SCAN gap %.4f eV (overrides PBE %.4f eV)",
+                kwargs["bandgap_eV"], old_gap,
+            )
 
         # Scissor HSE06.
         scissor_json = self._step_dir("hse06") / "hse06_scissor.json"

@@ -99,7 +99,10 @@ if not regenerated_wfs and _existing_nsc_is_usable():
     print(f"[SKIP] {NSC_EIG_PATH} already exists with symmetry-reduced k-points")
 else:
     from gpaw import GPAW
-    from gpaw.hybrids.eigenvalues import non_self_consistent_eigenvalues
+    try:
+        from gpaw.hybrids.eigenvalues import non_self_consistent_eigenvalues
+    except ImportError:
+        from gpaw.hybrids import non_self_consistent_eigenvalues
     print("=" * 60)
     print("Step 2: non_self_consistent_eigenvalues (HSE06) on 12x12x12")
     print("=" * 60)
