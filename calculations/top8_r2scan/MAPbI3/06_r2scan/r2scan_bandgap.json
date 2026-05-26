@@ -13,5 +13,12 @@
     0.49999999999999994,
     0.49999999999999994
   ],
-  "functional": "r2SCAN"
+  "functional": "r2SCAN",
+  "scissor_correction": {
+    "gap_scissor_eV": 2.364,
+    "scissor_eV": 0.5,
+    "base": "r2SCAN",
+    "method": "literatura G0W0@PBE para perovskitas haluro de Pb (aproximación)",
+    "note": "G0W0 infactible en hardware disponible; base r2SCAN sin SOC sobreestima el gap experimental (SOC reduce ~0.3 eV en Pb-6p); scissor_eV aplicado sobre r2SCAN puede sobrecorregir"
+  }
 }

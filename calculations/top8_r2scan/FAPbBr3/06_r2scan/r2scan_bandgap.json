@@ -13,5 +13,12 @@
     0.49999999999999994,
     0.49999999999999994
   ],
-  "functional": "r2SCAN"
+  "functional": "r2SCAN",
+  "scissor_correction": {
+    "gap_scissor_eV": 1.354,
+    "scissor_eV": 0.5,
+    "base": "r2SCAN",
+    "method": "literatura G0W0@PBE para perovskitas haluro de Pb (aproximación)",
+    "note": "artefacto FA: CBM r2SCAN cae sobre pi* del catión FA en lugar de Pb-6p; gap indirecto artificial (0.854 eV vs exp 2.23 eV); scissor no corrige el artefacto orbital; G0W0 necesario para resolver pero infactible"
+  }
 }

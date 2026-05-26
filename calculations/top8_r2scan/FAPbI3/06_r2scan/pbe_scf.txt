@@ -1,0 +1,369 @@
+  __  _  _
+ | _ |_)|_||  |
+ |__||  | ||/\| - 25.7.1b1
+
+User:   luis-ochoa@luis-pc
+Date:   Tue May 26 15:05:21 2026
+Arch:   x86_64
+Pid:    17226
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
+units:  Angstrom and eV
+cores:  1
+OpenMP: False
+
+Versions:
+  Python: 3.12.3
+  ASE:    3.28.0
+  Numpy:  2.4.4
+  Scipy:  1.17.1
+  Libxc:  7.0.0
+
+Paths:
+  gpaw:  /tmp/gpaw_master/gpaw
+  _gpaw: /tmp/gpaw_master/_gpaw.cpython-312-x86_64-linux-gnu.so
+  ase:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/ase
+  numpy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/numpy
+  scipy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/scipy
+
+Git-hashes:
+  gpaw:  31a98aa8a7
+  _gpaw: 31a98aa8a7
+
+OMP_NUM_THREADS: 4
+
+
+Environment variables:
+  GPAW_CPUPY:          False
+  GPAW_DEBUG:          False
+  GPAW_INITIALIZE_MPI: False
+  GPAW_MPI_BACKEND:    serial
+  GPAW_NO_C_EXTENSION: False
+  GPAW_NO_GPU_MPI:     False
+  GPAW_TRACE:          False
+  GPAW_USE_GPUS:       False
+
+Input parameters:
+  mode=PW(ecut=450.00000000000006),
+  convergence={'density': 0.0001, 'eigenstates': 1e-06},
+  eigensolver=Davidson(niter=3),
+  kpts=MonkhorstPack(size=[6, 6, 6], gamma=True),
+  occupations=Occupations(name='fermi-dirac', width=0.1),
+  xc=XC(name='PBE')
+
+Diagonalizing LCAO Hamiltonian
+Converting LCAO to pw mode
+
+Atoms  # Å, Bohr magnetons
+|    | symbol |        x |        y |         z |    initial magnetic moments |
+|----|--------|----------|----------|-----------|-----------------------------|
+|  0 |     Pb | 0.000000 | 0.000000 | -0.232484 | ( 0.0000,  0.0000,  0.0000) |
+|  1 |      I | 3.180000 | 0.000000 | -1.011728 | ( 0.0000,  0.0000,  0.0000) |
+|  2 |      I | 0.000000 | 3.180000 | -0.207155 | ( 0.0000,  0.0000,  0.0000) |
+|  3 |      I | 0.000000 | 0.000000 |  2.918081 | ( 0.0000,  0.0000,  0.0000) |
+|  4 |      C | 3.180000 | 3.180000 |  3.727179 | ( 0.0000,  0.0000,  0.0000) |
+|  5 |      N | 2.004161 | 3.180000 |  3.003894 | ( 0.0000,  0.0000,  0.0000) |
+|  6 |      N | 4.355839 | 3.180000 |  3.003894 | ( 0.0000,  0.0000,  0.0000) |
+|  7 |      H | 3.180000 | 3.180000 |  4.833013 | ( 0.0000,  0.0000,  0.0000) |
+|  8 |      H | 1.422896 | 3.979498 |  3.366047 | ( 0.0000,  0.0000,  0.0000) |
+|  9 |      H | 1.422896 | 2.380502 |  3.366047 | ( 0.0000,  0.0000,  0.0000) |
+| 10 |      H | 4.937104 | 3.979498 |  3.366047 | ( 0.0000,  0.0000,  0.0000) |
+| 11 |      H | 4.937104 | 2.380502 |  3.366047 | ( 0.0000,  0.0000,  0.0000) |
+
+
+Unit cell  # Å
+| periodic |        x |        y |        z |  lengths |    angles |
+|----------|----------|----------|----------|----------|-----------|
+|      yes | 6.360000 | 0.000000 | 0.000000 | 6.360000 | 90.000000 |
+|      yes | 0.000000 | 6.360000 | 0.000000 | 6.360000 | 90.000000 |
+|      yes | 0.000000 | 0.000000 | 6.360000 | 6.360000 | 90.000000 |
+
+
+Number of symmetries: 4
+Symmetry operations  # r_c * U_cc + t_c -> r_c
+|   | kind |            matrix            |
+|---|------|------------------------------|
+| 0 |  E   |  1, 0, 0,  0, 1, 0,  0, 0, 1 |
+| 1 |  σ   |  1, 0, 0,  0,-1, 0,  0, 0, 1 |
+| 2 |  σ   | -1, 0, 0,  0, 1, 0,  0, 0, 1 |
+| 3 |  C2  | -1, 0, 0,  0,-1, 0,  0, 0, 1 |
+
+BZ-sampling:
+  Number of BZ points: 216
+  Number of IBZ points: 64
+
+  Monkhorst-Pack size: [6, 6, 6]
+  Monkhorst-Pack shift: [0.08333333333333333, 0.08333333333333333, 0.08333333333333333]
+
+K-points  # in reciprocal-cell coordinates
+|     |                                coordinates |     weight |
+|-----|--------------------------------------------|------------|
+|   0 | (  0.00000000,   0.00000000,   0.00000000) | 0.00462963 |
+|   1 | (  0.00000000,   0.00000000,   0.16666667) | 0.00925926 |
+|   2 | (  0.00000000,   0.00000000,   0.33333333) | 0.00925926 |
+|   3 | (  0.00000000,   0.00000000,   0.50000000) | 0.00462963 |
+|   4 | (  0.00000000,   0.16666667,   0.00000000) | 0.00925926 |
+|   5 | (  0.00000000,   0.16666667,   0.16666667) | 0.01851852 |
+|   6 | (  0.00000000,   0.16666667,   0.33333333) | 0.01851852 |
+|   7 | (  0.00000000,   0.16666667,   0.50000000) | 0.00925926 |
+|   8 | (  0.00000000,   0.33333333,   0.00000000) | 0.00925926 |
+|   9 | (  0.00000000,   0.33333333,   0.16666667) | 0.01851852 |
+| ... |                                            |            |
+|  63 | (  0.50000000,   0.50000000,   0.50000000) | 0.00462963 |
+
+Plane wave coefficients: 5632
+Cutoff: 450.00000000000006 eV
+
+Spin-components: 1 (collinear spins)
+Bands:           37
+Projectors:      51
+Spin-degeneracy: 2
+Datatype:        complex128
+
+Memory:
+  Storage: CPU
+  Wave functions: 211_225_600 bytes (211_225_600 per core)
+  Projectors: 256_896_000 bytes (256_896_000 per core)
+
+Parallelization:
+  kpt:    1
+  domain: 1
+  band:   1
+
+Density:
+  Valence electrons: 54.0
+  Components: 1
+  Grid points: [32 32 32]
+  Charge: 0.0  # |e|
+
+Potential:
+  Grid points: [32 32 32]
+
+species:
+  Pb:
+    name:    Lead
+    id:      66e73b13d76dc837202bcdb13fee58e6
+    Z:       82.0
+    valence: 14
+    core:    68
+    charge:  0.0  # [|e|]
+    file:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/Pb.PBE.gz
+    compensation charges:
+      type: gauss
+      rc: 0.38  # [Å]
+      lmax: 2
+    cutoffs:
+      filter: 2.36  # [Å]
+      core: 2.43  # [Å]
+    projectors
+    | kind |    occ | energy [eV] | rcut [Å] |
+    |------|--------|-------------|----------|
+    |   6s |  2.000 |     -11.969 |    1.259 |
+    |   6p |  2.000 |      -3.506 |    1.275 |
+    |   5d | 10.000 |     -21.211 |    1.217 |
+    |    s |        |      15.243 |    1.259 |
+    |    p |        |      23.705 |    1.275 |
+    |    d |        |       6.001 |    1.217 |
+  
+    Using partial waves for Pb as LCAO basis
+
+  I:
+    name:    Iodine
+    id:      91405a398e4dfe788ff04f57531604ec
+    Z:       53.0
+    valence: 7
+    core:    46
+    charge:  0.0  # [|e|]
+    file:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/I.PBE.gz
+    compensation charges:
+      type: gauss
+      rc: 0.37  # [Å]
+      lmax: 2
+    cutoffs:
+      filter: 2.06  # [Å]
+      core: 2.90  # [Å]
+    projectors
+    | kind |    occ | energy [eV] | rcut [Å] |
+    |------|--------|-------------|----------|
+    |   5s |  2.000 |     -17.382 |    1.164 |
+    |   5p |  5.000 |      -7.088 |    1.164 |
+    |    s |        |       9.829 |    1.164 |
+    |    p |        |      20.123 |    1.164 |
+    |    d |        |       0.000 |    1.164 |
+  
+    Using partial waves for I as LCAO basis
+
+  C:
+    name:    Carbon
+    id:      4aa54d4b901d75f77cc0ea3eec22967b
+    Z:       6.0
+    valence: 4
+    core:    2
+    charge:  0.0  # [|e|]
+    file:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/C.PBE.gz
+    compensation charges:
+      type: gauss
+      rc: 0.20  # [Å]
+      lmax: 2
+    cutoffs:
+      filter: 1.14  # [Å]
+      core: 1.14  # [Å]
+    projectors
+    | kind |    occ | energy [eV] | rcut [Å] |
+    |------|--------|-------------|----------|
+    |   2s |  2.000 |     -13.751 |    0.635 |
+    |   2p |  2.000 |      -5.284 |    0.635 |
+    |    s |        |      13.461 |    0.635 |
+    |    p |        |      21.927 |    0.635 |
+    |    d |        |       0.000 |    0.635 |
+  
+    Using partial waves for C as LCAO basis
+
+  N:
+    name:    Nitrogen
+    id:      f7500608b86eaa90eef8b1d9a670dc53
+    Z:       7.0
+    valence: 5
+    core:    2
+    charge:  0.0  # [|e|]
+    file:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/N.PBE.gz
+    compensation charges:
+      type: gauss
+      rc: 0.18  # [Å]
+      lmax: 2
+    cutoffs:
+      filter: 1.11  # [Å]
+      core: 0.96  # [Å]
+    projectors
+    | kind |    occ | energy [eV] | rcut [Å] |
+    |------|--------|-------------|----------|
+    |   2s |  2.000 |     -18.583 |    0.603 |
+    |   2p |  3.000 |      -7.089 |    0.529 |
+    |    s |        |       8.629 |    0.603 |
+    |    p |        |      20.123 |    0.529 |
+    |    d |        |       0.000 |    0.577 |
+  
+    Using partial waves for N as LCAO basis
+
+  H:
+    name:    Hydrogen
+    id:      d65de229564ff8ea4db303e23b6d1ecf
+    Z:       1.0
+    valence: 1
+    core:    0
+    charge:  0.0  # [|e|]
+    file:    /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/H.PBE.gz
+    compensation charges:
+      type: gauss
+      rc: 0.15  # [Å]
+      lmax: 2
+    cutoffs:
+      filter: 0.85  # [Å]
+      core: 0.53  # [Å]
+    projectors
+    | kind |    occ | energy [eV] | rcut [Å] |
+    |------|--------|-------------|----------|
+    |   1s |  1.000 |      -6.494 |    0.476 |
+    |    s |        |      20.717 |    0.476 |
+    |    p |        |       0.000 |    0.476 |
+  
+    Using partial waves for H as LCAO basis
+
+Reference energy: -1151950.372298  # eV
+
+eigensolver:
+  Davidson
+  Converge bands: occupied
+  niter=3
+  
+Density mixing:
+  Method: separate
+  Backend: msr1
+  Linear mixing parameter: 0.05
+  old densities: 10
+  Width of damping distribution: 1.1
+  Damping of long wavelength oscillations: 20
+occupation numbers:
+  Fermi-Dirac:
+    width: 0.1000  # eV
+  
+
+<gpaw.new.pw.paw_poisson.SlowPAWPoissonSolver object at 0x7d4dfefb7800>
+xc functional:
+  name: PBE with 2 nearest neighbor stencil
+
+Initialization done in: 24.546 s
+
+convergence criteria:
+- Maximum integral of absolute [dens]ity change: 0.0001 electrons / valence electron
+- Maximum integral of absolute [eigenst]ate change: 1e-06 eV^2 / valence electron
+- Maximum [total energy] change in last 3 cyles: 0.0005 eV / valence electron
+maximum number of iterations: 333
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:06:41 |  -53.616485 | -0.73 |       |
+|iter:   2| 15:07:41 |  -52.678512 | -2.37 | -1.02 |
+|iter:   3| 15:08:38 |  -51.204874 | -2.05 | -1.05 |
+|iter:   4| 15:09:35 |  -50.358544 | -2.62 | -1.20 |
+|iter:   5| 15:10:38 |  -50.340590 | -3.19 | -1.58 |
+|iter:   6| 15:11:39 |  -50.323425 | -4.18 | -1.94 |
+|iter:   7| 15:12:39 |  -50.311119 | -4.48 | -2.33 |
+|iter:   8| 15:13:40 |  -50.308607c| -5.39 | -2.70 |
+|iter:   9| 15:14:39 |  -50.308263c| -6.22c| -3.14 |
+|iter:  10| 15:15:37 |  -50.308351c| -7.27c| -3.60 |
+|iter:  11| 15:16:39 |  -50.308328c| -8.29c| -4.11c|
+
+Converged in 11 steps
+SCF loop duration: 653.845 s (59.440 s/step)
+Energy contributions relative to reference atoms: (reference = -1151950.372298)
+
+Energy contributions:
+  Kinetic:          53.871524
+  Coulomb:         -57.017078
+  Zero:             -0.202464
+  External:          0.000000
+  Xc:              -46.952565
+  Entropy:          -0.015491
+  Spinorbit:         0.000000
+  ----------------------------
+  Free energy:     -50.316074
+  Extrapolated:    -50.308328
+
+dipole moment: (-89.164965, -89.170913, 47.840454)  # |e|*Ang
+
+
+Fermi level: 1.471
+Eigenvalues  # (at kpt = [0.000, 0.000, 0.000])
+| band index |      eig [eV] | occ [0-2] |
+|------------|---------------|-----------|
+|          0 |       -18.045 |     2.000 |
+|        ... |               |           |
+|         19 |        -0.551 |     2.000 |
+|         20 |        -0.418 |     2.000 |
+|         21 |        -0.370 |     2.000 |
+|         22 |         0.238 |     2.000 |
+|         23 |         0.241 |     2.000 |
+|         24 |         0.337 |     2.000 |
+|         25 |         0.680 |     1.999 |
+|         26 |         0.824 |     1.997 |
+|         27 |         2.311 |     0.000 |
+|         28 |         5.418 |     0.000 |
+|         29 |         5.578 |     0.000 |
+|         30 |         6.538 |     0.000 |
+|         31 |         6.542 |     0.000 |
+|         32 |         7.018 |     0.000 |
+|         33 |         7.027 |     0.000 |
+|         34 |         7.126 |     0.000 |
+|        ... |               |           |
+|         36 |         8.404 |     0.000 |
+
+
+Gap: 0.434 eV
+Transition (v -> c):
+  (s=0, k=63, n=26, [0.50, 0.50, 0.50]) -> (s=0, k=15, n=27, [0.00, 0.50, 0.50])
+Direct/indirect transitions are different
+Direct gap: 0.535 eV
+Transition at: (s=0, k=15, n=26, [0.00, 0.50, 0.50])
+# Writing to /home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/FAPbI3/06_r2scan/pbe_scf.gpw (mode='')
+

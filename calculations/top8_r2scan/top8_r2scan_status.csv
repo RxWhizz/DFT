@@ -91,3 +91,5 @@ timestamp,phase,status,exit_code,log_file
 2026-05-22T13:21:09-07:00,CsSnI3,failed,137,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/logs/r2scan_CsSnI3_20260522_125735.log
 2026-05-22T14:09:53-07:00,CsSnI3,failed,137,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/logs/r2scan_CsSnI3_20260522_132134.log
 2026-05-22T15:04:21-07:00,CsSnI3,failed,137,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/logs/r2scan_CsSnI3_20260522_140957.log
+2026-05-23T22:57:19-07:00,CsSnI3,failed,42,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/logs/r2scan_CsSnI3_20260523_225705.log
+2026-05-24T00:22:57-07:00,CsSnI3,failed,1,/home/luis-ochoa/Documents/Vscode/py/dft/calculations/top8_r2scan/logs/r2scan_CsSnI3_20260523_225914.log

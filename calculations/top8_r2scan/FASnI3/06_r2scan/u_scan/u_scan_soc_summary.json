@@ -1,0 +1,38 @@
+{
+  "U2.00": {
+    "u_ev": 2.0,
+    "gap_r2scan_eV": 0.6793,
+    "gap_soc_eV": 0.5018,
+    "delta_soc_eV": -0.1775,
+    "vbm_rel_ef": -0.0773,
+    "cbm_rel_ef": 0.4245,
+    "in_target_range": false
+  },
+  "U2.25": {
+    "u_ev": 2.25,
+    "gap_r2scan_eV": 0.8109,
+    "gap_soc_eV": 0.6039,
+    "delta_soc_eV": -0.207,
+    "vbm_rel_ef": -0.1677,
+    "cbm_rel_ef": 0.4363,
+    "in_target_range": false
+  },
+  "U2.50": {
+    "u_ev": 2.5,
+    "gap_r2scan_eV": 0.9745,
+    "gap_soc_eV": 0.7188,
+    "delta_soc_eV": -0.2557,
+    "vbm_rel_ef": -0.2725,
+    "cbm_rel_ef": 0.4463,
+    "in_target_range": false
+  },
+  "U2.75": {
+    "u_ev": 2.75,
+    "gap_r2scan_eV": 1.0962,
+    "gap_soc_eV": 0.8228,
+    "delta_soc_eV": -0.2734,
+    "vbm_rel_ef": -0.3693,
+    "cbm_rel_ef": 0.4535,
+    "in_target_range": false
+  }
+}

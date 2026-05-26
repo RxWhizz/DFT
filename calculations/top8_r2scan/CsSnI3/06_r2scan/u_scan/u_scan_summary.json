@@ -1,0 +1,34 @@
+{
+  "U2.00": {
+    "u_ev": 2.0,
+    "energy_eV": -91.550228,
+    "gap_eV": 1.4127,
+    "transition": "(21\u219222)  [0.5, 0.5, 0.5]\u2192[0.5, 0.5, 0.5]  [direct]",
+    "n_iters": 16,
+    "converged": true
+  },
+  "U2.25": {
+    "u_ev": 2.25,
+    "energy_eV": -91.672644,
+    "gap_eV": 1.6178,
+    "transition": "(21\u219222)  [0.5, 0.5, 0.5]\u2192[0.5, 0.5, 0.5]  [direct]",
+    "n_iters": 18,
+    "converged": true
+  },
+  "U2.50": {
+    "u_ev": 2.5,
+    "energy_eV": -91.829021,
+    "gap_eV": 1.8723,
+    "transition": "(21\u219222)  [0.5, 0.5, 0.5]\u2192[0.5, 0.5, 0.5]  [direct]",
+    "n_iters": 19,
+    "converged": true
+  },
+  "U2.75": {
+    "u_ev": 2.75,
+    "energy_eV": -92.038946,
+    "gap_eV": 2.19,
+    "transition": "(21\u219222)  [0.5, 0.5, 0.5]\u2192[0.5, 0.5, 0.5]  [direct]",
+    "n_iters": 19,
+    "converged": true
+  }
+}

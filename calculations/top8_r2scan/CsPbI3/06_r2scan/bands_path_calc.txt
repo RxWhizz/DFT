@@ -1,0 +1,125 @@
+
+Diagonalizing LCAO Hamiltonian
+Converting LCAO to pw mode
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 333
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:29:16 |             |       |       |
+|iter:   2| 15:29:45 |             | -2.31 |       |
+|iter:   3| 15:30:13 |             | -3.98 |       |
+|iter:   4| 15:30:40 |             | -4.98 |       |
+|iter:   5| 15:31:08 |             | -6.25c|       |
+SCF steps: 5
+  __  _  _
+ | _ |_)|_||  |
+ |__||  | ||/\| - 25.7.1b1
+
+User:   luis-ochoa@luis-pc
+Date:   Tue May 26 15:31:08 2026
+Arch:   x86_64
+Pid:    20414
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
+units:  Angstrom and eV
+cores:  1
+OpenMP: False
+
+Versions:
+  Python: 3.12.3
+  ASE:    3.28.0
+  Numpy:  2.4.4
+  Scipy:  1.17.1
+  Libxc:  7.0.0
+
+Paths:
+  gpaw:  /tmp/gpaw_master/gpaw
+  _gpaw: /tmp/gpaw_master/_gpaw.cpython-312-x86_64-linux-gnu.so
+  ase:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/ase
+  numpy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/numpy
+  scipy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/scipy
+
+Git-hashes:
+  gpaw:  31a98aa8a7
+  _gpaw: 31a98aa8a7
+
+OMP_NUM_THREADS: 4
+
+
+Environment variables:
+  GPAW_CPUPY:          False
+  GPAW_DEBUG:          False
+  GPAW_INITIALIZE_MPI: False
+  GPAW_MPI_BACKEND:    serial
+  GPAW_NO_C_EXTENSION: False
+  GPAW_NO_GPU_MPI:     False
+  GPAW_TRACE:          False
+  GPAW_USE_GPUS:       False
+
+Input parameters:
+  mode=PW(ecut=450.00000000000006),
+  convergence={'eigenstates': 1e-05},
+  eigensolver=Davidson(niter=3),
+  gpts=array([32, 32, 32]),
+  kpts=BandPath(path='GXMGRX,MR', npoints=80),
+  nbands=26,
+  occupations=Occupations(name='fermi-dirac', width=0.1),
+  parallel={},
+  symmetry=Symmetry(point_group=False, time_reversal=False),
+  xc=XC(name='PBE')
+Initialization done in: 0.000 s
+
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 333
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:31:36 |             | -7.00c|       |
+
+Converged in 1 steps
+SCF loop duration: 27.719 s (27.719 s/step)
+Energy contributions relative to reference atoms: (reference = -1359696.926849)
+
+Energy contributions:
+  Kinetic:          31.830628
+  Coulomb:         -31.169446
+  Zero:             -0.106389
+  External:          0.000000
+  Xc:              -14.061310
+  Entropy:          -0.000539
+  Spinorbit:         0.000000
+  ----------------------------
+  Free energy:     -13.507057
+  Extrapolated:    -13.506788
+
+dipole moment: (-88.277516, -88.277516, -88.277516)  # |e|*Ang
+
+
+Fermi level: 3.059
+Eigenvalues  # (at kpt = [0.000, 0.000, 0.000])
+| band index |      eig [eV] | occ [0-2] |
+|------------|---------------|-----------|
+|          0 |       -19.026 |     2.000 |
+|        ... |               |           |
+|         14 |        -1.247 |     2.000 |
+|         15 |        -1.247 |     2.000 |
+|         16 |         1.023 |     2.000 |
+|         17 |         1.023 |     2.000 |
+|         18 |         1.023 |     2.000 |
+|         19 |         1.154 |     2.000 |
+|         20 |         1.154 |     2.000 |
+|         21 |         1.154 |     2.000 |
+|         22 |         5.463 |     0.000 |
+|         23 |         8.095 |     0.000 |
+|         24 |         8.095 |     0.000 |
+|         25 |         8.095 |     0.000 |
+
+
+Gap: 1.289 eV
+Transition (v -> c):
+  (s=0, k=52, n=21, [0.50, 0.50, 0.50]) -> (s=0, k=52, n=22, [0.50, 0.50, 0.50])
+No difference between direct/indirect transitions

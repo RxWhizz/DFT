@@ -13,5 +13,13 @@
     0.49999999999999994,
     0.49999999999999994
   ],
-  "functional": "r2SCAN"
+  "functional": "r2SCAN",
+  "scissor_correction": {
+    "gap_pbe_eV": 1.2879,
+    "gap_scissor_eV": 1.7879,
+    "scissor_eV": 0.5,
+    "base": "PBE",
+    "method": "literatura G0W0@PBE para perovskitas haluro de Pb (Liu et al. 2015; Filip & Giustino 2014)",
+    "note": "G0W0 ejecutado 2026-05-26, interrumpido por apagón durante la fase de auto-energía Sigma tras ~15 h de chi0; sin checkpoint recuperable; scissor como proxy"
+  }
 }

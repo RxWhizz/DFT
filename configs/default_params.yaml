@@ -26,6 +26,15 @@ dos:
   - 12
   npts: 2000
   width: 0.05
+g0w0:
+  ecut_dft: 600
+  ecut_gw: 100
+  nbands_gw: 600
+  ppa_natoms_threshold: 6
+  kpts:
+  - 6
+  - 6
+  - 6
 hse06:
   convergence:
     density: 0.0001
@@ -116,22 +125,23 @@ phonons:
 r2scan:
   convergence:
     density: 0.0001
-    eigenstates: 1.0e-08
-    energy: 1.0e-06
+    eigenstates: 1.0e-06
+    energy: 1.0e-05
   ecut: 450
   kpts:
   - 6
   - 6
   - 6
+  maxiter: 2000
   mixer:
     backend: msr1
-    beta: 0.02
-    nmaxold: 5
+    beta: 0.002
+    nmaxold: 15
     weight: 100
   mode: PW
   occupations:
     name: fermi-dirac
-    width: 0.25
+    width: 0.2
   xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN
 relax:
   convergence:

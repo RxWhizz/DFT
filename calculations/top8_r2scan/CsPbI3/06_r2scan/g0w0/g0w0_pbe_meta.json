@@ -1,0 +1,9 @@
+{
+  "mat": "CsPbI3",
+  "n_occ": 22,
+  "nbands_gw": 600,
+  "ef_eV": 3.562164,
+  "gap_pbe_eV": 1.288,
+  "ecut_eV": 600.0,
+  "seed": "calculations/top8_r2scan/CsPbI3/01_relax/relax.gpw"
+}

@@ -284,19 +284,22 @@ class GPAWCalculatorFactory:
         else:
             mixer = {k: v for k, v in mixer_cfg.items()}
 
-        return {
+        params = {
             "mode": PW(p.get("ecut", 450)),
             "xc": p.get("xc", "MGGA_X_R2SCAN+MGGA_C_R2SCAN"),
             "kpts": {"size": p.get("kpts", [6, 6, 6]), "gamma": True},
             "convergence": {
-                "energy": conv.get("energy", 1e-6),
-                "eigenstates": conv.get("eigenstates", 1e-8),
+                "energy": conv.get("energy", 1e-5),
+                "eigenstates": conv.get("eigenstates", 1e-6),
                 "density": conv.get("density", 1e-4),
             },
             "occupations": {
                 "name": occ.get("name", "fermi-dirac"),
                 "width": occ.get("width", 0.05),
             },
-            "eigensolver": Davidson(niter=4),
+            "eigensolver": Davidson(niter=3),
             "mixer": mixer,
         }
+        if p.get("maxiter") is not None:
+            params["maxiter"] = int(p["maxiter"])
+        return params

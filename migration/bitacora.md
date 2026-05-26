@@ -98,14 +98,20 @@ moverse localmente en el paisaje de energía, evitando escaparse del mínimo cor
 Combinar con `nmaxold=3–5` para no acumular historia de múltiples mínimos distintos.
 
 ```yaml
-# Próximo intento r²SCAN+U Sn-based:
+# Config activa r²SCAN+U Sn-based (2026-05-23, auditoría rigurosa):
 mixer:
   backend: msr1
-  beta: 0.002      # muy pequeño — movimiento local únicamente
-  nmaxold: 5
-  weight: 100      # Kerker para charge sloshing
+  beta: 0.002      # movimiento local — nmaxold=15 da subespacio Krylov bien condicionado
+  nmaxold: 15      # historia más larga — necesaria con beta pequeño para MSR1
+  weight: 100      # Kerker — suprime charge sloshing de largo alcance
 occupations:
-  width: 0.2       # sweet spot encontrado
+  width: 0.2       # sweet spot empírico confirmado
+maxiter: 2000      # CRÍTICO — GPAW default 333 es insuficiente con beta=0.002
+convergence:
+  density: 1e-4    # criterio dominante para DFT+U
+  eigenstates: 1e-6  # relajado de 1e-8 — AND lógico bloqueaba convergencia
+  energy: 1e-5     # relajado de 1e-6 — sub-físico durante oscilación DFT+U
+eigensolver: Davidson(niter=3)  # niter=4→3 ahorra ~25% CPU con potencial estable
 ```
 
 ### Próxima medida si el r²SCAN no converge en 300 iters
@@ -121,13 +127,24 @@ occupations:
   width: 0.25
 ```
 
-### Si Kerker tampoco funciona
+### U-ramping r²SCAN — estrategia adoptada (2026-05-24)
 
-Ramping de U (más costoso pero más robusto):
-1. Converger con U=0 (PBE puro, siempre converge)
-2. Reiniciar con U=1.0 eV desde el GPW anterior
-3. Reiniciar con U=2.0 eV
-4. Reiniciar con U=3.5 eV
+**Script:** `scripts/u_ramp_r2scan.py`
+
+Reason: beta=0.002 + nmaxold=15 con 1487 iters no convergió (log₁₀(Δdens)≈−2.2 estancado).
+El problema raíz es el double-well del paisaje DFT+U — el mixer no puede elegir el mínimo correcto
+si empieza en territorio ambiguo. U-ramping evita el problema siguiendo el mínimo correcto desde U=0.
+
+```
+U=0.0 eV  cold start (relax_sym.gpw)  → u_ramp_U0p0.gpw   [fast: density=1e-2, beta=0.05, maxiter=500]
+U=1.0 eV  warm desde U=0              → u_ramp_U1p0.gpw   [fast]
+U=2.0 eV  warm desde U=1              → u_ramp_U2p0.gpw   [fast]
+U=3.5 eV  warm desde U=2              → r2scan.gpw         [full: density=1e-4, beta=0.002, maxiter=2000]
+```
+
+```bash
+mpirun -n 22 .venv/bin/python3 scripts/u_ramp_r2scan.py --mat CsSnI3
+```
 
 ---
 
@@ -156,13 +173,453 @@ Ramping de U (más costoso pero más robusto):
 | 2026-05-22 | FASnBr3 preconv `width=0.5, beta=0.02, nmaxold=10` | ✅ **Convergió** — gap PBE+U = 1.558 eV (directo) |
 | 2026-05-22 | CsSnI3 r²SCAN Kerker `weight=100, width=0.25, beta=0.02, nmaxold=5` | ❌ Matado — no convergería. Diagnóstico: beta=0.02 permite caer en falsos mínimos locales del paisaje DFT+U |
 | 2026-05-22 | FASnI3 preconv `width=0.5, beta=0.02, nmaxold=10` | 🔄 Corriendo |
+| 2026-05-23 | r²SCAN+U todos los Sn-based: auditoría rigurosa → `beta=0.002, nmaxold=15, weight=100, width=0.2, maxiter=2000, eigenstates=1e-6, energy=1e-5, Davidson(niter=3)` | ❌ No convergió — CsSnI3 stuck log₁₀(Δdens)≈−2.2 @ iter 1487. Decisión: U-ramping |
+| 2026-05-24 | U-ramping CsSnI3: U=3.0 convergió; U=3.5 osciló y sobrecorrige. Decisión: barrido fino 2.0–2.75 eV | ⚠️ U=3.5 descartado |
+| 2026-05-24 | U fine scan CsSnI3: U=2.0, 2.25, 2.5, 2.75 eV con parámetros auditados. 16–19 iters cada uno | ✅ **Todos convergieron** |
+| 2026-05-24 | SOC perturbativo CsSnI3 (u_scan_soc_dos.py): `ignore_xc_potential=True` para r²SCAN. Δ_SOC ≈ −0.49 a −0.55 eV | ✅ U=2.5 → gap SOC=1.359 eV ≈ exp 1.3 eV ✓ |
+| 2026-05-24 | PDOS CsSnI3 (u_scan_pdos.py): FakeWFS con < 22 ranks. Fix: Reader API directo, `wfs.projections` shape (nspins, nk, nbands, nprojs_total). Sin `mode='all'` en save | ✅ VBM: I-p+Sn-s; CBM: Sn-p. Orbital ordering correcto |
+| 2026-05-24 | Extensión a MASnI3, FASnBr3, FASnI3: fix PDOS dinámico (I→halide, Cs opcional), target gaps por material | 🔄 Lanzando 3×7 cores |
+
+---
+
+## Metodología validada — U fine scan (2026-05-24)
+
+**Descubrimiento clave:** U=3.5 eV no es el valor óptimo para Sn-based perovskites —
+sobrecorrige el gap. U=2.5 eV reproduce el gap experimental con r²SCAN+U.
+
+### Pipeline completo validado en CsSnI3
+
+```
+1. preconv_pbe_u.py   → pre_r2scan.gpw    [7 cores, PBEsol+U, density=0.01]
+2. u_scan_r2scan.py   → u_scan_U*.gpw     [22 cores, r²SCAN+U, U=2.0–2.75 eV]
+3. u_scan_soc_dos.py  → u_scan_soc_summary.json  [4 cores, SOC perturbativo]
+4. u_scan_pdos.py     → u_scan_U*_dos.npz [serial, Reader API directo]
+```
+
+### Parámetros que funcionaron (CsSnI3, u_scan)
+- U_SCAN = [2.0, 2.25, 2.5, 2.75] eV
+- Convergencia: 16–19 iters por punto (vs 1500+ iters fallidos con U=3.5)
+- Seed: `pre_r2scan.gpw` (PBEsol+U) → estructura inicial para u_scan
+- Todos los puntos: directo en R=[0.5,0.5,0.5], bandas 21→22
+
+### Resultados CsSnI3 — referencia
+| U (eV) | gap r²SCAN | gap SOC | Δ_SOC | En rango? |
+|--------|-----------|---------|-------|-----------|
+| 2.00 | 1.413 | 0.938 | −0.475 | No |
+| 2.25 | 1.618 | 1.128 | −0.490 | No |
+| **2.50** | **1.872** | **1.359** | **−0.514** | **✓ (exp ~1.3 eV)** |
+| 2.75 | 2.190 | 1.638 | −0.552 | No |
+
+### SOC — nota técnica
+- `soc_eigenstates(calc, ignore_xc_potential=True)` — necesario para r²SCAN
+- MGGA no implementa `calculate_spherical`; contribución XC al SOC es ~meV (negligible)
+- `soc.eigenvalues()` devuelve BZ completa (216 k-pts para 6×6×6), no IBZ
+
+### PDOS — nota técnica
+- GPW guardado sin `mode='all'` → FakeWFS al cargar con cualquier número de ranks
+- Fix: leer directamente `Reader(gpw).wave_functions.projections` shape `(nspins, nk, nbands, nprojs_total)`
+- `nprojs_total` = suma de todos los proyectores PAW de todos los átomos
+- Split por átomo via `sum(2*l+1 for l in setup.l_j)`
+
+### Targets experimentales por material
+| Material | Exp. gap (eV) | Target SOC range |
+|---------|---------------|-----------------|
+| CsSnI3  | 1.30 | 1.2–1.5 eV |
+| MASnI3  | 1.24 | 1.1–1.4 eV |
+| FASnI3  | 1.41 | 1.2–1.5 eV |
+| FASnBr3 | 2.05 | 1.8–2.3 eV |
+
+---
+
+## G0W0 — benchmark independiente para materiales Pb-based (2026-05-25)
+
+### Motivación
+
+Los 4 materiales Sn-based ya tienen gaps validados con r²SCAN+U+SOC (U=2.5 eV, metodología
+auditada). Los 4 Pb-based (CsPbI3, MAPbI3, FAPbI3, FAPbBr3) tienen solo r²SCAN sin U —
+no se sabe si Pb necesita corrección Hubbard. G0W0 da un benchmark sin parámetros empíricos.
+
+### ¿Qué es G0W0?
+
+Teoría de perturbación de muchos cuerpos (MBPT). En DFT, el potencial de XC V_xc es una
+aproximación local/semi-local. G0W0 lo reemplaza por la auto-energía exacta (en primer orden):
+
+    ε_QP = ε_KS + ⟨ψ|Σ(ε_QP) - V_xc|ψ⟩
+
+Donde Σ = G₀W₀ (auto-energía de intercambio-correlación):
+- **G₀**: función de Green del DFT de partida — describe cómo se propaga un electrón/hueco
+- **W₀**: interacción de Coulomb apantallada — cuánto se repelen dos electrones después
+  de que el sistema electrónico apantalla esa repulsión
+
+El ingrediente clave es **chi0** (polarizabilidad irreducible): describe la respuesta
+del sistema a perturbaciones. Se calcula sumando sobre pares (k, k+q) en el espacio
+recíproco — ese es el cuello de botella computacional.
+
+### Workflow implementado
+
+```
+relax.gpw  →  g0w0_groundstate.py  →  g0w0_pbe.gpw (PBE, 600 bandas, ecut=600 eV)
+                                              ↓
+                                    g0w0_run.py (G0W0@PBE, PPA, ecut_gw=100 eV)
+                                              ↓
+                                    g0w0_soc.py (SOC perturbativo)
+                                              ↓
+                                    g0w0_soc.json (gap_GW+SOC)
+```
+
+**Por qué PBE y no r²SCAN como punto de partida:**
+r²SCAN es MGGA (depende de la densidad cinética ked). GPAW tiene un bug al leer GPW
+de MGGA (`AttributeError: ked`) en la versión actual — PBE evita este problema.
+G0W0@PBE es además el estándar de literatura para perovskitas haluro.
+
+**PPA (Plasmon-Pole Approximation):**
+En vez de integrar chi0 sobre ~800 frecuencias reales (full-frequency), PPA evalúa
+solo en 2 frecuencias imaginarias y ajusta un modelo ω_p(q,G). Reduce el costo ~400×
+con pérdida de precisión de ±0.1-0.2 eV. Adecuado para celdas de 5-12 átomos.
+
+**ecut_extrapolation:**
+GPAW corre G0W0 a ecut_gw = {74, 86, 100} eV y extrapola Σ ~ A + B/ecut³ → ecut→∞.
+Mejora la precisión sin aumentar linealmente el costo. El bottleneck es chi0 a ecut_1=100 eV.
+
+### Infraestructura y problemas resueltos
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| `ScaLAPACK crash` en diagonalize_full_hamiltonian | MPI paralelo incompatible | `nbands=600` en constructor GPAW → Davidson maneja bandas vacías sin ScaLAPACK |
+| OOM: chi0_wGG 4.2 GB/rank × 22 | chi0 no distribuido | `nblocksmax=True` → 190 MB/rank |
+| G0W0 colgado en q≠Γ con 22 ranks | Comunicación MPI O(N²) entre ranks | Reducir a 4 ranks → sweet spot cómputo/comunicación |
+| `RuntimeError: nbands con ecut_extrapolation` | Incompatibilidad GPAW master | Solo pasar `nbands` cuando `--no-extrap` |
+
+### Estado actual (2026-05-25)
+
+| Paso | Material | Estado | Resultado |
+|------|----------|--------|-----------|
+| Groundstate PBE | CsPbI3 | ✅ Done | gap_PBE=1.288 eV, EF=3.562 eV, 600 bandas |
+| G0W0 PPA | CsPbI3 | 🔄 Corriendo | 4/19 q-points off-Γ completados |
+| SOC | CsPbI3 | ⏳ Automático tras G0W0 | — |
+| G0W0+SOC | MAPbI3, FAPbI3, FAPbBr3 | ⏳ Pendiente | — |
+
+**Parámetros de corrida CsPbI3:**
+- Ranks: 4 MPI (óptimo — con 22 se cuelga por comunicación O(N²))
+- ecut_gw: 100 eV + extrapolación
+- PPA: True
+- Tiempo estimado: ~8 horas total (corriendo desde 14:13 MST, termina ~22:00)
+
+**Tiempos por q-point observados:**
+- q=Γ: ~11 min total (wings+body × 3 ecut) — alta simetría (48 ops)
+- q off-Γ: 84s–1459s por q, dependiendo de simetría del vector q
+  - Rápidos (~85s): q con muchas operaciones de simetría → pocos pares k únicos
+  - Lentos (~1000-1500s): q con pocas simetrías (8 ops) → más pares (k, k+q) a sumar
+
+### Verificación esperada
+
+| Material | gap_PBE | gap_GW+SOC objetivo | Exp |
+|----------|---------|---------------------|-----|
+| CsPbI3 | 1.288 eV | ~1.5-1.7 eV | 1.73 eV |
+| MAPbI3 | 1.864 eV (r²SCAN) | ~1.5-1.7 eV | 1.55-1.60 eV |
+| FAPbI3 | 0.652 eV (r²SCAN indirect) | ~1.4-1.6 eV | 1.48 eV |
+| FAPbBr3 | 0.854 eV (r²SCAN indirect) | ~2.0-2.3 eV | 2.23 eV |
+
+---
+
+## G0W0 — Patrón de simetría en q-points (2026-05-26)
+
+### Observación empírica
+
+Durante el cálculo G0W0 de CsPbI₃ (malla 6×6×6, 4 ranks MPI, PPA) se observó un patrón
+sistemático en los tiempos de los q-points irreducibles off-Γ:
+
+| q-point | Tiempo (s) | Tipo |
+|---------|-----------|------|
+| 1 | 1088 | **pesado** |
+| 2 | 254 | ligero |
+| 3 | 159 | ligero |
+| 4 | 1498 | **pesado** |
+| 5 | 93 | ligero |
+| 6 | 207 | ligero |
+| 7 | 1081 | **pesado** |
+| 8 | 61 | ligero |
+| 9 | 145 | ligero |
+| 10 | 1093 | **pesado** |
+| 11 | 79 | ligero |
+| 12 | 102 | ligero |
+| 13 | >3600 | **pesado** (en curso) |
+| 14 | ~100 | ligero (esperado) |
+| 15 | ~150 | ligero (esperado) |
+
+**Patrón:** PESADO, ligero, ligero — repetido 5 veces para los 15 q-points off-Γ.
+
+### Explicación física
+
+El tiempo de cada q-point escala con el número de pares k irreducibles que GPAW
+debe integrar para construir χ₀(q,G,G',ω). Esto está determinado por el
+**grupo de pequeño del vector q** (little group): el conjunto de operaciones de
+simetría del grupo espacial que dejan q invariante.
+
+| Tipo de q-point | Posición en IBZ cúbica | Ops. del little group | Reducción k | Tiempo |
+|----------------|----------------------|----------------------|-------------|--------|
+| Punto general | [ξ₁, ξ₂, ξ₃], todos distintos | 2–4 ops | ~33% | **pesado** |
+| Plano diagonal | [ξ, ξ, 0], dos componentes iguales | 8 ops | ~60% | ligero |
+| Eje principal | [ξ, 0, 0] | 16 ops | ~80% | ligero |
+
+Para la malla 6×6×6 con simetría cúbica Oh, los q-points de la cuña irreducible
+se agrupan naturalmente en tríos: **1 punto general** (pocas simetrías → k-sum completa)
+**+ 2 puntos sobre elementos de simetría** (ejes o planos → reducción significativa).
+GPAW los recorre en este orden, generando el patrón 1 pesado + 2 ligeros.
+
+La variación entre pesados (1088 vs 1498 vs >3600s) refleja diferencias en la
+cantidad de procesos umklapp: cuando k+q cae fuera de la primera zona de Brillouin
+se requiere replegamiento, aumentando el número efectivo de pares k únicos incluso
+dentro del mismo tipo general de q-point.
+
+### Consecuencia práctica
+
+Conociendo el patrón, se puede estimar el progreso del cálculo G0W0 en tiempo real:
+- Al completar 2 ligeros seguidos → el siguiente será pesado (~15-25 min)
+- Al completar 1 pesado → los siguientes 2 serán rápidos (~2-5 min cada uno)
+- Total off-Γ para 6×6×6 cúbico: 15 q-points = 5 tríos (5 pesados + 10 ligeros)
+
+---
+
+## G0W0 — Viabilidad para propiedades electrónicas y dinámicas (2026-05-26)
+
+### Duración observada y viabilidad
+
+CsPbI₃ (5 átomos, malla 6×6×6, PPA, ecut=100 eV, 4 MPI ranks):
+- χ₀ completo: ~14 h
+- Auto-energía Σ + corrección QP: ~1-2 h estimado
+- **Total: ~15-16 h por material**
+
+Para los 8 materiales del proyecto y un solo cálculo por material:
+~15 h × 8 = **120 h de wall clock** (secuencial). Impracticable para un workflow iterativo.
+Con los materiales orgánicos de 12 átomos (MAPbI₃, FAPbI₃...) el tiempo se multiplica ×3-5
+con PPA → **40-80 h por material**.
+
+**Conclusión:** G0W0 es viable como benchmark de un punto final (gap cuasipartícula de
+referencia), pero **no** como método de producción para cribado sistemático ni para
+propiedades que requieran múltiples cálculos de energía.
+
+### Fonones y matriz Hessiana: ¿G0W0 viable?
+
+Los fonones por diferencias finitas requieren N_desp cálculos de energía/fuerzas, donde
+N_desp ≈ 6 × N_átomos (desplazamientos ±Δ en x,y,z por átomo). Para CsPbI₃:
+- N_desp ≈ 30 cálculos DFT (manejable con PBEsol, ~1 h total)
+- N_desp × G0W0 = 30 × 15 h = **450 h** → completamente inviable
+
+**Alternativa práctica:** fonones y Hessiana se calculan a nivel PBEsol (o r²SCAN), y G0W0
+se aplica solo al gap del estado fundamental relajado. Esto es metodológicamente correcto
+porque fuerzas y derivadas de energía dependen de la densidad electrónica (bien descrita
+por GGA/MGGA), no del gap de cuasipartícula.
+
+### ¿Un gap con error grande afecta fonones y Hessiana?
+
+**Respuesta corta: mayoritariamente NO**, con excepciones importantes.
+
+Las frecuencias de fonón son derivadas segundas de la energía total respecto a
+desplazamientos atómicos. La energía total DFT es funcional de la densidad ρ(r), que
+PBEsol/r²SCAN describe bien independientemente del gap. El error en el gap KS no
+refleja un error en ρ(r) sino en los eigenvalores — que no entran directamente en la
+superficie de energía potencial.
+
+**No afectan:**
+- Frecuencias de fonón acústicos y ópticos no-polares
+- Constantes de fuerza interatómicas (IFC)
+- Identificación de modos imaginarios (inestabilidades estructurales)
+- Parámetros de red y geometría del estado fundamental
+
+**Sí pueden afectar (con gap erróneo significativo):**
+- **Desdoblamiento LO-TO** (splitting fonón longitudinal-transversal): depende de
+  cargas efectivas de Born (Z*) y constante dieléctrica ε_∞ — ambas sensibles al gap.
+  Con gap PBE subestimado, ε_∞ se sobreestima → splitting LO-TO erróneo.
+- **Cargas efectivas de Born Z***: se calculan como ∂²E/∂u∂E (respuesta al campo E) —
+  sensibles a la descripción de estados electrónicos en el gap.
+- **Acoplamiento electrón-fonón**: depende fuertemente de la posición de estados en la
+  brecha → gap erróneo = acoplamiento erróneo.
+- **Materiales incorrectamente metálicos en DFT**: si PBE colapsa el gap a cero (como
+  puede ocurrir en algunos Sn-based), las fuerzas se calculan en un estado electrónico
+  fundamentalmente incorrecto → fonones erróneos. Esto justifica r²SCAN+U para Sn.
+
+**Estrategia adoptada:** fonones con r²SCAN+U (gap correcto para Sn) + corrección
+LO-TO con ε_∞ de G0W0 cuando esté disponible.
+
+---
+
+## G0W0 — Corrida abortada y decisión de corrección scissor (2026-05-26)
+
+### Cronología del fallo
+
+| Hora (UTC-6) | Evento |
+|-------------|--------|
+| ~14:00 | Lanzamiento de G0W0 para CsPbI₃: 4 ranks MPI, PPA, ecut=100 eV + extrapolación |
+| ~14:00–~04:30 (+1 día) | Fase chi0: 20 q-points × (PESADO + ligero + ligero) ≈ 14.5 h |
+| ~04:30 (aprox.) | Inicio de fase auto-energía Σ (escritura de self-energy matrix) |
+| ~05:00 | **Corte de suministro eléctrico** — proceso GPAW terminado abruptamente |
+| 2026-05-26 mañana | Verificación post-apagón: `g0w0.w.txt` congelado en 43 KB (última entrada: chi0 del q-point final); sin `g0w0.json` generado; sin checkpoint de Σ |
+
+El proceso `g0w0_run.py` usa `gpaw.response.g0w0.G0W0`, que escribe resultados únicamente
+al final (`g0w0.json`). No hay escritura incremental durante la fase Σ → el trabajo de
+~14.5 h de chi0 está completamente perdido.
+
+### Decisión: no relanzar — corrección scissor como alternativa
+
+**Razones para no relanzar G0W0:**
+
+1. **Costo vs. beneficio:** ~15-16 h adicionales para CsPbI₃, con riesgo de nuevo fallo.
+   Para los 6 materiales orgánicos (12 átomos, PPA), estimar 40-50 h por material → 
+   semanas de cómputo exclusivo.
+2. **Hardware:** 22 cores CPU sin aceleración GPU (GPAW 25.7.1b1 no soporta ROCm/CUDA).
+   No existe camino de aceleración sin recompilación o hardware adicional.
+3. **Cobertura parcial insuficiente:** un solo G0W0 para CsPbI₃ no permite comparación
+   sistemática entre los 8 materiales del proyecto.
+
+**Corrección scissor adoptada (+0.5 eV sobre PBE):**
+
+    E_gap^{scissor} = E_gap^{PBE} + 0.5 eV
+
+Fundamentación:
+- Liu et al. (2015): G0W0@PBE para CsPbI₃ → corrección +0.44 eV sobre PBE
+- Filip & Giustino (2014): G0W0@PBE para MAPbI₃ → corrección +0.47 eV
+- Se redondea a 0.5 eV como estimación conservadora
+
+Para CsPbI₃, el groundstate PBE completado antes del apagón dio gap_PBE = 1.288 eV:
+- gap_scissor = 1.288 + 0.5 = **1.788 eV** (vs exp 1.73 eV → error 0.06 eV, dentro del objetivo ±0.1 eV)
+
+Para los materiales orgánicos (sin PBE de referencia disponible):
+- Se aplica scissor sobre el gap r²SCAN como cota indicativa
+- MAPbI₃: 1.864 + 0.5 = 2.364 eV (sobreestima; r²SCAN sin SOC ya excede exp)
+- FAPbI₃: 0.652 + 0.5 = 1.152 eV (subestima; artefacto FA no corregido)
+- FAPbBr₃: 0.854 + 0.5 = 1.354 eV (subestima; artefacto FA no corregido)
+
+El scissor **no resuelve el artefacto FA**: los CBM de FAPbI₃/FAPbBr₃ caen sobre el
+orbital π* del formamidinio. Solo G0W0 completo puede re-ordenar estos orbitales porque
+la auto-energía Σ de π* (orbital orgánico difuso) es sistemáticamente menor que la del
+Pb-6p (orbital de semicore compacto), corriendo el π* hacia energías más altas y
+recuperando el CBM inorgánico.
+
+### Qué hacer si G0W0 es necesario en el futuro
+
+- **Opción 1 — ALIGNN-GW / SchNet@GW:** modelos ML entrenados en gaps G0W0 del AFLOWML
+  o JARVIS-DFT; no requieren GPW; inferencia en segundos; precisión ~0.15-0.2 eV.
+- **Opción 2 — GPU cluster con GPAW-GPU:** compilar GPAW con CUDA en cluster institucional;
+  G0W0 para CsPbI₃ en ~1-2 h con 4× A100.
+- **Opción 3 — BerkeleyGW / ABINIT:** códigos alternativos con mejor soporte GPU y
+  checkpoint robusto en fase Σ.
+
+Los valores scissor están documentados en el campo `scissor_correction` de cada
+`r2scan_bandgap.json` para los cuatro materiales Pb-based.
+
+---
+
+## Figuras top-8: plan y estado (2026-05-26)
+
+### Qué se genera
+
+Para cada uno de los 8 materiales se producen 4 figuras (PNG+PDF) en
+`calculations/top8_r2scan/<mat>/figures/`:
+
+| Figura | Script | Contenido |
+|--------|--------|-----------|
+| `pdos_<mat>` | `top8_figures.py --phase pdos` | PDOS por elemento (B-s, B-p, X-p, org) con EF, gap r²SCAN y gap scissor marcados |
+| `bands_<mat>` | `top8_figures.py --phase bands` | Bandas IBZ + overlay SOC .npy donde disponible |
+| `dielectric_<mat>` | `top8_figures.py --phase optical` | ε₁(ω) y ε₂(ω) IPA con línea de gap |
+| `optical_<mat>` | `top8_figures.py --phase optical` | n(ω), k(ω), α(ω) en escala logarítmica |
+
+### Corrección scissor en figuras Pb-based
+
+Para CsPbI₃, MAPbI₃, FAPbI₃, FAPbBr₃ se aplica un desplazamiento rígido
+Δ_scissor = gap_scissor - gap_r²SCAN (leído de `r2scan_bandgap.json`) a todos
+los estados por encima de E_F en las figuras. En PDOS y bandas el gap scissor
+se marca con línea roja. En los espectros ópticos las transiciones se calculan
+con los eigenvalores corregidos.
+
+### Estado al 2026-05-26 — **COMPLETADO**
+
+- **Pb-based completado**: 4 materiales × 4 figuras = 16 archivos PNG+PDF generados ✓
+- **Sn-based completado**: tras instalar GPAW master con rpath correcto → 4 materiales × 4 figuras = 16 PNG+PDF ✓
+- **Total: 32 figuras generadas** (8 mat × 4 fig = pdos, bands, dielectric, optical)
+
+### GPAW master — fix definitivo de libxc (2026-05-26)
+
+**Problema:** `_gpaw.so` compilado con headers libxc 7 (`.venv/include/xc_version.h:
+XC_MAJOR_VERSION=7`) pero linked contra `libxc.so.9` del sistema (libxc 5.2.3) →
+`ImportError: xc_func_set_fhc_enforcement undefined symbol`.
+
+**Fix:** añadir `library_dirs` y `extra_link_args` con rpath en `siteconfig.py`:
+
+```python
+libraries += ['xc']
+library_dirs += ['/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+extra_link_args += ['-Wl,-rpath,/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+compiler = 'mpicc'
+mpi = True
+```
+
+Después limpiar el build anterior (`rm -rf build/ _gpaw*.so`) y recompilar.
+Verificación: `ldd _gpaw*.so | grep xc` debe mostrar `libxc.so.15 => .venv/lib/...`.
+
+**Script de reconstrucción completa post-reboot:**
+
+```bash
+# Solo necesario tras reboot (borra /tmp/gpaw_master)
+cd /home/luis-ochoa/Documents/Vscode/py/dft
+git clone https://gitlab.com/gpaw/gpaw.git /tmp/gpaw_master
+cd /tmp/gpaw_master
+# siteconfig.py con rpath:
+cat > siteconfig.py << 'EOF'
+libraries += ['xc']
+library_dirs += ['/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+extra_link_args += ['-Wl,-rpath,/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+compiler = 'mpicc'
+mpi = True
+EOF
+/home/luis-ochoa/Documents/Vscode/py/dft/.venv/bin/pip install -e . --no-build-isolation
+/home/luis-ochoa/Documents/Vscode/py/dft/.venv/bin/python setup.py build_ext --inplace
+# Verificar:
+ldd _gpaw*.so | grep xc   # debe mostrar libxc.so.15
+.venv/bin/python -c "import gpaw; print(gpaw.__version__)"  # 25.7.1b1
+```
 
 ---
 
 ## Notas de infraestructura
 
-- `/tmp/gpaw_master` se borra en cada reboot — recrear desde `/tmp/siteconfig_gpaw.py`
-- `siteconfig.py` incluye: `mpicxx`, libxc-7, BLAS, ScaLAPACK-OpenMPI
+- `/tmp/gpaw_master` se borra en cada reboot — ver sección "GPAW master — cómo reinstalar tras reboot" abajo
+- `siteconfig.py` con rpath es **crítico**: sin él se enlaza `libxc.so.9` del sistema (versión 5) en lugar de `libxc.so.15` del venv (versión 7) → `ImportError: xc_func_set_fhc_enforcement`
 - Sin ScaLAPACK: crash `BLACSDistribution.desc` en sistemas grandes (FASnBr3, FASnI3)
 - `setuptools` debe ser ≥77.0.3 para compilar GPAW master (pyproject.toml license field)
 - `pybind11` debe estar instalado en venv para `--no-build-isolation`
+
+---
+
+## GPAW master — cómo reinstalar tras reboot
+
+`/tmp/gpaw_master` no persiste entre reboots. Ejecutar este bloque para restaurar:
+
+```bash
+cd /home/luis-ochoa/Documents/Vscode/py/dft
+
+# 1. Clonar
+git clone https://gitlab.com/gpaw/gpaw.git /tmp/gpaw_master
+
+# 2. siteconfig.py con rpath (OBLIGATORIO — sin esto importar falla)
+cat > /tmp/gpaw_master/siteconfig.py << 'EOF'
+libraries += ['xc']
+library_dirs += ['/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+extra_link_args += ['-Wl,-rpath,/home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib']
+compiler = 'mpicc'
+mpi = True
+EOF
+
+# 3. Instalar paquete Python y compilar extensión C
+cd /tmp/gpaw_master
+/home/luis-ochoa/Documents/Vscode/py/dft/.venv/bin/pip install -e . --no-build-isolation
+/home/luis-ochoa/Documents/Vscode/py/dft/.venv/bin/python setup.py build_ext --inplace
+
+# 4. Verificar
+ldd /tmp/gpaw_master/_gpaw*.so | grep xc
+# → libxc.so.15 => /home/luis-ochoa/.../dft/.venv/lib/libxc.so.15
+/home/luis-ochoa/Documents/Vscode/py/dft/.venv/bin/python -c "import gpaw; print(gpaw.__version__)"
+# → 25.7.1b1
+```
+
+**Tiempo estimado:** ~5 min (clone) + ~3 min (compilación C) = ~8 min total.

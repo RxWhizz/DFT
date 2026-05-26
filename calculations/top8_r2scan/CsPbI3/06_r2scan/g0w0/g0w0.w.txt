@@ -1,0 +1,1207 @@
+Using integrator: PointIntegrator
+FrequencyGridDescriptor(from 0.000+0.000j to 0.000+27.211j eV, 2 points)
+Nonperiodic BCs:  [False False False]
+Using integrator: PointIntegrator
+FrequencyGridDescriptor(from 0.000+0.000j to 0.000+27.211j eV, 2 points)
+Nonperiodic BCs:  [False False False]
+  ___  _ _ _
+ |   || | | |
+ | | || | | |
+ |__ ||_____|
+ |___|
+
+BZ k-points: Symmetries present (total): 48
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+216 k-points: 6 x 6 x 6 Monkhorst-Pack grid + [1/12,1/12,1/12]
+20 k-points in the irreducible part of the Brillouin zone
+       k-points in crystal coordinates                weights
+   0:     0.00000000    0.00000000    0.00000000          1/216
+   1:     0.16666667    0.00000000    0.00000000          6/216
+   2:     0.16666667    0.16666667    0.00000000         12/216
+   3:     0.16666667    0.16666667    0.16666667          8/216
+   4:     0.33333333    0.00000000    0.00000000          6/216
+   5:     0.33333333    0.16666667    0.00000000         24/216
+   6:     0.33333333    0.16666667    0.16666667         24/216
+   7:     0.33333333    0.33333333    0.00000000         12/216
+   8:     0.33333333    0.33333333    0.16666667         24/216
+   9:     0.33333333    0.33333333    0.33333333          8/216
+          ...
+  19:     0.50000000    0.50000000    0.50000000          1/216
+
+Distributing spins, k-points and bands (1 x 20 x 2) over 4 processes
+Number of blocks: 1
+
+Quasi particle states:
+k-points (IBZ indices): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+Band range: (21, 23)
+
+Computational parameters:
+Extrapolating to infinite plane wave cut-off using points at:
+  86.177 eV
+  92.448 eV
+  100.000 eV
+Number of bands: 566
+Coulomb cutoff: None
+Broadening: 0.1 eV
+
+fxc modes: GW
+Kernel: RPA
+Using Godby-Needs plasmon-pole approximation:
+  Fitting energy: i*E0, E0 = 1.000 Hartree
+Summing all q:
+
+Calculating screened Coulomb potential
+No Coulomb truncation
+FrequencyGridDescriptor(from 0.000+0.000j to 0.000+27.211j eV, 2 points)
+  memory estimate for chi0: local=21.03 MB, global=21.03 MB
+Removing empty qpoint cache files...
+
+Mon May 25 14:13:18 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [1.3877787807814457e-17, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 587
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 10.515411376953125 M / cpu
+        Memory usage before allocation: 648.734375 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function
+411.67168259620667s |----------------------------------------| Time: 404.954s
+Integrating chi0 head and wings.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function wings
+117.02696681022644s |----------------------------------------| Time: 115.637s
+151855.27908802032s |-
+Mon May 25 14:41:19 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [1.3877787807814457e-17, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 587
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 10.515411376953125 M / cpu
+        Memory usage before allocation: 1131.578125 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function
+27.387094497680664s |----------------------------------------| Time: 22.088s
+Integrating chi0 head and wings.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function wings
+16.02235198020935s |----------------------------------------| Time: 16.820s
+
+Mon May 25 15:02:20 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [1.3877787807814457e-17, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 587
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 10.515411376953125 M / cpu
+        Memory usage before allocation: 1227.77734375 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function
+69.2164421081543s |----------------------------------------| Time: 35.704s
+Integrating chi0 head and wings.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 48
+    Indirect symmetries (TUq -> q): 0
+In total 48 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0 -1  0)  ( 0 -1  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 1  0  0)  (-1  0  0)  ( 1  0  0)  (-1  0  0)
+
+  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)
+  (-1  0  0)  (-1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)  ( 1  0  0)  (-1  0  0)
+
+  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  ( 0 -1  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0 -1)  ( 0  0 -1)  (-1  0  0)  (-1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 1  0  0)  (-1  0  0)  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)  (-1  0  0)
+  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)  ( 0  0  1)  ( 0  0 -1)
+
+20 groups of equivalent kpoints. 90.74074074074075% reduction.
+
+Integral kind: response function wings
+20.97113013267517s |----------------------------------------| Time: 21.445s
+
+Mon May 25 15:27:22 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 558
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.5020751953125 M / cpu
+        Memory usage before allocation: 1344.99609375 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+1088.3445167541504s |----------------------------------------| Time: 1060.266s
+----------
+Mon May 25 16:06:53 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 558
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.5020751953125 M / cpu
+        Memory usage before allocation: 1344.99609375 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+254.58436846733093s |----------------------------------------| Time: 84.048s
+
+Mon May 25 16:33:26 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 558
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.5020751953125 M / cpu
+        Memory usage before allocation: 1344.99609375 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+159.4768989086151s |----------------------------------------| Time: 87.242s
+
+Mon May 25 17:07:58 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 553
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.332550048828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 4
+    Indirect symmetries (TUq -> q): 0
+In total 4 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0  1  0)  ( 0  1  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+84 groups of equivalent kpoints. 61.111111111111114% reduction.
+
+Integral kind: response function
+1498.3358087539673s |----------------------------------------| Time: 1459.417s
+------------
+Mon May 25 18:16:20 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 553
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.332550048828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 4
+    Indirect symmetries (TUq -> q): 0
+In total 4 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0  1  0)  ( 0  1  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+84 groups of equivalent kpoints. 61.111111111111114% reduction.
+
+Integral kind: response function
+93.22901630401611s |----------------------------------------| Time: 87.124s
+
+Mon May 25 19:08:34 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 553
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.332550048828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 4
+    Indirect symmetries (TUq -> q): 0
+In total 4 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0  1  0)  ( 0  1  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+84 groups of equivalent kpoints. 61.111111111111114% reduction.
+
+Integral kind: response function
+206.6520345211029s |----------------------------------------| Time: 121.335s
+
+Mon May 25 20:17:38 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 567
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.811065673828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 6
+    Indirect symmetries (TUq -> q): 0
+In total 6 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)  ( 1  0  0)
+
+56 groups of equivalent kpoints. 74.07407407407408% reduction.
+
+Integral kind: response function
+1080.8563303947449s |----------------------------------------| Time: 1027.164s
+
+Mon May 25 21:03:49 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 567
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.811065673828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 6
+    Indirect symmetries (TUq -> q): 0
+In total 6 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)  ( 1  0  0)
+
+56 groups of equivalent kpoints. 74.07407407407408% reduction.
+
+Integral kind: response function
+60.74690771102905s |----------------------------------------| Time: 60.069s
+
+Mon May 25 21:39:18 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.16666666666666669, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 567
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.811065673828125 M / cpu
+        Memory usage before allocation: 1348.3671875 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 6
+    Indirect symmetries (TUq -> q): 0
+In total 6 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)
+  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  1  0)  ( 0  0  1)  ( 1  0  0)  ( 0  1  0)  ( 1  0  0)
+
+56 groups of equivalent kpoints. 74.07407407407408% reduction.
+
+Integral kind: response function
+145.4056043624878s |----------------------------------------| Time: 79.237s
+
+Mon May 25 22:25:32 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 554
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.3663330078125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+1093.4586882591248s |----------------------------------------| Time: 1096.090s
+
+Mon May 25 23:05:38 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 554
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.3663330078125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+78.81597876548767s |----------------------------------------| Time: 60.390s
+
+Mon May 25 23:32:24 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 1.3877787807814457e-17, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 554
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.3663330078125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 8
+    Indirect symmetries (TUq -> q): 0
+In total 8 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)  ( 0  0  1)  ( 0  0  1)  ( 0  0 -1)  ( 0  0 -1)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  1  0)  ( 0 -1  0)  ( 0  1  0)  ( 0 -1  0)
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0 -1  0)  ( 0 -1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+60 groups of equivalent kpoints. 72.22222222222221% reduction.
+
+Integral kind: response function
+101.77141070365906s |----------------------------------------| Time: 79.668s
+
+Tue May 26 00:06:38 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+144 groups of equivalent kpoints. 33.333333333333336% reduction.
+
+Integral kind: response function
+2670.209352493286s |----------------------------------------| Time: 2654.394s
+-----------------| Time: 42572.729s
+
+Tue May 26 02:16:29 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+144 groups of equivalent kpoints. 33.333333333333336% reduction.
+
+Integral kind: response function
+199.51615619659424s |----------------------------------------| Time: 148.499s
+
+Tue May 26 03:57:49 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  1  0)
+  ( 0  0  1)  ( 0  0 -1)
+
+144 groups of equivalent kpoints. 33.333333333333336% reduction.
+
+Integral kind: response function
+585.8410720825195s |----------------------------------------| Time: 211.820s
+
+Tue May 26 06:14:29 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  0  1)
+  ( 0  0  1)  ( 0  1  0)
+
+126 groups of equivalent kpoints. 41.666666666666664% reduction.
+
+Integral kind: response function
+2442.400100708008s |----------------------------------------| Time: 2452.515s
+
+Tue May 26 08:20:48 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  0  1)
+  ( 0  0  1)  ( 0  1  0)
+
+126 groups of equivalent kpoints. 41.666666666666664% reduction.
+
+Integral kind: response function
+208.1939697265625s |----------------------------------------| Time: 129.184s
+
+Tue May 26 10:03:59 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.16666666666666669, 0.16666666666666669]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 562
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.6387939453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 2
+    Indirect symmetries (TUq -> q): 0
+In total 2 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)
+  ( 0  1  0)  ( 0  0  1)
+  ( 0  0  1)  ( 0  1  0)
+
+126 groups of equivalent kpoints. 41.666666666666664% reduction.
+
+Integral kind: response function
+317.4256057739258s |----------------------------------------| Time: 173.730s
+
+Tue May 26 12:21:54 2026
+Calculating chi0 body with:
+    Ground state adapter containing:
+    Number of spins: 1
+    Number of kpoints: 216
+    Number of irreducible kpoints: 20
+    Number of completely occupied states: 22
+    Number of partially occupied states: 22
+    Occupied states memory: 15.662109375 M / cpu
+
+    Linear response parametrization:
+    q_c: [0.3333333333333333, 0.3333333333333333, 1.3877787807814457e-17]
+    Number of frequency points: 2
+    Planewave cutoff: 100.0
+    Number of bands: 566
+    Number of planewaves: 571
+    Broadening (eta): 1e-06
+    comm.size: 4
+    kncomm.size: 4
+    blockcomm.size: 1
+
+    Memory estimate of potentially large arrays:
+        chi0_wGG: 9.949981689453125 M / cpu
+        Memory usage before allocation: 1351.75 M / cpu
+Integrating chi0 body.
+
+Symmetries of q_c:
+    Direct symmetries (Uq -> q): 4
+    Indirect symmetries (TUq -> q): 0
+In total 4 allowed symmetries.
+
+  ( 1  0  0)  ( 1  0  0)  ( 0  1  0)  ( 0  1  0)
+  ( 0  1  0)  ( 0  1  0)  ( 1  0  0)  ( 1  0  0)
+  ( 0  0  1)  ( 0  0 -1)  ( 0  0  1)  ( 0  0 -1)
+
+84 groups of equivalent kpoints. 61.111111111111114% reduction.
+
+Integral kind: response function
+1536.7864201068878s |-------------

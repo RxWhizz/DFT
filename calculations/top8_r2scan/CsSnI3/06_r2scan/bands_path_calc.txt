@@ -1,0 +1,130 @@
+
+Diagonalizing LCAO Hamiltonian
+Converting LCAO to pw mode
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 2000
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:36:29 |             |       |       |
+|iter:   2| 15:38:13 |             | -1.72 |       |
+|iter:   3| 15:39:59 |             | -2.50 |       |
+|iter:   4| 15:41:44 |             | -3.22 |       |
+|iter:   5| 15:43:30 |             | -3.83 |       |
+|iter:   6| 15:45:15 |             | -4.49 |       |
+|iter:   7| 15:47:02 |             | -5.05c|       |
+SCF steps: 7
+  __  _  _
+ | _ |_)|_||  |
+ |__||  | ||/\| - 25.7.1b1
+
+User:   luis-ochoa@luis-pc
+Date:   Tue May 26 15:47:02 2026
+Arch:   x86_64
+Pid:    21879
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
+units:  Angstrom and eV
+cores:  1
+OpenMP: False
+
+Versions:
+  Python: 3.12.3
+  ASE:    3.28.0
+  Numpy:  2.4.4
+  Scipy:  1.17.1
+  Libxc:  7.0.0
+
+Paths:
+  gpaw:  /tmp/gpaw_master/gpaw
+  _gpaw: /tmp/gpaw_master/_gpaw.cpython-312-x86_64-linux-gnu.so
+  ase:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/ase
+  numpy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/numpy
+  scipy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/scipy
+
+Git-hashes:
+  gpaw:  31a98aa8a7
+  _gpaw: 31a98aa8a7
+
+OMP_NUM_THREADS: 4
+
+
+Environment variables:
+  GPAW_CPUPY:          False
+  GPAW_DEBUG:          False
+  GPAW_INITIALIZE_MPI: False
+  GPAW_MPI_BACKEND:    serial
+  GPAW_NO_C_EXTENSION: False
+  GPAW_NO_GPU_MPI:     False
+  GPAW_TRACE:          False
+  GPAW_USE_GPUS:       False
+
+Input parameters:
+  mode=PW(ecut=450.00000000000006),
+  convergence={'eigenstates': 1e-05},
+  eigensolver=Davidson(niter=3),
+  gpts=array([32, 32, 32]),
+  kpts=BandPath(path='GXMGRX,MR', npoints=80),
+  maxiter=2000,
+  mixer=Mixer(backend='msr1', beta=0.002, nmaxold=15, weight=100),
+  nbands=26,
+  occupations=Occupations(name='fermi-dirac', width=0.2),
+  parallel={},
+  setups={'Sn': ':s,2.5'},
+  symmetry=Symmetry(point_group=False, time_reversal=False),
+  xc=XC(name='MGGA_X_R2SCAN+MGGA_C_R2SCAN')
+Initialization done in: 0.000 s
+
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 2000
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:48:49 |             | -5.69c|       |
+
+Converged in 1 steps
+SCF loop duration: 106.235 s (106.235 s/step)
+Energy contributions relative to reference atoms: (reference = -960433.156792)
+
+Energy contributions:
+  Kinetic:          -6.126337
+  Coulomb:           9.879232
+  Zero:             -2.332364
+  External:          0.000000
+  Xc:              -92.589631
+  Entropy:          -0.009619
+  Spinorbit:         0.000000
+  ----------------------------
+  Free energy:     -91.178718
+  Extrapolated:    -91.173909
+
+dipole moment: (-81.115385, -81.115385, -81.115385)  # |e|*Ang
+
+
+Fermi level: 3.028
+Eigenvalues  # (at kpt = [0.000, 0.000, 0.000])
+| band index |      eig [eV] | occ [0-2] |
+|------------|---------------|-----------|
+|          0 |       -19.655 |     2.000 |
+|        ... |               |           |
+|         14 |        -1.567 |     2.000 |
+|         15 |        -1.567 |     2.000 |
+|         16 |         0.806 |     2.000 |
+|         17 |         0.806 |     2.000 |
+|         18 |         0.806 |     2.000 |
+|         19 |         0.972 |     2.000 |
+|         20 |         0.972 |     2.000 |
+|         21 |         0.972 |     2.000 |
+|         22 |         5.960 |     0.000 |
+|         23 |         8.612 |     0.000 |
+|         24 |         8.612 |     0.000 |
+|         25 |         8.612 |     0.000 |
+
+
+Gap: 1.872 eV
+Transition (v -> c):
+  (s=0, k=52, n=21, [0.50, 0.50, 0.50]) -> (s=0, k=52, n=22, [0.50, 0.50, 0.50])
+No difference between direct/indirect transitions

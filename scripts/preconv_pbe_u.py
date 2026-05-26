@@ -69,6 +69,7 @@ def main() -> None:
         convergence={"density": 0.01, "energy": 1e-3, "eigenstates": 1e-5},
         mixer={"backend": "msr1", "beta": 0.02, "nmaxold": 10},
         eigensolver=Davidson(niter=4),
+        maxiter=500,
         parallel={"domain": 1},
         txt=str(out_txt),
     )

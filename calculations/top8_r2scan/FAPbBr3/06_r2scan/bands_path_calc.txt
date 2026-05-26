@@ -1,0 +1,132 @@
+
+Diagonalizing LCAO Hamiltonian
+Converting LCAO to pw mode
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 333
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:15:51 |             |       |       |
+|iter:   2| 15:16:47 |             | -2.16 |       |
+|iter:   3| 15:17:40 |             | -3.89 |       |
+|iter:   4| 15:18:36 |             | -5.00c|       |
+SCF steps: 4
+  __  _  _
+ | _ |_)|_||  |
+ |__||  | ||/\| - 25.7.1b1
+
+User:   luis-ochoa@luis-pc
+Date:   Tue May 26 15:18:36 2026
+Arch:   x86_64
+Pid:    17227
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft
+units:  Angstrom and eV
+cores:  1
+OpenMP: False
+
+Versions:
+  Python: 3.12.3
+  ASE:    3.28.0
+  Numpy:  2.4.4
+  Scipy:  1.17.1
+  Libxc:  7.0.0
+
+Paths:
+  gpaw:  /tmp/gpaw_master/gpaw
+  _gpaw: /tmp/gpaw_master/_gpaw.cpython-312-x86_64-linux-gnu.so
+  ase:   /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/ase
+  numpy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/numpy
+  scipy: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/scipy
+
+Git-hashes:
+  gpaw:  31a98aa8a7
+  _gpaw: 31a98aa8a7
+
+OMP_NUM_THREADS: 4
+
+
+Environment variables:
+  GPAW_CPUPY:          False
+  GPAW_DEBUG:          False
+  GPAW_INITIALIZE_MPI: False
+  GPAW_MPI_BACKEND:    serial
+  GPAW_NO_C_EXTENSION: False
+  GPAW_NO_GPU_MPI:     False
+  GPAW_TRACE:          False
+  GPAW_USE_GPUS:       False
+
+Input parameters:
+  mode=PW(ecut=450.00000000000006),
+  convergence={'eigenstates': 1e-05},
+  eigensolver=Davidson(niter=3),
+  gpts=array([30, 30, 30]),
+  kpts=BandPath(path='GXMGRX,MR', npoints=80),
+  nbands=37,
+  occupations=Occupations(name='fermi-dirac', width=0.1),
+  parallel={},
+  symmetry=Symmetry(point_group=False, time_reversal=False),
+  xc=XC(name='PBE')
+Initialization done in: 0.000 s
+
+convergence criteria:
+- Maximum integral of absolute [eigenst]ate change: 1e-05 eV^2 / valence electron
+maximum number of iterations: 333
+
+SCF iterations
+|iter     |     time |      energy | eigst |  dens |
+|---------|----------|-------------|-------|-------|
+|iter:   1| 15:19:33 |             | -6.39c|       |
+
+Converged in 1 steps
+SCF loop duration: 57.226 s (57.226 s/step)
+Energy contributions relative to reference atoms: (reference = -784034.728487)
+
+Energy contributions:
+  Kinetic:          56.612015
+  Coulomb:         -59.199174
+  Zero:             -0.260466
+  External:          0.000000
+  Xc:              -48.662295
+  Entropy:          -0.015925
+  Spinorbit:         0.000000
+  ----------------------------
+  Free energy:     -51.525845
+  Extrapolated:    -51.517883
+
+dipole moment: (-72.961415, -72.964427, 40.309823)  # |e|*Ang
+
+
+Fermi level: 1.093
+Eigenvalues  # (at kpt = [0.000, 0.000, 0.000])
+| band index |      eig [eV] | occ [0-2] |
+|------------|---------------|-----------|
+|          0 |       -18.489 |     2.000 |
+|        ... |               |           |
+|         19 |        -1.186 |     2.000 |
+|         20 |        -0.951 |     2.000 |
+|         21 |        -0.883 |     2.000 |
+|         22 |        -0.565 |     2.000 |
+|         23 |        -0.422 |     2.000 |
+|         24 |        -0.287 |     2.000 |
+|         25 |        -0.031 |     2.000 |
+|         26 |         0.276 |     1.999 |
+|         27 |         2.040 |     0.000 |
+|         28 |         5.508 |     0.000 |
+|         29 |         5.640 |     0.000 |
+|         30 |         6.664 |     0.000 |
+|         31 |         6.691 |     0.000 |
+|         32 |         7.205 |     0.000 |
+|         33 |         7.424 |     0.000 |
+|         34 |         7.757 |     0.000 |
+|        ... |               |           |
+|         36 |        10.808 |     0.000 |
+
+
+Gap: 0.579 eV
+Transition (v -> c):
+  (s=0, k=52, n=26, [0.50, 0.50, 0.50]) -> (s=0, k=10, n=27, [0.00, 0.50, 0.00])
+Direct/indirect transitions are different
+Direct gap: 0.913 eV
+Transition at: (s=0, k=52, n=26, [0.50, 0.50, 0.50])
