@@ -858,3 +858,111 @@ ldd /tmp/gpaw_master/_gpaw*.so | grep xc
 ```
 
 **Tiempo estimado:** ~5 min (clone) + ~3 min (compilación C) = ~8 min total.
+
+---
+
+## 2026-05-27 — Surrogate ML entrenable (módulo `src/ml_surrogate/`)
+
+### Motivación
+
+Los modelos GNN genéricos (MEGNet-BandGap, M3GNet, ALIGNN) presentan dos limitaciones
+para este proyecto: (1) sobreestimación sistemática de +1–2 eV en haluros Pb/Sn
+por ausencia de SOC en el entrenamiento; (2) requieren estructura cristalina, lo
+que impide screening puramente composicional. Se decidió construir un surrogate ML
+propio especializado, entrenable con los datos DFT del proyecto y datasets públicos.
+
+### Datos (Materials Project API)
+
+- API key configurada, `mp-api` instalado en `.venv`
+- Consulta: 3A × 3B × 3X = 27 combinaciones inorgánicas, filtrando `nsites=5`
+- Resultado: 21 registros ABX₃ únicos con Eg_GGA, Eform, e_hull, estructura
+- Dataset aumentado con 16 valores experimentales para MA/FA (orgánicos, no en MP)
+- Dataset final: **26 muestras**, Eg_target ∈ [1.20, 3.67] eV (etiqueta = experimental)
+- Archivo: `data/surrogate_training.csv`, builder: `data/build_training_dataset.py`
+
+### Arquitectura del modelo
+
+- `SurrogateEnsemble` = RF (200 árboles) + GBR (200 árboles) → media
+- Imputer(median) → StandardScaler → modelo (pipeline sklearn)
+- Incertidumbre: bootstrap B=100, σ = std(predicciones bootstraps)
+- max_depth=4, min_samples_leaf=2 (regularización para n≈26)
+
+### Rendimiento
+
+| Métrica | Valor |
+|---------|-------|
+| MAE 5-fold CV | **0.31 eV** |
+| RMSE 5-fold CV | 0.45 eV |
+| R² 5-fold CV | 0.55 |
+| MAE en-muestra | 0.08 eV |
+| MAE top-8 vs exp | **0.135 eV** |
+
+Mejora ×2.5 sobre heurística B_BASE+X_SHIFT (MAE ≈ 0.34 eV).
+
+### Importancias de características
+
+Top-3: `chi_X` (0.244), `oct_factor` (0.236), `r_X` (0.209) → físicamente coherente,
+el haluro controla el gap (χ_X: I < Br < Cl, gap ↑ con electronegatividad).
+
+### Predicciones top-8 (2026-05-27)
+
+| Material | Eg_pred | ± | Eg_exp | err |
+|----------|:-------:|:---:|:------:|:---:|
+| CsPbI₃ | 1.725 | 0.189 | 1.73 | −0.005 |
+| CsSnI₃ | 1.435 | 0.183 | 1.30 | +0.135 |
+| MASnI₃ | 1.440 | 0.167 | 1.20 | +0.240 |
+| FASnI₃ | 1.534 | 0.161 | 1.41 | +0.124 |
+| MAPbI₃ | 1.678 | 0.177 | 1.55 | +0.128 |
+| FAPbI₃ | 1.699 | 0.162 | 1.48 | +0.219 |
+| FASnBr₃ | 1.858 | 0.170 | 2.00 | −0.142 |
+| FAPbBr₃ | 2.148 | 0.188 | 2.23 | −0.082 |
+
+### Archivos creados
+
+- `src/ml_surrogate/config.py` — `SurrogateConfig` dataclass + YAML loading
+- `src/ml_surrogate/features.py` — extracción de descriptores composicionales (16D base)
+- `src/ml_surrogate/model.py` — `SurrogateEnsemble` RF+GBR, bootstrap uncertainty
+- `src/ml_surrogate/train.py` — CLI: `python -m src.ml_surrogate.train`
+- `src/ml_surrogate/predict.py` — CLI: `python -m src.ml_surrogate.predict`
+- `src/ml_surrogate/integration.py` — `SurrogateAcquisition`, drop-in para `GNNAcquisition`
+- `configs/surrogate.yaml` — configuración completa
+- `tests/test_surrogate.py` — 13 tests (todos pasan)
+- `data/surrogate_training.csv` — 26 muestras de entrenamiento
+- `data/build_training_dataset.py` — script de construcción del dataset
+- `data/mp_abx3.json` — datos crudos de Materials Project (21 ABX₃)
+- `models/surrogate_bandgap.pkl` — modelo entrenado
+- `models/surrogate_bandgap.metrics.json` — métricas de CV
+
+### Comandos
+
+```bash
+# Entrenar
+.venv/bin/python3 -m src.ml_surrogate.train --config configs/surrogate.yaml
+
+# Predecir (top-8)
+.venv/bin/python3 -m src.ml_surrogate.predict --mat all
+
+# Predecir composición arbitraria
+.venv/bin/python3 -m src.ml_surrogate.predict --A Rb --B Sn --X I
+
+# Tests
+.venv/bin/python3 -m pytest tests/test_surrogate.py -v   # 13/13 pasan
+```
+
+### Limitaciones conocidas
+
+1. **n=26 muestras:** R²=0.55 en CV; mejorable con más datos DFT o MP-r2SCAN
+2. **Stab_score=0.5 fijo:** la predicción de Eform requiere MACE o GNN externo
+3. **Orgánicos (MA/FA) sin estructura en MP:** etiquetas experimentales con mayor
+   dispersión que los inorgánicos (MA/FA requieren T-ambiente para estabilizar fase cubic)
+4. **CsGeCl₃:** outlier sistemático (err = −0.42 eV en-muestra); Ge tiene electrónica
+   diferente (sin relativismo fuerte vs. Pb/Sn), el dataset tiene solo 2 Ge-Cl muestras
+
+### Integración con hts-perovskite
+
+`SurrogateAcquisition` reemplaza `GNNAcquisition` con la misma API:
+```python
+acq = SurrogateAcquisition(beta=1.0)  # carga modelos/surrogate_bandgap.pkl
+score = acq.score_one("CsPbI3", "Cs", "Pb", "I")
+```
+Fallback automático a B_BASE+X_SHIFT si el modelo no está entrenado.

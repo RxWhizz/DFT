@@ -402,30 +402,6 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
                     ax.plot(xcoords[seg], eigs_plot[s, seg, b],
                             color="#1a4e8a", lw=0.8, alpha=0.65)
 
-    # --- Capa k·p AI: aproximación parabólica con Eg_semi (AI-02) ---
-    eg_ai = None; e_cb_ai = None; e_vb_ai = None  # defaults si no hay datos AI
-    # Los métodos AI no producen eigenvalores resueltos en k-space. La k·p
-    # parabólica usa Eg_semi como gap y el modelo de Kane para m*:
-    #   m*_e/m0 ≈ Eg / (Eg + 2P²/m0)  con  2P²/m0 ≈ 20 eV (haluro perovskitas)
-    # Centrada en el mismo k_cbm que el DFT para comparación directa.
-    _ai_pred = _AI_PREDS.get(mat, {})
-    eg_ai = _ai_pred.get("Eg_semi_eV", None)
-    if eg_ai is not None:
-        P2 = 20.0                          # 2P²/m0 típico haluro perovskitas [eV]
-        meff_e = eg_ai / (eg_ai + P2)      # m*_e/m0 adimensional (modelo Kane)
-        meff_h = eg_ai / (eg_ai + P2)      # aproximamos m*_h ≈ m*_e (simétrico)
-        # Convertir curvatura a unidades de coordenada k normalizada.
-        # Longitud típica del camino k en perovskitas: ~0.40 Å⁻¹ (Γ→R en ~6 Å cúbico)
-        k_phys = 0.40                       # Å⁻¹
-        # hbar²/(2m*) = 3.81 eV·Å² (para m* en unidades de m0)
-        alpha = 3.81 / meff_e / (k_phys ** 2)   # eV por (k normalizado)²
-        k_rel = xcoords - float(xcoords[k_cbm])
-        e_cb_ai = eg_ai + alpha * k_rel ** 2    # parábola de conducción
-        e_vb_ai = 0.0 - alpha * k_rel ** 2      # parábola de valencia (VBM=0)
-        ax.plot(xcoords, e_cb_ai, color="#e67e22", lw=1.1, ls="-", alpha=0.75,
-                label=f"k·p AI (Eg_semi={eg_ai:.2f} eV)")
-        ax.plot(xcoords, e_vb_ai, color="#e67e22", lw=1.1, ls="-", alpha=0.75)
-
     # Líneas horizontales: VBM=0 (negro) y CBM (rojo)
     ax.axhline(0,   color="black",   lw=1.0, ls="--", alpha=0.55)
     ax.axhline(cbm, color="#c0392b", lw=1.0, ls="--", alpha=0.80)
@@ -476,9 +452,6 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
 
     from matplotlib.lines import Line2D
     _handles = [Line2D([0], [0], color="#1a4e8a", lw=1.5, label=main_label)]
-    if eg_ai is not None:
-        _handles.append(Line2D([0], [0], color="#e67e22", lw=1.2,
-                                label=f"k·p AI  $E_g^{{semi}}$={eg_ai:.2f} eV"))
     ax.legend(handles=_handles, fontsize=9, loc="upper right")
     ax.grid(axis="y", alpha=0.15)
 
@@ -502,9 +475,6 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
 
     axins.axhline(0,   color="black",   lw=0.7, ls="--", alpha=0.55)
     axins.axhline(cbm, color="#c0392b", lw=0.7, ls="--", alpha=0.80)
-    if eg_ai is not None:
-        axins.plot(xcoords, e_cb_ai, color="#e67e22", lw=0.8, ls="-", alpha=0.75)
-        axins.plot(xcoords, e_vb_ai, color="#e67e22", lw=0.8, ls="-", alpha=0.75)
     axins.set_xlim(xl, xr)
     axins.set_ylim(yi_lo, yi_hi)
 

@@ -1,0 +1,35 @@
+{
+  "cv": {
+    "cv": "5-fold",
+    "MAE_eV": 0.3076697863247864,
+    "RMSE_eV": 0.44894060929189894,
+    "R2": 0.5496958656676506,
+    "n_samples": 26
+  },
+  "train_MAE_eV": 0.08304963782305319,
+  "n_samples": 26,
+  "n_features": 19,
+  "features": [
+    "r_A",
+    "r_B",
+    "r_X",
+    "chi_A",
+    "chi_B",
+    "chi_X",
+    "q_A",
+    "q_B",
+    "q_X",
+    "tolerance_t",
+    "oct_factor",
+    "a_lat_est_A",
+    "vol_est_A3",
+    "delta_chi_BX",
+    "mu_BX",
+    "is_organic_A",
+    "a_lat_mp_A",
+    "band_gap_gga_eV",
+    "Eform_eV_atom"
+  ],
+  "model_type": "SurrogateEnsemble-RF+GBR",
+  "target": "Eg_target_eV"
+}

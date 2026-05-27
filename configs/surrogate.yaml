@@ -1,0 +1,52 @@
+# Surrogate ML model configuration for ABX3 halide perovskite screening
+# Used by: python -m src.ml_surrogate.train / predict
+
+# ── Feature set ──────────────────────────────────────────────────────────────
+# Base features are always available from composition alone
+base_features:
+  - r_A            # Shannon ionic radius A-site (Å, 12-coord)
+  - r_B            # Shannon ionic radius B-site (Å, 6-coord)
+  - r_X            # Shannon ionic radius X-site (Å, 6-coord)
+  - chi_A          # Pauling electronegativity A-site
+  - chi_B          # Pauling electronegativity B-site
+  - chi_X          # Pauling electronegativity X-site
+  - q_A            # Formal charge A (+1)
+  - q_B            # Formal charge B (+2)
+  - q_X            # Formal charge X (-1)
+  - tolerance_t    # Goldschmidt tolerance factor
+  - oct_factor     # Octahedral factor r_B / r_X
+  - a_lat_est_A    # Estimated lattice constant 2√2·(r_B+r_X) (Å)
+  - vol_est_A3     # Estimated unit cell volume (Å³)
+  - delta_chi_BX   # chi_X - chi_B (ionicity proxy)
+  - mu_BX          # r_B + r_X (bond length proxy)
+  - is_organic_A   # 1 for MA/FA, 0 for Cs/Rb/K
+
+# Optional: added automatically if present in CSV (not all-NaN)
+optional_features:
+  - a_lat_mp_A      # MP or MACE relaxed lattice constant (Å)
+  - E_mace_eV_atom  # MACE total energy per atom (eV)
+  - band_gap_gga_eV # GGA bandgap from MP or DFT
+  - Eform_eV_atom   # Formation energy per atom from MP
+
+# ── Model ────────────────────────────────────────────────────────────────────
+model_type: ensemble          # rf | gbr | ensemble (RF + GBR average)
+n_estimators: 200
+max_depth: 4                  # shallow trees for n≈26 samples
+min_samples_leaf: 2
+
+# ── Uncertainty quantification ───────────────────────────────────────────────
+n_bootstrap: 100              # bootstrap resamplings for std(prediction)
+uncertainty_method: bootstrap
+confidence_level: 0.90
+
+# ── Training ─────────────────────────────────────────────────────────────────
+target_col: Eg_target_eV      # target column in training CSV
+test_size: 0.2
+cv_folds: 5                   # LOO used automatically when n ≤ 15
+random_state: 42
+
+# ── Paths (relative to project root) ─────────────────────────────────────────
+training_data: data/surrogate_training.csv
+model_dir: models
+model_name: surrogate_bandgap
+predictions_db: calculations/top8_r2scan/surrogate_cache.sqlite

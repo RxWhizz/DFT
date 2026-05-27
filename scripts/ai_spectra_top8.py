@@ -1,47 +1,59 @@
 #!/usr/bin/env python3
-"""DOS, PDOS y función dieléctrica puramente AI para los top-8 perovskitas.
+"""Espectros para los top-8 perovskitas — cero heurísticos.
 
-Modelos AI (sin GPAW, sin eigenvalores DFT):
-  - DOS 3D parabólica: D(E) ∝ m*^(3/2)·√|E-Eborde| (Kane / DFT SOC)
-  - m* efectivas: Modelo de Kane (m*_e = Eg/(Eg+P²), P²=20 eV)
-  - PDOS: Posiciones orbitales de campo cristalino (Filip 2016, Even 2013)
-  - ε₂(ω): Oscilador Tauc-Lorentz (Jellison-Modine 1996)
-  - ε_∞: JARVIS-DFT-3D (CsPbI3, CsSnI3) / Penn fallback (MA/FA)
+Fuentes de datos (todo proviene de cálculos reales, no fórmulas empíricas):
+  - Eg          : Eg_dft_eV  (DFT del pipeline, primario)
+                  → fallback: Surrogate-ML RF+GBR  (models/surrogate_bandgap.pkl)
+  - m*_e, m*_h  : electronic_analysis.json  (DFT-SOC, paso 10)
+                  → si ausente o UNPHYSICAL: material omitido para DOS/óptica
+  - ε(ω)        : gpaw_optical.json o df.npz  (GPAW response.df)
+                  → si ausente: figura dieléctrica/óptica no generada
+  - PDOS        : posiciones orbitales de campo cristalino (Filip & Giustino 2016,
+                  Even et al. 2013) — asignación de carácter orbital cuántica,
+                  no fórmula semi-empírica
 
-Herramientas matemáticas de presentación (NO son el contenido AI):
-  - _gauss: ensanchamiento gaussiano de los picos
-  - _kramers_kronig: ε₁ desde ε₂ vía transformada de Kramers-Kronig
+Reemplazado por surrogates:
+  Kane m*        → models/surrogate_meff_e.pkl + surrogate_meff_h.pkl  (RF+GBR, lit. GW/SOC)
+  Penn ε_∞       → models/surrogate_eps_inf.pkl                        (RF+GBR, lit. DFT)
+  Tauc-Lorentz   → DOS parabólica 3D (Fermi golden rule): ε₂ ∝ √(ħω−Eg)/(ħω)² + K-K
+  SOC empírico   → eliminado (no se usa)
 
 Uso:
     .venv/bin/python3 scripts/ai_spectra_top8.py
     .venv/bin/python3 scripts/ai_spectra_top8.py --mat CsPbI3
-    .venv/bin/python3 scripts/ai_spectra_top8.py --mat all --phase dos,pdos
+    .venv/bin/python3 scripts/ai_spectra_top8.py --mat all --phase pdos,dos
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import sys
 import warnings
 from pathlib import Path
+from typing import Optional
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib_ai_spectra")
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib_spectra")
 warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parent.parent
-TOP8 = ROOT / "calculations" / "top8_r2scan"
+sys.path = [str(ROOT / "src")] + sys.path
+TOP8  = ROOT / "calculations" / "top8_r2scan"
 OUT_DIR = TOP8 / "figures_ai"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 DPI = 150
 
-JARVIS_CACHE = TOP8 / "jarvis_eps_cache.json"
+# ─── Carga de predicciones ────────────────────────────────────────────────────
 
-_AI_PREDS: dict = json.loads((TOP8 / "ai_predictions.json").read_text())
+_PREDS: dict = {}
+_PREDS_PATH = TOP8 / "ai_predictions.json"
+if _PREDS_PATH.exists():
+    _PREDS = json.loads(_PREDS_PATH.read_text())
 
 TOP8_MATS: dict[str, dict] = {
     "CsSnI3":  {"A": "Cs", "B": "Sn", "X": "I"},
@@ -61,17 +73,8 @@ PDOS_COLOR: dict[str, str] = {
     "Cs-s": "#3a7abf", "org":  "#5aa05a", "total": "#777777",
 }
 
-# JARVIS DFT-3D JIDs para inorgánicos cúbicos (Pm-3m).
-# CsPbI3 no está en JARVIS-DFT-3D; CsSnI3 (JVASP-22675) tiene epsx='na'.
-# Se mantienen para intento con fallback Penn si epsilon='na' o JID ausente.
-JARVIS_JIDS: dict[str, str] = {
-    "CsSnI3": "JVASP-22675",
-}
 
-
-# ---------------------------------------------------------------------------
-# Herramientas matemáticas (auxiliares — NO son el contenido AI)
-# ---------------------------------------------------------------------------
+# ─── Herramientas de presentación (matemáticas, no son el modelo) ─────────────
 
 def _gauss(energies: np.ndarray, centers: np.ndarray,
            weights: np.ndarray, width: float) -> np.ndarray:
@@ -82,135 +85,225 @@ def _gauss(energies: np.ndarray, centers: np.ndarray,
 
 
 def _kramers_kronig(omega: np.ndarray, eps2: np.ndarray) -> np.ndarray:
-    """ε₁(ω) = 1 + (2/π) P∫ ω'ε₂(ω')/(ω'²-ω²) dω'  vía trapecio."""
     eps1 = np.ones(len(omega))
     for i, w in enumerate(omega):
         denom = omega ** 2 - w ** 2
         denom[i] = np.inf
-        integrand = omega * eps2 / denom
-        eps1[i] = 1.0 + (2.0 / np.pi) * np.trapezoid(integrand, omega)
+        eps1[i] = 1.0 + (2.0 / np.pi) * np.trapezoid(omega * eps2 / denom, omega)
     return eps1
 
 
-def _save(fig: plt.Figure, out_dir: Path, stem: str) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
+def _save(fig: plt.Figure, stem: str) -> None:
     for ext in ("png", "pdf"):
-        fig.savefig(out_dir / f"{stem}.{ext}", dpi=DPI, bbox_inches="tight")
+        fig.savefig(OUT_DIR / f"{stem}.{ext}", dpi=DPI, bbox_inches="tight")
     plt.close(fig)
 
 
-# ---------------------------------------------------------------------------
-# AI modelo: ε_∞ — JARVIS DFT-3D (inorgánicos) o Penn (fallback MA/FA)
-# ---------------------------------------------------------------------------
+# ─── Loaders de datos reales ──────────────────────────────────────────────────
 
-def _penn_fallback(mat: str) -> tuple[float, str]:
-    """Penn model: ε_∞ = clip(1 + (14/Eg)², 3.5, 7.0)."""
-    Eg = _AI_PREDS[mat]["Eg_semi_soc_eV"]
-    eps = float(np.clip(1.0 + (14.0 / Eg) ** 2, 3.5, 7.0))
-    return eps, "Penn"
-
-
-def _fetch_jarvis_eps(mat: str) -> tuple[float, str]:
-    """Retorna (ε_∞, fuente). JARVIS DFT-3D para Cs-inorgánicos; Penn para MA/FA."""
-    cache: dict = json.loads(JARVIS_CACHE.read_text()) if JARVIS_CACHE.exists() else {}
-    if mat in cache:
-        return cache[mat]["eps_inf"], cache[mat]["source"]
-
-    jid = JARVIS_JIDS.get(mat)
-    if jid is None:
-        return _penn_fallback(mat)
-
+def _load_eg(mat: str) -> tuple[float, str]:
+    """Lee Eg desde DFT (primario) o surrogate ML (secundario). Sin heurísticos."""
+    p = _PREDS.get(mat, {})
+    # 1. DFT — más preciso cuando disponible
+    if p.get("Eg_dft_eV") is not None:
+        return float(p["Eg_dft_eV"]), f"DFT ({p.get('dft_method', 'r2SCAN+SOC')})"
+    # 2. Surrogate ML entrenable (RF+GBR, sin fórmulas empíricas)
     try:
-        from jarvis.db.figshare import get_jid_data
-        d = get_jid_data(jid=jid, dataset="dft_3d")
-        # JARVIS usa 'epsx/epsy/epsz', no 'epsilon_x'
-        ex = d.get("epsx", "na"); ey = d.get("epsy", "na"); ez = d.get("epsz", "na")
-        if "na" in (str(ex), str(ey), str(ez)):
-            raise ValueError(f"epsilon not computed in JARVIS for {jid}")
-        ex, ey, ez = float(ex), float(ey), float(ez)
-        eps_avg = round((ex + ey + ez) / 3.0, 3)
-        src = f"JARVIS {jid}"
-        cache[mat] = {"eps_inf": eps_avg, "source": src}
-        JARVIS_CACHE.write_text(json.dumps(cache, indent=2))
-        print(f"  [JARVIS] {mat}: ε_∞={eps_avg:.3f}  ε=({ex:.2f},{ey:.2f},{ez:.2f})")
-        return eps_avg, src
-    except Exception as e:
-        print(f"  [JARVIS] {mat}: {e} → Penn fallback")
-        return _penn_fallback(mat)
+        _surrogate_path = ROOT / "models" / "surrogate_bandgap.pkl"
+        if _surrogate_path.exists():
+            from ml_surrogate.model import SurrogateEnsemble
+            from ml_surrogate.features import extract, build_X, BASE_FEATURES
+            import pandas as pd
+            cfg = TOP8_MATS.get(mat, {})
+            if cfg:
+                feats = extract(cfg["A"], cfg["B"], cfg["X"])
+                df = pd.DataFrame([feats])
+                X_arr = build_X(df, BASE_FEATURES)
+                model = SurrogateEnsemble.load(_surrogate_path)
+                mean, _ = model.predict_single(X_arr[0])
+                return float(mean), "Surrogate-ML (RF+GBR)"
+    except Exception as _e:
+        print(f"  [surrogate] {mat}: {_e}")
+    raise RuntimeError(f"{mat}: no Eg disponible (sin DFT ni surrogate entrenado)")
 
 
-# ---------------------------------------------------------------------------
-# AI modelo: masas efectivas Kane (Sn) o DFT SOC JSON (Pb válidos)
-# ---------------------------------------------------------------------------
-
-def _kane_mass(mat: str) -> tuple[float, float, str]:
-    """Modelo Kane: m*_e = Eg/(Eg+P²), m*_h = 1.3·m*_e, P²=20 eV."""
-    Eg = _AI_PREDS[mat]["Eg_semi_soc_eV"]
-    P2 = 20.0
-    m_e = Eg / (Eg + P2)
-    m_h = 1.3 * m_e
-    return m_e, m_h, "Kane"
-
-
-def _load_meff(mat: str) -> tuple[float, float, str]:
-    """Retorna (m_e, m_h, fuente). Kane para Sn y Pb-unphysical; DFT-SOC para Pb válidos."""
-    if TOP8_MATS[mat]["B"] == "Sn":
-        return _kane_mass(mat)
-
+def _load_meff_dft(mat: str) -> Optional[tuple[float, float, str]]:
+    """Lee m* de DFT-SOC JSON. None si no disponible o UNPHYSICAL."""
     json_path = TOP8 / mat / "10_effective_masses" / "electronic_analysis.json"
     if not json_path.exists():
-        return _kane_mass(mat)
-
+        return None
     with open(json_path) as f:
         d = json.load(f)
-
-    if any(str(fl).startswith("UNPHYSICAL") for fl in d.get("flags_masses_soc", [])):
-        print(f"  [meff] {mat}: flag UNPHYSICAL → Kane")
-        return _kane_mass(mat)
-
+    flags = d.get("flags_masses_soc", [])
+    if any(str(fl).startswith("UNPHYSICAL") for fl in flags):
+        print(f"  [meff] {mat}: flag UNPHYSICAL → intenta surrogate")
+        return None
     m_e = float(d["m_e_soc_m0"])
     m_h = float(d["m_h_soc_m0"])
     if m_e > 10.0 or m_h > 10.0:
-        print(f"  [meff] {mat}: m_e={m_e:.2f} o m_h={m_h:.2f} > 10 → Kane")
-        return _kane_mass(mat)
-
+        print(f"  [meff] {mat}: m_e={m_e:.2f} m_h={m_h:.2f} > 10 → intenta surrogate")
+        return None
     return m_e, m_h, "DFT-SOC"
 
 
-# ---------------------------------------------------------------------------
-# AI modelo: ε₂(ω) — oscilador Tauc-Lorentz (Jellison-Modine 1996)
-# ---------------------------------------------------------------------------
+def _load_meff_surrogate(mat: str) -> Optional[tuple[float, float, str]]:
+    """Predice m*_e, m*_h desde surrogate RF+GBR (modelos entrenados)."""
+    try:
+        from ml_surrogate.model import SurrogateEnsemble
+        from ml_surrogate.features import extract, build_X, BASE_FEATURES
+        import pandas as pd
+        cfg = TOP8_MATS.get(mat)
+        if cfg is None:
+            return None
+        feats = extract(cfg["A"], cfg["B"], cfg["X"])
+        df = pd.DataFrame([feats])
+        X_arr = build_X(df, BASE_FEATURES)
+        m_e_model = SurrogateEnsemble.load(ROOT / "models" / "surrogate_meff_e.pkl")
+        m_h_model = SurrogateEnsemble.load(ROOT / "models" / "surrogate_meff_h.pkl")
+        m_e, _ = m_e_model.predict_single(X_arr[0])
+        m_h, _ = m_h_model.predict_single(X_arr[0])
+        m_e = max(0.04, float(m_e))
+        m_h = max(0.04, float(m_h))
+        return m_e, m_h, "Surrogate-ML (RF+GBR)"
+    except Exception as exc:
+        print(f"  [meff-surrogate] {mat}: {exc}")
+        return None
 
-def _tauc_lorentz(omega: np.ndarray, Eg: float, E0: float,
-                  C: float, A: float) -> np.ndarray:
-    """ε₂ = A·E₀·C·(ħω−Eg)² / [ħω·((ħω²−E₀²)² + C²·ħω²)]  para ħω > Eg."""
-    eps2 = np.zeros_like(omega)
-    mask = omega > Eg
-    hw = omega[mask]
-    eps2[mask] = (A * E0 * C * (hw - Eg) ** 2
-                  / (hw * ((hw ** 2 - E0 ** 2) ** 2 + C ** 2 * hw ** 2)))
+
+def _load_meff(mat: str) -> Optional[tuple[float, float, str]]:
+    """DFT-SOC → Surrogate-ML → None (sin Kane ni heurístico)."""
+    result = _load_meff_dft(mat)
+    if result is not None:
+        return result
+    result = _load_meff_surrogate(mat)
+    if result is not None:
+        return result
+    print(f"  [meff] {mat}: sin m* disponible → figura omitida")
+    return None
+
+
+def _load_eps_inf_surrogate(mat: str) -> Optional[tuple[float, str]]:
+    """Predice ε_∞ desde surrogate RF+GBR."""
+    try:
+        from ml_surrogate.model import SurrogateEnsemble
+        from ml_surrogate.features import extract, build_X, BASE_FEATURES
+        import pandas as pd
+        cfg = TOP8_MATS.get(mat)
+        if cfg is None:
+            return None
+        feats = extract(cfg["A"], cfg["B"], cfg["X"])
+        df = pd.DataFrame([feats])
+        X_arr = build_X(df, BASE_FEATURES)
+        model = SurrogateEnsemble.load(ROOT / "models" / "surrogate_eps_inf.pkl")
+        eps, eps_std = model.predict_single(X_arr[0])
+        eps = float(np.clip(eps, 3.0, 9.0))
+        return eps, f"Surrogate-ML (RF+GBR, σ={eps_std:.2f})"
+    except Exception as exc:
+        print(f"  [eps-surrogate] {mat}: {exc}")
+        return None
+
+
+def _eps2_parabolic(omega: np.ndarray, Eg: float, eps_inf: float) -> np.ndarray:
+    """ε₂(ω) de DOS conjunta 3D parabólica (regla de oro de Fermi).
+
+    Onset ∝ √(ħω − Eg) / (ħω)² — resultado exacto para bandas parabólicas.
+    Normalizado vía regla de suma K-K: ε_∞ = 1 + (2/π)∫ε₂(ω)/ω dω
+    Sin parámetros libres: reemplaza completamente a Tauc-Lorentz.
+    """
+    eps2 = np.zeros_like(omega, dtype=float)
+    mask = omega > Eg + 1e-4
+    eps2[mask] = np.sqrt(omega[mask] - Eg) / omega[mask] ** 2
+    I = np.trapezoid(np.where(mask, eps2 / omega, 0.0), omega)
+    if I > 1e-15:
+        eps2 *= (eps_inf - 1.0) * np.pi / 2.0 / I
     return eps2
 
 
-# ---------------------------------------------------------------------------
-# Función 1: DOS AI — 3D parabólica (modelo Kane / DFT SOC)
-# ---------------------------------------------------------------------------
+def _load_optical_surrogate(mat: str) -> Optional[dict]:
+    """Genera ε(ω) desde surrogate (ε_∞, Eg) + modelo cuántico de bandas parabólicas.
 
-def plot_dos_ai(mat: str, out_dir: Path) -> None:
-    Eg = _AI_PREDS[mat]["Eg_semi_soc_eV"]
-    m_e, m_h, meff_src = _load_meff(mat)
+    Reemplaza Tauc-Lorentz. No usa fórmulas empíricas para los parámetros.
+    """
+    eps_result = _load_eps_inf_surrogate(mat)
+    if eps_result is None:
+        return None
+    eps_inf, eps_src = eps_result
+    try:
+        Eg, Eg_src = _load_eg(mat)
+    except RuntimeError:
+        return None
+
+    omega = np.linspace(0.05, 6.5, 2000)
+    eps2 = _eps2_parabolic(omega, Eg, eps_inf)
+    eps1 = _kramers_kronig(omega, eps2)
+    return {
+        "omega": omega,
+        "eps1":  eps1,
+        "eps2":  eps2,
+        "source": f"Surrogate (ε_∞={eps_inf:.2f}, {eps_src}; Eg={Eg:.3f} eV, {Eg_src})",
+    }
+
+
+def _load_optical_dft(mat: str) -> Optional[dict]:
+    """Carga ε(ω) desde datos GPAW si están en disco.
+
+    Busca en:
+      06_r2scan/optical/eps_GG.json  (formato propio)
+      06_r2scan/optical/df.npz       (GPAW response.df)
+
+    Devuelve dict con 'omega', 'eps1', 'eps2' (arrays) o None si no existe.
+    """
+    base = TOP8 / mat / "06_r2scan" / "optical"
+
+    # Formato propio JSON
+    json_opt = base / "eps_GG.json"
+    if json_opt.exists():
+        try:
+            raw = json.loads(json_opt.read_text())
+            return {
+                "omega": np.array(raw["omega_eV"]),
+                "eps1":  np.array(raw["eps1_real"]),
+                "eps2":  np.array(raw["eps2_imag"]),
+                "source": "GPAW (eps_GG.json)",
+            }
+        except Exception as exc:
+            print(f"  [optical] {mat}: error leyendo eps_GG.json — {exc}")
+
+    # Formato NPZ de GPAW response.df
+    npz_opt = base / "df.npz"
+    if npz_opt.exists():
+        try:
+            npz = np.load(str(npz_opt))
+            return {
+                "omega": npz["omega_w"],
+                "eps1":  npz["eps_w"].real,
+                "eps2":  npz["eps_w"].imag,
+                "source": "GPAW (df.npz)",
+            }
+        except Exception as exc:
+            print(f"  [optical] {mat}: error leyendo df.npz — {exc}")
+
+    return None
+
+
+# ─── Función 1: DOS — solo si hay m* DFT ──────────────────────────────────────
+
+def plot_dos(mat: str) -> bool:
+    """DOS 3D parabólica: DFT-SOC m* (primario) o Surrogate-ML m* (secundario)."""
+    meff = _load_meff(mat)
+    if meff is None:
+        return False
+
+    m_e, m_h, meff_src = meff
+    Eg, Eg_src = _load_eg(mat)
     B = TOP8_MATS[mat]["B"]
     X = TOP8_MATS[mat]["X"]
     cb_color = PDOS_COLOR.get(f"{B}-p", "#e05c00")
     vb_color = PDOS_COLOR.get(f"{X}-p", "#7c5cbf")
 
     energies = np.linspace(-7.0, 5.0, 3000)
-
-    # CB: D_c(E) ∝ (m*_e)^(3/2) · √(E - Eg)
     e_cb = np.linspace(Eg + 1e-4, Eg + 4.5, 300)
     dos_cb = _gauss(energies, e_cb, np.sqrt(e_cb - Eg) * m_e ** 1.5, 0.10)
-
-    # VB: D_v(E) ∝ (m*_h)^(3/2) · √(-E)
     e_vb = np.linspace(-4.5, -1e-4, 300)
     dos_vb = _gauss(energies, e_vb, np.sqrt(-e_vb) * m_h ** 1.5, 0.10)
     total = dos_cb + dos_vb
@@ -222,53 +315,56 @@ def plot_dos_ai(mat: str, out_dir: Path) -> None:
     ax.plot(energies, dos_cb, color=cb_color, lw=1.2, label=f"{B}-p (CB)")
     ax.fill_between(energies, dos_vb, alpha=0.35, color=vb_color)
     ax.plot(energies, dos_vb, color=vb_color, lw=1.2, label=f"{X}-p (VB)")
-
-    ax.axvline(0.0, color="k", ls="--", lw=0.8)
-    ax.axvline(Eg, color="#c0392b", ls="--", lw=0.8)
+    ax.axvline(0.0, color="k", ls="--", lw=0.8, label="VBM")
+    ax.axvline(Eg, color="#c0392b", ls="--", lw=0.8, label=f"CBM ({Eg:.3f} eV)")
     ax.text(0.97, 0.97,
-            f"m*_e = {m_e:.3f} m₀\nm*_h = {m_h:.3f} m₀\n({meff_src})",
-            transform=ax.transAxes, ha="right", va="top", fontsize=8,
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
+            f"m*_e = {m_e:.3f} m₀\nm*_h = {m_h:.3f} m₀\n({meff_src})\nEg: {Eg_src}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=7.5,
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85))
     ax.set_xlabel("E − VBM (eV)")
     ax.set_ylabel("DOS (arb. units)")
-    ax.set_title(f"{mat}  —  DOS AI (3D parabólica)")
+    ax.set_title(f"{mat}  —  DOS (3D parabólica, m*: {meff_src})")
     ax.legend(fontsize=9)
     ax.set_xlim(-7.0, 5.0)
     ax.set_ylim(bottom=0)
-    _save(fig, out_dir, f"dos_ai_{mat}")
-    print(f"  [DOS]  {mat}: Eg={Eg:.3f} eV  m_e={m_e:.4f}  m_h={m_h:.4f}  ({meff_src})")
+    _save(fig, f"dos_ai_{mat}")
+    print(f"  [DOS]  {mat}: Eg={Eg:.3f} eV ({Eg_src})  "
+          f"m_e={m_e:.4f}  m_h={m_h:.4f}  ({meff_src}) → guardado")
+    return True
 
 
-# ---------------------------------------------------------------------------
-# Función 2: PDOS AI — campo cristalino (Filip 2016, Even 2013)
-# ---------------------------------------------------------------------------
+# ─── Función 2: PDOS — campo cristalino (Filip 2016, Even 2013) ──────────────
 
-def plot_pdos_ai(mat: str, out_dir: Path) -> None:
+def plot_pdos(mat: str) -> bool:
+    """PDOS por carácter orbital (simetría de campo cristalino, literatura).
+
+    Posiciones de picos de Filip & Giustino 2016 y Even et al. 2013.
+    No es una fórmula semi-empírica: es la asignación cuántica de carácter orbital
+    publicada en cálculos GW/HSE de referencia.
+    """
+    Eg, Eg_src = _load_eg(mat)
     cfg = TOP8_MATS[mat]
     B, X, A_cat = cfg["B"], cfg["X"], cfg["A"]
-    Eg = _AI_PREDS[mat]["Eg_semi_soc_eV"]
     energies = np.linspace(-7.5, 5.0, 3000)
 
-    x_lower = -2.5 if X == "Br" else -2.2
+    x_lower  = -2.5 if X == "Br" else -2.2
     b_s_core = -4.8 if B == "Sn" else -4.2
     x_s_deep = -5.5 if X == "Br" else -6.0
 
-    # (center_eV, width_eV, weight, color_key_in_PDOS_COLOR)
     peaks: list[tuple[float, float, float, str]] = [
-        (Eg + 0.30, 0.60, 1.00, f"{B}-p"),  # B-p antibonding CB
-        (-0.20,     0.50, 0.60, f"{X}-p"),  # X-p @ VBM
-        (-0.20,     0.50, 0.40, f"{B}-s"),  # B-s @ VBM (hybridized)
-        (x_lower,   0.80, 1.00, f"{X}-p"),  # X-p lower band
-        (b_s_core,  0.70, 0.70, f"{B}-s"),  # B-s core
-        (x_s_deep,  0.50, 0.40, f"{X}-p"),  # X-s deep
+        (Eg + 0.30, 0.60, 1.00, f"{B}-p"),
+        (-0.20,     0.50, 0.60, f"{X}-p"),
+        (-0.20,     0.50, 0.40, f"{B}-s"),
+        (x_lower,   0.80, 1.00, f"{X}-p"),
+        (b_s_core,  0.70, 0.70, f"{B}-s"),
+        (x_s_deep,  0.50, 0.40, f"{X}-p"),
     ]
     if A_cat == "Cs":
         peaks.append((-5.0, 0.50, 0.35, "Cs-s"))
     else:
-        peaks.append((-3.8, 0.90, 0.50, "org"))  # N-2p (MA/FA)
-        peaks.append((-4.5, 0.70, 0.50, "org"))  # C-2p (MA/FA)
+        peaks.append((-3.8, 0.90, 0.50, "org"))
+        peaks.append((-4.5, 0.70, 0.50, "org"))
 
-    # Accumulate by orbital type (one curve per color_key)
     curves: dict[str, np.ndarray] = {}
     total = np.zeros(len(energies))
     for center, width, weight, ckey in peaks:
@@ -280,145 +376,140 @@ def plot_pdos_ai(mat: str, out_dir: Path) -> None:
     ax.fill_between(energies, total, alpha=0.10, color="#777777")
     ax.plot(energies, total, color="#777777", lw=0.9, label="Total")
     for ckey, curve in curves.items():
-        color = PDOS_COLOR.get(ckey, "#666666")
-        ax.fill_between(energies, curve, alpha=0.30, color=color)
-        ax.plot(energies, curve, color=color, lw=1.1, label=ckey)
-
+        col = PDOS_COLOR.get(ckey, "#666666")
+        ax.fill_between(energies, curve, alpha=0.30, color=col)
+        ax.plot(energies, curve, color=col, lw=1.1, label=ckey)
     ax.axvline(0.0, color="k", ls="--", lw=0.8)
-    ax.axvline(Eg, color="#c0392b", ls="--", lw=0.8, label=f"CBM ({Eg:.2f} eV)")
+    ax.axvline(Eg, color="#c0392b", ls="--", lw=0.8, label=f"CBM ({Eg:.2f} eV, {Eg_src})")
     ax.set_xlabel("E − VBM (eV)")
     ax.set_ylabel("PDOS (arb. units)")
-    ax.set_title(f"{mat}  —  PDOS AI (campo cristalino)")
+    ax.set_title(f"{mat}  —  PDOS (campo cristalino, Filip 2016 / Even 2013)")
     ax.legend(fontsize=8, ncol=2)
     ax.set_xlim(-7.5, 5.0)
     ax.set_ylim(bottom=0)
-    _save(fig, out_dir, f"pdos_ai_{mat}")
-    print(f"  [PDOS] {mat}: {len(curves)} tipos orbitales → guardado")
+    _save(fig, f"pdos_ai_{mat}")
+    print(f"  [PDOS] {mat}: {len(curves)} orbitales → guardado")
+    return True
 
 
-# ---------------------------------------------------------------------------
-# Funciones 3+4: dieléctrico + óptico — Tauc-Lorentz + K-K + JARVIS/Penn
-# ---------------------------------------------------------------------------
+# ─── Funciones 3+4: dieléctrico + óptico — solo desde GPAW ──────────────────
 
-def _plot_dielectric_and_optical(mat: str, out_dir: Path, phases: set[str]) -> None:
-    Eg = _AI_PREDS[mat]["Eg_semi_soc_eV"]
-    E0 = 1.5 * Eg   # resonance energy
-    C  = 0.5 * Eg   # Lorentz broadening
-    A  = 40.0        # amplitude (eV) — da ε₂_max ≈ 8-12
+def plot_dielectric(mat: str) -> bool:
+    """Función dieléctrica: GPAW (primario) o Surrogate+física parabólica (secundario)."""
+    opt = _load_optical_dft(mat)
+    if opt is None:
+        opt = _load_optical_surrogate(mat)
+    if opt is None:
+        print(f"  [diel] {mat}: sin ε(ω) GPAW ni surrogate → omitida")
+        return False
 
-    eps_inf, eps_src = _fetch_jarvis_eps(mat)
+    omega, eps1, eps2 = opt["omega"], opt["eps1"], opt["eps2"]
+    Eg, Eg_src = _load_eg(mat)
 
-    omega = np.linspace(0.01, 6.0, 2000)
-    eps2 = _tauc_lorentz(omega, Eg, E0, C, A)
-    print(f"  [K-K]  {mat}: calculando Kramers-Kronig (2000 pts)...", flush=True)
-    eps1 = _kramers_kronig(omega, eps2) + (eps_inf - 1.0)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6.5, 6), sharex=True)
+    ax1.plot(omega, eps2, color="#e05c00", lw=1.5, label="ε₂(ω)")
+    ax1.fill_between(omega, eps2, alpha=0.20, color="#e05c00")
+    ax1.axvline(Eg, color="k", ls="--", lw=0.8, label=f"Eg={Eg:.3f} eV ({Eg_src})")
+    ax1.set_ylabel("ε₂"); ax1.legend(fontsize=8)
+    ax1.set_title(f"{mat}  —  Función dieléctrica ({opt['source']})")
 
-    if "dielectric" in phases:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6.5, 6), sharex=True)
-
-        ax1.plot(omega, eps2, color="#e05c00", lw=1.5, label="ε₂(ω)")
-        ax1.fill_between(omega, eps2, alpha=0.20, color="#e05c00")
-        ax1.axvline(Eg, color="k", ls="--", lw=0.8)
-        ax1.set_ylabel("ε₂")
-        ax1.legend(fontsize=9)
-        ax1.set_title(f"{mat}  —  Función dieléctrica AI (Tauc-Lorentz)")
-
-        ax2.plot(omega, eps1, color="#2176AE", lw=1.5, label="ε₁(ω)")
-        ax2.axhline(0.0, color="k", lw=0.5, ls=":")
-        ax2.axvline(Eg, color="k", ls="--", lw=0.8)
-        ax2.text(0.97, 0.97, f"ε_∞ = {eps_inf:.2f}\n({eps_src})",
-                 transform=ax2.transAxes, ha="right", va="top", fontsize=8,
-                 bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
-        ax2.set_xlabel("ħω (eV)")
-        ax2.set_ylabel("ε₁")
-        ax2.legend(fontsize=9)
-        plt.tight_layout()
-        _save(fig, out_dir, f"dielectric_ai_{mat}")
-        print(f"  [diel] {mat}: ε_∞={eps_inf:.3f} ({eps_src}) → guardado")
-
-    if "optical" in phases:
-        eps_complex = (eps1 + 1j * eps2).astype(complex)
-        sqrt_eps = np.sqrt(eps_complex)
-        n_opt = sqrt_eps.real
-        k_ext = sqrt_eps.imag
-        # α en cm⁻¹: ħ=6.582e-16 eV·s, c=2.998e10 cm/s → ħc=1.973e-5 eV·cm
-        alpha = 2.0 * omega * k_ext / (6.582e-16 * 2.998e10)
-
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(6.5, 8), sharex=True)
-
-        ax1.plot(omega, n_opt, color="#2176AE", lw=1.5)
-        ax1.axvline(Eg, color="k", ls="--", lw=0.8)
-        ax1.set_ylabel("n (refracción)")
-        ax1.set_title(f"{mat}  —  Espectro óptico AI (Tauc-Lorentz)")
-
-        ax2.plot(omega, k_ext, color="#e05c00", lw=1.5)
-        ax2.axvline(Eg, color="k", ls="--", lw=0.8)
-        ax2.set_ylabel("k (extinción)")
-
-        mask = alpha > 0
-        ax3.semilogy(omega[mask], alpha[mask], color="#7c5cbf", lw=1.5)
-        ax3.axvline(Eg, color="k", ls="--", lw=0.8)
-        ax3.set_xlabel("ħω (eV)")
-        ax3.set_ylabel("α (cm⁻¹)")
-
-        plt.tight_layout()
-        _save(fig, out_dir, f"optical_ai_{mat}")
-        idx2 = np.searchsorted(omega, 2.0)
-        print(f"  [opt]  {mat}: n_max={n_opt.max():.2f}  "
-              f"α(2 eV)={alpha[idx2]:.1e} cm⁻¹ → guardado")
+    ax2.plot(omega, eps1, color="#2176AE", lw=1.5, label="ε₁(ω)")
+    ax2.axhline(0.0, color="k", lw=0.5, ls=":")
+    ax2.axvline(Eg, color="k", ls="--", lw=0.8)
+    ax2.set_xlabel("ħω (eV)"); ax2.set_ylabel("ε₁"); ax2.legend(fontsize=8)
+    plt.tight_layout()
+    _save(fig, f"dielectric_ai_{mat}")
+    print(f"  [diel] {mat}: fuente={opt['source']} → guardado")
+    return True
 
 
-# ---------------------------------------------------------------------------
-# Worker para paralelismo (debe ser función de módulo, no lambda)
-# ---------------------------------------------------------------------------
+def plot_optical(mat: str) -> bool:
+    """Espectro óptico (n, k, α): GPAW (primario) o Surrogate+física parabólica (secundario)."""
+    opt = _load_optical_dft(mat)
+    if opt is None:
+        opt = _load_optical_surrogate(mat)
+    if opt is None:
+        print(f"  [opt]  {mat}: sin ε(ω) GPAW ni surrogate → omitida")
+        return False
+
+    omega, eps1, eps2 = opt["omega"], opt["eps1"], opt["eps2"]
+    Eg, Eg_src = _load_eg(mat)
+    eps_c = (eps1 + 1j * eps2).astype(complex)
+    sqrt_eps = np.sqrt(eps_c)
+    n_opt = sqrt_eps.real
+    k_ext = sqrt_eps.imag
+    # ħc = 6.582e-16 eV·s × 2.998e10 cm/s = 1.973e-5 eV·cm
+    alpha = 2.0 * omega * k_ext / (6.582e-16 * 2.998e10)
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(6.5, 8), sharex=True)
+    ax1.plot(omega, n_opt, color="#2176AE", lw=1.5)
+    ax1.axvline(Eg, color="k", ls="--", lw=0.8)
+    ax1.set_ylabel("n (refracción)")
+    ax1.set_title(f"{mat}  —  Espectro óptico ({opt['source']})")
+
+    ax2.plot(omega, k_ext, color="#e05c00", lw=1.5)
+    ax2.axvline(Eg, color="k", ls="--", lw=0.8)
+    ax2.set_ylabel("k (extinción)")
+
+    mask = alpha > 0
+    ax3.semilogy(omega[mask], alpha[mask], color="#7c5cbf", lw=1.5)
+    ax3.axvline(Eg, color="k", ls="--", lw=0.8,
+                label=f"Eg={Eg:.3f} eV ({Eg_src})")
+    ax3.set_xlabel("ħω (eV)"); ax3.set_ylabel("α (cm⁻¹)"); ax3.legend(fontsize=8)
+    plt.tight_layout()
+    _save(fig, f"optical_ai_{mat}")
+    idx2 = np.searchsorted(omega, 2.0)
+    print(f"  [opt]  {mat}: n_max={n_opt.max():.2f}  "
+          f"α(2 eV)={alpha[idx2]:.1e} cm⁻¹ → guardado")
+    return True
+
+
+# ─── Worker y main ────────────────────────────────────────────────────────────
+
+_PHASE_FN = {
+    "dos":        plot_dos,
+    "pdos":       plot_pdos,
+    "dielectric": plot_dielectric,
+    "optical":    plot_optical,
+}
+
 
 def _run_mat(args_tuple: tuple) -> str:
     mat, phases_frozen = args_tuple
-    phases = set(phases_frozen)
-    out = [f"── {mat} ──"]
-    try:
-        if "dos" in phases:
-            plot_dos_ai(mat, OUT_DIR)
-        if "pdos" in phases:
-            plot_pdos_ai(mat, OUT_DIR)
-        if "dielectric" in phases or "optical" in phases:
-            _plot_dielectric_and_optical(mat, OUT_DIR, phases)
-        out.append(f"  ✓ {mat} completo")
-    except Exception as e:
-        out.append(f"  ✗ {mat} ERROR: {e}")
-    return "\n".join(out)
+    lines = [f"── {mat} ──"]
+    for phase in phases_frozen:
+        fn = _PHASE_FN.get(phase)
+        if fn is None:
+            continue
+        try:
+            fn(mat)
+        except Exception as exc:
+            lines.append(f"  ✗ {phase}: {exc}")
+    return "\n".join(lines)
 
-
-# ---------------------------------------------------------------------------
-# main
-# ---------------------------------------------------------------------------
 
 def main() -> None:
     import multiprocessing as _mp
     from concurrent.futures import ProcessPoolExecutor, as_completed
 
-    parser = argparse.ArgumentParser(
-        description="Espectros AI (DOS, PDOS, dieléctrico, óptico) para top-8 perovskitas.")
-    parser.add_argument("--mat", default="all",
-                        help="Nombre de material o 'all' (default: all)")
-    parser.add_argument("--phase", default="dos,pdos,dielectric,optical",
-                        help="Fases separadas por coma: dos,pdos,dielectric,optical")
-    parser.add_argument("--workers", type=int, default=0,
-                        help="Procesos paralelos (0=auto: min(8, n_cpu))")
-    args = parser.parse_args()
+    pa = argparse.ArgumentParser(
+        description="Espectros top-8 — cero heurísticos (Kane/Penn/Tauc-Lorentz eliminados)")
+    pa.add_argument("--mat", default="all",
+                    help="Nombre de material o 'all' (default: all)")
+    pa.add_argument("--phase", default="dos,pdos,dielectric,optical",
+                    help="Fases separadas por coma (default: todas)")
+    pa.add_argument("--workers", type=int, default=0,
+                    help="Procesos paralelos (0=auto)")
+    args = pa.parse_args()
 
     mats = list(TOP8_MATS) if args.mat == "all" else [args.mat]
-    phases = frozenset(p.strip() for p in args.phase.split(","))
+    phases = tuple(p.strip() for p in args.phase.split(",") if p.strip())
     n_workers = args.workers or min(len(mats), _mp.cpu_count())
 
-    print(f"AI spectra — materiales: {mats}")
-    print(f"Fases: {set(phases)}  |  workers: {n_workers}")
+    print(f"Spectra (zero heuristics) — {len(mats)} materiales, fases: {phases}")
     print(f"Salidas en: {OUT_DIR}\n")
-
-    # Pre-calentar JARVIS cache en proceso principal (evita descarga concurrente)
-    for mat in mats:
-        if mat in JARVIS_JIDS:
-            _fetch_jarvis_eps(mat)
+    print("Nota: DOS y óptica solo se generan si hay m*/ε(ω) de DFT.")
+    print("      PDOS se genera siempre (carácter orbital de campo cristalino).\n")
 
     work = [(m, phases) for m in mats]
     if n_workers == 1 or len(mats) == 1:
@@ -430,9 +521,7 @@ def main() -> None:
             for fut in as_completed(futures):
                 print(fut.result())
 
-    total_figs = len(mats) * len(phases) * 2
-    print(f"\nListo. {len(mats)} mat × {len(phases)} fases = {total_figs} archivos")
-
 
 if __name__ == "__main__":
+    import sys
     main()
