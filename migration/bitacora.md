@@ -593,6 +593,112 @@ ldd _gpaw*.so | grep xc   # debe mostrar libxc.so.15
 
 ## GPAW master — cómo reinstalar tras reboot
 
+---
+
+## Pipeline AI — Resultados (2026-05-26)
+
+Ejecución completa de `scripts/ai_pipeline_top8.py` (AI-01 a AI-05) sobre los top-8
+perovskitas. Datos guardados en `calculations/top8_r2scan/ai_predictions.json` y figuras
+en `calculations/top8_r2scan/figures_ai/`.
+
+### AI-01: Relajación MACE-MP-0 small (L0, 32 M parámetros)
+
+Modelo usado: `20231210mace128L0_energy_epoch249model` (small, ya en caché desde 2026-05-05).
+El checkpoint "medium" (`20231203mace128L1_epoch199model`) resultó corrupto (HF descarga
+incompleta sin token). Se optó por small — validez comparable para perovskitas haluro.
+
+| Material | a_DFT (Å) | a_MACE (Å) | Δa (Å) | fmax | Conv. |
+|----------|:---------:|:----------:|:------:|:----:|:-----:|
+| CsSnI3   | 6.200 | 6.251 | +0.051 | 0.0000 | ✓ |
+| MASnI3   | 6.240 | 6.317 | +0.077 | 0.0399 | ✓ |
+| FASnI3   | 6.310 | 6.451 | +0.141 | 0.0476 | ✓ |
+| FASnBr3  | 5.940 | 6.036 | +0.096 | 0.0453 | ✓ |
+| CsPbI3   | 6.296 | 6.373 | +0.076 | 0.0000 | ✓ |
+| MAPbI3   | 6.310 | 6.448 | +0.138 | 0.0429 | ✓ |
+| FAPbI3   | 6.360 | 6.573 | +0.213 | 0.0472 | ✓ |
+| FAPbBr3  | 5.990 | 6.124 | +0.134 | 0.0384 | ✓ |
+
+**Obs**: Δa > 0 sistemático (MACE/GGA sobreestima volumen). Error mayor en FA grande
+(Δa ≈ +0.21 Å para FAPbI3 — catión voluminoso deforma más la red).
+
+### AI-02: Bandgap semi-empírico y Goldschmidt t
+
+| Material | Eg_semi (eV) | t | AI_score_02 |
+|----------|:-----------:|:---:|:-----------:|
+| CsSnI3   | 1.30 | 0.854 | 0.789 |
+| MASnI3   | 1.30 | 0.914 | 1.035 |
+| FASnI3   | 1.30 | 0.990 | 0.461 |
+| FASnBr3  | 1.60 | 1.011 | 0.296 |
+| CsPbI3   | 1.50 | 0.851 | 1.155 |
+| MAPbI3   | 1.50 | 0.912 | 1.583 |
+| FAPbI3   | 1.50 | 0.987 | 0.724 |
+| FAPbBr3  | 1.80 | 1.008 | 0.000 |
+
+### AI-03: Score AINAGENT (ranking Bayesiano)
+
+Ranking: MAPbI3 (1.985) > CsPbI3 (1.910) > MASnI3 (1.905) > CsSnI3 (1.840) >
+FAPbI3 (1.761) > FASnI3 (1.669) > FASnBr3 (1.564) > FAPbBr3 (1.274).
+Coincide con ranking DFT en top-2.
+
+### AI-04: MEGNet-MP bandgap (proxy de ALIGNN — ALIGNN roto por DGL)
+
+ALIGNN requiere DGL graphbolt C++ (`libgraphbolt_pytorch_2.11.0.so`) ausente.
+MEGNet (matgl 3.0.1) con monkey-patch de broadcast en `_broadcast_to_nodes`.
+Requiere `state_attr=torch.tensor([[2]])` (insulator=2 en mfi convention).
+
+| Material | Eg_MEGNet (eV) | Eg_DFT (eV) | Error (eV) |
+|----------|:-------------:|:-----------:|:----------:|
+| CsSnI3   | 2.398 | 1.359 | +1.04 |
+| MASnI3   | 2.124 | 1.584 | +0.54 |
+| FASnI3   | 2.772 | 0.771 | +2.00 |
+| FASnBr3  | 3.140 | 1.115 | +2.02 |
+| CsPbI3   | 2.802 | 1.483 | +1.32 |
+| MAPbI3   | 2.223 | 2.054 | +0.17 |
+| FAPbI3   | 2.121 | 0.982 | +1.14 |
+| FAPbBr3  | 2.403 | 1.079 | +1.32 |
+
+**Obs crítica**: MEGNet sobreestima sistemáticamente +0.2 a +2.0 eV. Entrenado en
+óxidos Materials Project → fuera de distribución para haluro perovskitas. Solo sirve
+como señal de ranking relativo (no valores absolutos).
+
+### AI-05: Corrección SOC empírica (nueva, 2026-05-26)
+
+Motivación: MEGNet es no-relativista. Corrección ΔEg_SOC por par (A,B) tomada de:
+- Even et al. Phys. Rev. Lett. 109, 166805 (2013) — Pb SOC splitting
+- Brivio et al. Phys. Rev. B 89, 155204 (2014) — MAPbI3
+- Mosconi et al. J. Phys. Chem. C 117, 13902 (2013) — Sn
+- Filip & Giustino Phys. Chem. Chem. Phys. 18, 9884 (2016) — FA dilución
+
+| (A,B) | ΔEg_SOC (eV) |
+|-------|:-----------:|
+| Cs+Pb | -0.50 |
+| MA+Pb | -0.55 |
+| FA+Pb | -0.20 |
+| Cs+Sn | -0.25 |
+| MA+Sn | -0.22 |
+| FA+Sn | -0.08 |
+
+**Resultado con validación cruzada DFT:**
+
+| Material | Eg_semi_SOC | Eg_MEGNet_SOC | Eg_DFT | Eg_exp | Error_semi_SOC |
+|----------|:-----------:|:-------------:|:------:|:------:|:--------------:|
+| CsSnI3   | 1.050 | 2.148 | 1.359 | 1.30 | -0.25 |
+| MASnI3   | 1.080 | 1.904 | 1.584 | — | — |
+| FASnI3   | 1.220 | 2.692 | 0.771 | — | — |
+| FASnBr3  | 1.520 | 3.060 | 1.115 | — | — |
+| CsPbI3   | 1.000 | 2.302 | 1.483 | 1.73 | -0.73 |
+| MAPbI3   | 0.950 | 1.673 | 2.054 | 1.55 | -0.60 |
+| FAPbI3   | 1.300 | 1.921 | 0.982 | 1.48 | -0.18 |
+| FAPbBr3  | 1.600 | 2.203 | 1.079 | 2.23 | -0.63 |
+
+**Diagnóstico**: Eg_semi_SOC sub-corrige para Pb (error -0.6 a -0.73 eV) porque
+B_BASE[Pb]=1.5 eV ya fue calibrado sobre valores experimentales que incluyen SOC
+implícitamente. Para la tesis: reportar Eg_semi sin corrección adicional para Pb.
+Para Sn, Eg_semi_SOC da CsSnI3=1.05 eV (exp=1.30, error -0.25 eV) — razonable.
+MEGNet+SOC mejora parcialmente pero el error residual de distribución (~0.5–2 eV) domina.
+
+---
+
 `/tmp/gpaw_master` no persiste entre reboots. Ejecutar este bloque para restaurar:
 
 ```bash

@@ -629,8 +629,8 @@ AI-06. Learning loop (blended reward → reentrenamiento surrogate)
 | 01 | Relajación estructural | PBEsol+D3 · BFGS (ASE/GPAW) | Relajación geométrica MLFF | MACE-MP-0 · FIRE (torch-sim) |
 | 02 | Preconvergencia SCF | PBEsol+U · dens=1e-2 (GPAW) | Prescreening semi-empírico | Eg_semi + factor t · B_BASE/X_SHIFT (AINAGENT) |
 | 03 | SCF principal | r²SCAN+U · dens=1e-4 (GPAW) | Optimización Bayesiana | MLP surrogate (6D→μ,σ²) + UCB · Adam lr=1e-3 (AINAGENT) |
-| 04 | SOC perturbativo + PDOS | `soc_eigenstates` (GPAW) | GNN bandgap con SOC implícito | ALIGNN-FC (JARVIS-DFT, entrenado en gaps+SOC) |
-| 05 | G0W0@PBE (Pb-based) | `G0W0` (GPAW response) | GNN gap cuasipartícula | ALIGNN-GW / SchNet (entrenado en GW gaps, AFLOWML) |
+| 04 | SOC perturbativo + PDOS | `soc_eigenstates` (GPAW) | GNN bandgap (proxy ALIGNN) | MEGNet-MP (matgl, mfi-MP-2019.4.1) — ALIGNN roto por DGL graphbolt |
+| 05 | G0W0@PBE (Pb-based) | `G0W0` (GPAW response) | Corrección SOC empírica | ΔEg_SOC por (A,B) desde literatura (Even 2013, Brivio 2014, Filip 2016) |
 | 06 | SOC sobre eigenvalores GW | `soc_eigenstates`@QP eigenvals | Learning loop | Blended reward + Adam retraining · R_blend (AINAGENT) |
 
 La diferencia fundamental: en el pipeline DFT cada paso opera sobre **una estructura fija**
@@ -744,8 +744,13 @@ El seguimiento de la distancia de Fréchet en el espacio de parámetros de celda
 detecta convergencia de la geometría sin requerir gradiente del cell stress explícito.
 Las 5 estructuras con menor energía de formación tras la relajación avanzan a la Fase 3.
 
-La precisión de MACE para parámetros de celda es ≈±0.01 Å respecto a DFT, con un
-coste 100–1000× menor que la relajación PBEsol completa.
+**Resultados sobre los top-8 (2026-05-26):** Modelo small (L0, fmax < 0.05 eV/Å).
+Todos los 8 materiales convergieron. El parámetro de red MACE sobreestima
+sistemáticamente Δa = +0.05 a +0.21 Å respecto al DFT PBEsol: error GGA típico,
+mayor para cationes FA voluminosos. La precisión de MACE para parámetros de celda es
+≈±0.05–0.10 Å respecto a DFT (algo mayor que el ±0.01 Å de la literatura para óxidos —
+en haluro perovskitas con cationes orgánicos el error es mayor), con un coste ~100×
+menor que la relajación PBEsol completa.
 
 ### 12.6 Fase 3 — Validación DFT (GPAW, 3 niveles)
 
@@ -800,18 +805,28 @@ diferencias para los cinco métodos empleados en este trabajo:
 ### 13.2 Concordancia cuantitativa con el experimento
 
 Los bandgaps calculados con cada método se comparan con los valores experimentales
-disponibles para los materiales estudiados en este trabajo (estado al 2026-05-25):
+disponibles. Resultados completos (2026-05-26):
 
-| Material | Eg_AI (eV) | Eg_PBE (eV) | Eg_r²SCAN (eV) | Eg_scissor† (eV) | Eg_exp (eV) |
-|----------|:----------:|:-----------:|:--------------:|:----------------:|:-----------:|
-| CsPbI₃  | 1.50 | 1.288 | 1.594 | **1.788** (PBE+0.5) | 1.73 |
-| CsSnI₃  | 1.30 | — | 1.359 (U=2.5+SOC) | — (Sn, no aplicable) | 1.30 |
-| MAPbI₃  | 1.80 | — | 1.864 (sin SOC) | 2.364‡ (r²SCAN+0.5) | 1.55–1.60 |
-| FAPbI₃  | 1.50 | — | 0.652 (indir., artef.) | 1.152‡ (r²SCAN+0.5) | 1.48 |
-| FAPbBr₃ | 1.80 | — | 0.854 (indir., artef.) | 1.354‡ (r²SCAN+0.5) | 2.23 |
+| Material | Eg_semi (eV) | Eg_semi+SOC† (eV) | Eg_MEGNet+SOC (eV) | Eg_DFT (eV) | Eg_exp (eV) |
+|----------|:------------:|:------------------:|:------------------:|:-----------:|:-----------:|
+| CsPbI₃  | 1.50 | 1.00 | 2.30 | 1.483 (PBE+scissor) | 1.73 |
+| CsSnI₃  | 1.30 | 1.05 | 2.15 | 1.359 (r²SCAN+U+SOC) | 1.30 |
+| MASnI₃  | 1.30 | 1.08 | 1.90 | 1.584 (r²SCAN+U+SOC) | — |
+| FASnI₃  | 1.30 | 1.22 | 2.69 | 0.771 (r²SCAN+U+SOC) | — |
+| FASnBr₃ | 1.60 | 1.52 | 3.06 | 1.115 (r²SCAN+U+SOC) | — |
+| MAPbI₃  | 1.50 | 0.95 | 1.67 | 2.054 (r²SCAN/Pb) | 1.55 |
+| FAPbI₃  | 1.50 | 1.30 | 1.92 | 0.982 (r²SCAN/Pb) | 1.48 |
+| FAPbBr₃ | 1.80 | 1.60 | 2.20 | 1.079 (r²SCAN/Pb) | 2.23 |
 
-† Corrección scissor +0.5 eV (G0W0@PBE literatura; ver §9.9). Para CsPbI₃: base PBE disponible del groundstate G0W0 abortado (1.288 eV). Para orgánicos: base r²SCAN sin SOC → valor indicativo, no directamente comparable con experimento.  
-‡ Sobreestima: r²SCAN sin SOC ya incluye parte de la corrección; la corrección scissor sobre r²SCAN puede superar el valor experimental.
+† Corrección SOC empírica (AI-05): ΔEg por par (A,B) según Even 2013, Brivio 2014,
+Filip 2016. Nota: B_BASE fue calibrado contra valores experimentales que ya incluyen SOC
+implícitamente → Eg_semi+SOC sub-corrige para Pb (error -0.6 a -0.7 eV vs exp).
+MEGNet+SOC reduce el error de +1.3 a +0.8 eV para Pb, pero el error de distribución
+del modelo (~+0.8–1.8 eV residual) domina sobre la corrección SOC (~0.2–0.55 eV).
+
+**Ranking AI vs DFT (AI-03 score):** MAPbI₃ (1.985) > CsPbI₃ (1.910) > MASnI₃ (1.905) >
+CsSnI₃ (1.840). Los cuatro materiales top del AI coinciden con los de mayor solar_score DFT.
+FA-materials penalizados por t ≈ 1.0 (alejado del óptimo t = 0.90 del descriptor Goldschmidt).
 
 ### 13.3 Análisis
 
