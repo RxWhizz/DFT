@@ -272,6 +272,25 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
 
     nspins, nk_path, nbands = eigs_abs.shape
 
+    # --- Trim comma-paths to the first (main) segment ---
+    # Paths like "GXMGRX,MR" produce two segments sharing a k-point at the comma.
+    # We drop the tail segment so no spurious X|M separator appears in the figure.
+    _trim_k: int | None = None  # shared with SOC section below
+    if ',' in path_str:
+        xsp_arr = np.asarray(xsp_norm)
+        brk = int(np.abs(np.diff(xsp_arr)).argmin())   # index where xsp[i]≈xsp[i+1]
+        x_cut = float(xsp_arr[brk])
+        _trim_k = int(np.searchsorted(xcoords, x_cut + 1e-9, side='left'))
+        xcoords  = xcoords[:_trim_k]
+        eigs_abs = eigs_abs[:, :_trim_k, :]
+        nk_path  = _trim_k
+        xsp_norm = list(xsp_arr[:brk + 1])
+        labels   = list(labels[:brk + 1])
+        if xcoords[-1] > 0:
+            _sc = float(xcoords[-1])
+            xcoords  = xcoords / _sc
+            xsp_norm = [x / _sc for x in xsp_norm]
+
     # Referencia VBM = 0 (convenio para semiconductores).
     # El EF de GPAW con smearing finito puede quedar lejos del gap real;
     # usamos n_occ (del JSON) para encontrar la VBM directamente.
@@ -302,6 +321,8 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
     soc_eigs = None
     if soc_file.exists():
         soc_abs = np.load(str(soc_file))    # (nk_path, 2*nbands) eV absolutos
+        if _trim_k is not None:
+            soc_abs = soc_abs[:_trim_k, :]
         soc_rel = soc_abs - ref             # centrado en VBM
         if scissor > 0.001:
             soc_plot = soc_rel.copy()
@@ -327,36 +348,77 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
     cuts = [0] + seg_breaks + [nk_path]
     segs = [slice(cuts[i], cuts[i + 1]) for i in range(len(cuts) - 1)]
 
-    # --- Plot ---
-    fig, ax = plt.subplots(figsize=(7, 5.5))
-    spin_colors = ["#1a4e8a", "#c0392b"]
-    for s in range(nspins):
-        for b in range(nbands):
-            for seg in segs:
-                ax.plot(xcoords[seg], eigs_plot[s, seg, b],
-                        color=spin_colors[s], lw=0.8, alpha=0.65)
+    # --- Label de método, bandas primarias y CBM ---
+    is_pb_mat = MATERIALS[mat]["is_pb"]
+    n_soc = soc_eigs.shape[1] if soc_eigs is not None else 0
 
-    if soc_eigs is not None:
-        n_soc_bands = min(soc_eigs.shape[1], 2 * nbands)
-        for b in range(n_soc_bands):
+    if not is_pb_mat and soc_eigs is not None:
+        # Sn: r²SCAN+U+SOC — re-alinear al VBM del SOC (cada banda DFT → 2 bandas SOC)
+        main_label = "r²SCAN+U+SOC"
+        use_soc_primary = True
+        if n_occ is not None and 2 * n_occ < n_soc:
+            _vbm_soc = float(soc_eigs[:, 2 * n_occ - 1].max())
+            soc_eigs = soc_eigs - _vbm_soc
+            cbm = float(soc_eigs[:, 2 * n_occ].min())
+            k_cbm = int(np.argmin(soc_eigs[:, 2 * n_occ]))
+        else:
+            _above = np.where(soc_eigs > 5e-3, soc_eigs, np.inf)
+            cbm = float(_above.min())
+            k_cbm = int(_above.min(axis=1).argmin())
+    else:
+        # Pb: PBE+scissor como proxy hasta tener G0W0+SOC
+        main_label = "PBE+scissor"
+        use_soc_primary = False
+        if n_occ is not None and n_occ < nbands:
+            cbm = float(eigs_plot[0, :, n_occ].min())
+            k_cbm = int(np.argmin(eigs_plot[0, :, n_occ]))
+        else:
+            _above = np.where(eigs_plot > 5e-3, eigs_plot, np.inf)
+            cbm = float(_above.min())
+            k_cbm = int(_above.min(axis=(0, 2)).argmin())
+
+    # --- Plot ---
+    fig, ax = plt.subplots(figsize=(7.5, 5.5))
+    fig.subplots_adjust(right=0.82)   # deja espacio para la anotación E_g
+
+    # Bandas primarias: SOC para Sn, DFT+scissor para Pb
+    if use_soc_primary:
+        for b in range(n_soc):
             for seg in segs:
                 ax.plot(xcoords[seg], soc_eigs[seg, b],
-                        color="#e85d04", lw=0.5, alpha=0.35, ls="--",
-                        label="DFT+SOC" if b == 0 else "")
+                        color="#1a4e8a", lw=0.9, alpha=0.68)
+    else:
+        for s in range(nspins):
+            for b in range(nbands):
+                for seg in segs:
+                    ax.plot(xcoords[seg], eigs_plot[s, seg, b],
+                            color="#1a4e8a", lw=0.8, alpha=0.65)
 
-    # Línea en VBM = 0
-    ax.axhline(0, color="black", lw=0.9, ls="--", alpha=0.5, label="VBM")
+    # Líneas horizontales: VBM=0 (negro) y CBM (rojo)
+    ax.axhline(0,   color="black",   lw=1.0, ls="--", alpha=0.55)
+    ax.axhline(cbm, color="#c0392b", lw=1.0, ls="--", alpha=0.80)
 
-    # Puntos de alta simetría — línea doble en saltos de segmento
-    drawn_xc = set()
-    for i, (xc, lb) in enumerate(zip(xsp_norm, labels)):
-        is_break = xc in [float(b) for b in break_xcoords]
-        lw = 1.2 if is_break else 0.5
+    # Anotación E_g: flecha doble + texto fuera del eje (derecha)
+    from matplotlib.transforms import blended_transform_factory
+    _tr = blended_transform_factory(ax.transAxes, ax.transData)
+    ax.annotate("", xy=(1.04, cbm), xytext=(1.04, 0.0),
+                xycoords=_tr, textcoords=_tr, clip_on=False,
+                arrowprops=dict(arrowstyle="<->", color="#c0392b",
+                                lw=1.4, mutation_scale=14))
+    ax.text(1.06, cbm / 2,
+            f"$E_g$\n{cbm:.2f} eV",
+            transform=_tr, color="#c0392b", fontsize=8.5,
+            va="center", ha="left", clip_on=False,
+            bbox=dict(fc="white", ec="none", alpha=0.9, pad=1.5))
+
+    # Puntos de alta simetría
+    drawn_xc: set = set()
+    for xc in xsp_norm:
         if xc not in drawn_xc:
-            ax.axvline(xc, color="gray", lw=lw, alpha=0.55)
+            ax.axvline(xc, color="gray", lw=0.5, alpha=0.55)
             drawn_xc.add(xc)
 
-    # Labels: fusionar X|M cuando comparten coordenada
+    # Labels: fusionar puntos compartidos
     tick_xcoords, tick_labels = [], []
     i = 0
     while i < len(xsp_norm):
@@ -370,31 +432,61 @@ def plot_bands(mat: str, mat_dir: Path, out_dir: Path, scissor: float) -> None:
         tick_xcoords.append(xc)
         tick_labels.append(lb)
 
-    def _fmt(lb):
+    def _fmt(lb: str) -> str:
         return lb.replace("G", "Γ").replace("Gamma", "Γ")
 
     ax.set_xticks(tick_xcoords)
     ax.set_xticklabels([_fmt(lb) for lb in tick_labels], fontsize=11)
-
     ax.set_xlim(xcoords[0], xcoords[-1])
     ax.set_ylim(-5, 5)
     ax.set_ylabel("Energía − VBM (eV)", fontsize=12)
-
-    sc_note = f"  [scissor +{scissor:.3f} eV en CB]" if scissor > 0.001 else ""
-    ax.set_title(f"Estructura de bandas — {mat}  ({xc_label}){sc_note}", fontsize=10)
+    ax.set_title(f"Estructura de bandas — {mat}  ({main_label})", fontsize=10)
 
     from matplotlib.lines import Line2D
-    handles = [Line2D([0], [0], color="#1a4e8a", lw=1.5, label=f"DFT ({xc_label})")]
-    if soc_eigs is not None:
-        handles.append(
-            Line2D([0], [0], color="#e85d04", lw=1.0, ls="--", label="DFT+SOC")
-        )
-    ax.legend(handles=handles, fontsize=9)
+    ax.legend(handles=[Line2D([0], [0], color="#1a4e8a", lw=1.5, label=main_label)],
+              fontsize=9, loc="upper right")
     ax.grid(axis="y", alpha=0.15)
 
+    # --- Inset close-up alrededor del gap ---
+    x_cbm = float(xcoords[k_cbm])
+    dx = 0.13
+    xl = max(float(xcoords[0]), x_cbm - dx)
+    xr = min(float(xcoords[-1]), x_cbm + dx)
+    yi_lo, yi_hi = -0.55, cbm + 0.55
+
+    inset_x0 = 0.55 if x_cbm < 0.5 else 0.04
+    axins = ax.inset_axes([inset_x0, 0.54, 0.38, 0.42])
+
+    if use_soc_primary:
+        for b in range(n_soc):
+            axins.plot(xcoords, soc_eigs[:, b], color="#1a4e8a", lw=0.7, alpha=0.65)
+    else:
+        for s in range(nspins):
+            for b in range(nbands):
+                axins.plot(xcoords, eigs_plot[s, :, b], color="#1a4e8a", lw=0.7, alpha=0.65)
+
+    axins.axhline(0,   color="black",   lw=0.7, ls="--", alpha=0.55)
+    axins.axhline(cbm, color="#c0392b", lw=0.7, ls="--", alpha=0.80)
+    axins.set_xlim(xl, xr)
+    axins.set_ylim(yi_lo, yi_hi)
+
+    # Etiqueta E_g dentro del inset
+    axins.text(0.97, 0.50, f"$E_g$={cbm:.2f} eV",
+               transform=axins.transAxes, color="#c0392b", fontsize=7,
+               va="center", ha="right",
+               bbox=dict(fc="white", ec="#c0392b", alpha=0.92, pad=2, lw=0.6))
+
+    # Tick del punto k más cercano al CBM
+    _ci = min(range(len(tick_xcoords)), key=lambda j: abs(tick_xcoords[j] - x_cbm))
+    axins.set_xticks([tick_xcoords[_ci]])
+    axins.set_xticklabels([_fmt(tick_labels[_ci])], fontsize=7)
+    axins.tick_params(axis="y", labelsize=6.5)
+    axins.yaxis.set_major_locator(plt.MaxNLocator(nbins=3))
+    ax.indicate_inset_zoom(axins, edgecolor="#777777", alpha=0.55)
+
     _save(fig, out_dir, f"bands_{mat}")
-    print(f"  [bands] guardado → {out_dir.name}/bands_{mat}.png  "
-          f"(camino: {path_str})")
+    print(f"  [bands] {mat}: guardado → {out_dir.name}/bands_{mat}.png  "
+          f"(E_g={cbm:.3f} eV, {main_label})")
 
 
 # ---------------------------------------------------------------------------

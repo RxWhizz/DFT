@@ -76,10 +76,10 @@ def _band_path_str(atoms) -> str:
     angles = cell.angles()
     # Cúbico: a≈b≈c, α≈β≈γ≈90
     if (lengths.max() - lengths.min()) < 0.15 and all(abs(a - 90) < 3 for a in angles):
-        return "GXMGRX,MR"
+        return "GXMGR"   # camino estándar cúbico sin salto X|M
     # Tetragonal: a≈b≠c
     if abs(lengths[0] - lengths[1]) < 0.1 and abs(lengths[0] - lengths[2]) > 0.1:
-        return "GXMGZRAZ,XR"
+        return "GXMGZRAZ"   # sin cola XR
     # Ortorrómbico: fallback
     return "GXSYGZURTZ"
 
