@@ -699,6 +699,135 @@ MEGNet+SOC mejora parcialmente pero el error residual de distribución (~0.5–2
 
 ---
 
+## AI-06: Espectros AI — DOS, PDOS, dieléctrico y óptico (2026-05-27)
+
+Script: `scripts/ai_spectra_top8.py`. Ejecución paralela (8 workers, `ProcessPoolExecutor`).
+64 figuras en `calculations/top8_r2scan/figures_ai/` (4 tipos × 8 materiales × PNG+PDF).
+
+### Modelos AI implementados
+
+| Propiedad | Modelo físico AI | Parámetros | Referencia |
+|-----------|-----------------|------------|-----------|
+| DOS total | D(E) ∝ m\*^(3/2)·√\|E−Eborde\| (3D parabólica) | m\*_e, m\*_h | Ashcroft & Mermin 1976 |
+| m\* efectiva | Kane: m\*_e = Eg/(Eg+P²), P²=20 eV | Eg_semi_soc | Mosconi 2014 |
+| m\*_h | 1.3·m\*_e (factor asimétrico) | m\*_e | Mosconi 2014 |
+| PDOS | Posiciones orbitales de campo cristalino | composición (A,B,X), Eg | Filip 2016, Even 2013 |
+| ε₂(ω) | Tauc-Lorentz: A=40 eV, E₀=1.5·Eg, C=0.5·Eg | Eg_semi_soc | Jellison-Modine 1996 |
+| ε_∞ | Penn: clip(1+(14/Eg)², 3.5, 7.0) | Eg_semi_soc | Penn 1962 |
+| ε₁(ω) | Kramers-Kronig numérico (trapecio) + ε_∞ | ε₂(ω) | Clásica |
+
+**Herramientas matemáticas auxiliares (no son el contenido AI):** ensanchamiento gaussiano (σ=0.1 eV), K-K numérico.
+
+**Intento JARVIS-DFT-3D para ε_∞:** `jarvis-tools 2026.4.2` instalado y dataset descargado (41 MB).
+CsPbI3 **no está** en la base JARVIS-DFT-3D. CsSnI3 existe (JVASP-22675, Pm-3m) pero `epsx='na'`
+(DFPT no calculado para esa entrada). Penn fallback usado para los 8 materiales.
+ALIGNN sigue roto (DGL: `libgraphbolt_pytorch_2.11.0.so` ausente). CHGNet/matgl solo predicen
+energía/fuerzas, no propiedades electrónicas.
+
+### Masas efectivas: Kane vs DFT-SOC
+
+| Material | m\*_e (m₀) | m\*_h (m₀) | Fuente | Nota |
+|----------|:---------:|:---------:|--------|------|
+| CsSnI3   | 0.0499 | 0.0648 | Kane   | Sn: siempre Kane |
+| MASnI3   | 0.0512 | 0.0666 | Kane   | Sn: siempre Kane |
+| FASnI3   | 0.0575 | 0.0747 | Kane   | Sn: siempre Kane |
+| FASnBr3  | 0.0706 | 0.0918 | Kane   | Sn: siempre Kane |
+| CsPbI3   | 0.0453 | 0.0526 | DFT-SOC | electrones ligeros, típico Pb |
+| MAPbI3   | 1.264  | 1.296  | DFT-SOC | masas pesadas (distorsión orgánica) |
+| FAPbI3   | 1.770  | 9.891  | DFT-SOC | heavy-hole (m\*_h grande pero físico) |
+| FAPbBr3  | 0.0741 | 0.0963 | Kane   | flag `UNPHYSICAL_MASS_CBM_SOC:64.32` → Kane |
+
+### Resultados ópticos AI
+
+| Material | Eg_AI_soc (eV) | ε_∞ | n_max | α(2 eV) (cm⁻¹) |
+|----------|:-------------:|:---:|:-----:|:--------------:|
+| CsSnI3   | 1.050 | 7.0 (Penn) | 3.83 | 1.9×10⁵ |
+| MASnI3   | 1.080 | 7.0 (Penn) | 3.80 | 2.0×10⁵ |
+| FASnI3   | 1.220 | 7.0 (Penn) | 3.69 | 2.5×10⁵ |
+| FASnBr3  | 1.520 | 7.0 (Penn) | 3.50 | 6.3×10⁴ |
+| CsPbI3   | 1.000 | 7.0 (Penn) | 3.88 | 1.6×10⁵ |
+| MAPbI3   | 0.950 | 7.0 (Penn) | 3.94 | 1.4×10⁵ |
+| FAPbI3   | 1.300 | 7.0 (Penn) | 3.63 | 2.2×10⁵ |
+| FAPbBr3  | 1.600 | 7.0 (Penn) | 3.46 | 3.3×10⁴ |
+
+Penn ε_∞=7.0 en todos: Eg_semi_soc < 2 eV para todos los materiales → (14/Eg)² > 49 → siempre
+clipea al máximo 7.0. Valor razonable (exp haluro perovskitas: 4.5–7.0, Löper 2015).
+
+---
+
+## Comparativa AI vs DFT (2026-05-27)
+
+### Geometría: MACE vs DFT
+
+Δa sistemáticamente positivo (+0.05 a +0.21 Å, 0.8–3.3%). Origen: MACE-MP-0 small entrenado
+con GGA/PBE que sobreestima volúmenes. Error mayor en cationes FA orgánicos grandes (FAPbI3: +0.21 Å).
+MACE es válido como pre-relajador antes de DFT (reduce ciclos SCF, no como resultado final).
+
+### Bandgap: AI vs DFT+SOC vs experimento
+
+| Material | Eg_semi | Eg_semi_SOC | Eg_DFT+SOC | Eg_exp | Err_semi vs exp | Err_DFT vs exp |
+|----------|:-------:|:-----------:|:----------:|:------:|:---------------:|:--------------:|
+| CsSnI3   | 1.30 | 1.05 | 1.359 | 1.30 | 0.00 | +0.06 |
+| CsPbI3   | 1.50 | 1.00 | 1.483 | 1.73 | −0.23 | −0.25 |
+| MAPbI3   | 1.50 | 0.95 | 2.054 | 1.55 | −0.05 | +0.50 |
+| FAPbI3   | 1.50 | 1.30 | 0.982 | 1.48 | +0.02 | −0.50 |
+| FAPbBr3  | 1.80 | 1.60 | 1.079 | 2.23 | −0.43 | −1.15 |
+
+Conclusiones:
+- **Eg_semi (AI-02) da mejor acuerdo con exp que Eg_DFT+SOC para MAPbI3** (−0.05 vs +0.50 eV).
+  Esto revela que el modelo semi-empírico B_BASE[Pb]=1.5 eV fue calibrado implícitamente contra
+  experimento (que ya incluye SOC y muchos-cuerpos). El DFT r²SCAN sin U sobreestima para MAPbI3.
+- **FAPbBr3**: DFT falla gravemente (−1.15 eV vs exp); AI semi-empírico es más cercano (−0.43 eV).
+  Indica que r²SCAN sin U es insuficiente para haluros mixtos FA+Br.
+- **CsSnI3**: DFT con U=2.5 da el mejor resultado absoluto (+0.06 eV). AI sin SOC reproduce exp exacto.
+- **AI-05 (SOC empírico) sobre-corrige Pb**: B_BASE[Pb] ya incluye SOC implícitamente → doble corrección.
+  Para tesis: **usar Eg_semi (sin AI-05) como predictor AI para Pb**; AI-05 válido solo para Sn.
+
+### DOS: parabólica AI vs DFT
+
+La DOS parabólica 3D captura correctamente el **orden de masas** y la tendencia de anchura de banda:
+- CsPbI3 (m\*=0.05 m₀): DOS ancha, alta mobilidad esperada. Consistente con DFT.
+- MAPbI3 (m\*=1.3 m₀): DOS estrecha, masas pesadas por distorsión orgánica. Consistente con DFT.
+- FAPbI3 heavy-hole (m\*_h=9.89 m₀): cola VB extremadamente angosta. Físicamente esperado (DFT confirma).
+- FAPbBr3 Kane (m\*~0.07): Kane fallback evita artefacto m\*=64 m₀.
+
+Limitaciones del modelo parabólico:
+- No reproduce hibridación Pb-s/I-p en VBM (solo parábola continua).
+- No captura estados orgánicos (N-2p, C-2p) que DFT muestra a −3 a −5 eV.
+- PDOS de campo cristalino es cualitativamente correcto pero posiciones de pico son literatura
+  para fase cúbica ideal — materiales FA distorsionados pueden variar ±0.3 eV.
+
+### Función dieléctrica: Tauc-Lorentz AI vs DFT
+
+| Propiedad | AI (TL) | DFT GPAW | Exp (CsPbI3) |
+|-----------|:-------:|:--------:|:------------:|
+| Onset ε₂ | cuadrático (ħω−Eg)² | abrupto (transiciones verticales) | — |
+| n_max | 3.4–3.9 | 2.5–3.5 | ~3.0 (Löper 2015) |
+| ε₁(0) ≈ ε_∞ | 7.0 (Penn, clamped) | — | ~4.5–5.0 (CsPbI3) |
+| α(2 eV) | 10⁴–10⁵ cm⁻¹ | ~10⁴–10⁵ cm⁻¹ | ~10⁴–10⁵ cm⁻¹ |
+
+AI sobreestima n_max en ~10–20% respecto a DFT (Penn ε_∞ alto). La forma del espectro es cualitativamente
+correcta: onset en Eg, pico de ε₂ cerca de E₀=1.5·Eg, cruce de ε₁ por cero cerca del pico.
+α(ω) está en el rango correcto para fotovoltaica (absorción fuerte en visible).
+
+### Resumen de capacidades AI vs DFT
+
+| Propiedad | AI (este trabajo) | DFT r²SCAN+SOC | Ganancia AI |
+|-----------|:-----------------:|:--------------:|:-----------:|
+| Geometría (a₀) | ±1–3% (MACE) | ±0.3% | 10× más rápido |
+| Bandgap | ±0.05–0.5 eV | ±0.06–0.5 eV | comparable |
+| DOS cualitativa | ✓ (tendencias) | ✓ (cuantitativa) | screening rápido |
+| m\* | Kane ±20% / DFT-SOC | ±15% | — |
+| ε₂(ω) espectral | onset correcto, forma aproximada | cuantitativa | cualitativa suficiente |
+| n, k, α | orden magnitud correcto | cuantitativo | screening óptico |
+| Tiempo/material | ~2 s (AI) | 2–10 h (DFT) | ~10000× |
+
+**Conclusión**: el pipeline AI es viable para **screening de primer nivel** (selección de candidatos,
+tendencias) a costo computacional despreciable. Para diseño de dispositivos (OghmaNano, eficiencia)
+se requiere DFT+SOC cuantitativo.
+
+---
+
 `/tmp/gpaw_master` no persiste entre reboots. Ejecutar este bloque para restaurar:
 
 ```bash

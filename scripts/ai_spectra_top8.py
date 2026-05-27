@@ -61,10 +61,11 @@ PDOS_COLOR: dict[str, str] = {
     "Cs-s": "#3a7abf", "org":  "#5aa05a", "total": "#777777",
 }
 
-# JARVIS DFT-3D JIDs para inorgánicos cúbicos (Pm-3m)
+# JARVIS DFT-3D JIDs para inorgánicos cúbicos (Pm-3m).
+# CsPbI3 no está en JARVIS-DFT-3D; CsSnI3 (JVASP-22675) tiene epsx='na'.
+# Se mantienen para intento con fallback Penn si epsilon='na' o JID ausente.
 JARVIS_JIDS: dict[str, str] = {
-    "CsPbI3": "JVASP-36323",
-    "CsSnI3": "JVASP-1408",
+    "CsSnI3": "JVASP-22675",
 }
 
 
@@ -122,9 +123,11 @@ def _fetch_jarvis_eps(mat: str) -> tuple[float, str]:
     try:
         from jarvis.db.figshare import get_jid_data
         d = get_jid_data(jid=jid, dataset="dft_3d")
-        ex = float(d["epsilon_x"])
-        ey = float(d["epsilon_y"])
-        ez = float(d["epsilon_z"])
+        # JARVIS usa 'epsx/epsy/epsz', no 'epsilon_x'
+        ex = d.get("epsx", "na"); ey = d.get("epsy", "na"); ez = d.get("epsz", "na")
+        if "na" in (str(ex), str(ey), str(ez)):
+            raise ValueError(f"epsilon not computed in JARVIS for {jid}")
+        ex, ey, ez = float(ex), float(ey), float(ez)
         eps_avg = round((ex + ey + ez) / 3.0, 3)
         src = f"JARVIS {jid}"
         cache[mat] = {"eps_inf": eps_avg, "source": src}
@@ -366,36 +369,69 @@ def _plot_dielectric_and_optical(mat: str, out_dir: Path, phases: set[str]) -> N
 
 
 # ---------------------------------------------------------------------------
-# main
+# Worker para paralelismo (debe ser función de módulo, no lambda)
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Espectros AI (DOS, PDOS, dieléctrico, óptico) para top-8 perovskitas.")
-    parser.add_argument("--mat", default="all",
-                        help="Nombre de material o 'all' (default: all)")
-    parser.add_argument("--phase", default="dos,pdos,dielectric,optical",
-                        help="Fases separadas por coma: dos,pdos,dielectric,optical")
-    args = parser.parse_args()
-
-    mats = list(TOP8_MATS) if args.mat == "all" else [args.mat]
-    phases = {p.strip() for p in args.phase.split(",")}
-
-    print(f"AI spectra — materiales: {mats}")
-    print(f"Fases: {phases}")
-    print(f"Salidas en: {OUT_DIR}\n")
-
-    for mat in mats:
-        print(f"── {mat} ──")
+def _run_mat(args_tuple: tuple) -> str:
+    mat, phases_frozen = args_tuple
+    phases = set(phases_frozen)
+    out = [f"── {mat} ──"]
+    try:
         if "dos" in phases:
             plot_dos_ai(mat, OUT_DIR)
         if "pdos" in phases:
             plot_pdos_ai(mat, OUT_DIR)
         if "dielectric" in phases or "optical" in phases:
             _plot_dielectric_and_optical(mat, OUT_DIR, phases)
+        out.append(f"  ✓ {mat} completo")
+    except Exception as e:
+        out.append(f"  ✗ {mat} ERROR: {e}")
+    return "\n".join(out)
 
-    total_figs = len(mats) * len(phases) * 2  # PNG + PDF
-    print(f"\nListo. {len(mats)} materiales × {len(phases)} fases = {total_figs} archivos")
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    import multiprocessing as _mp
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+
+    parser = argparse.ArgumentParser(
+        description="Espectros AI (DOS, PDOS, dieléctrico, óptico) para top-8 perovskitas.")
+    parser.add_argument("--mat", default="all",
+                        help="Nombre de material o 'all' (default: all)")
+    parser.add_argument("--phase", default="dos,pdos,dielectric,optical",
+                        help="Fases separadas por coma: dos,pdos,dielectric,optical")
+    parser.add_argument("--workers", type=int, default=0,
+                        help="Procesos paralelos (0=auto: min(8, n_cpu))")
+    args = parser.parse_args()
+
+    mats = list(TOP8_MATS) if args.mat == "all" else [args.mat]
+    phases = frozenset(p.strip() for p in args.phase.split(","))
+    n_workers = args.workers or min(len(mats), _mp.cpu_count())
+
+    print(f"AI spectra — materiales: {mats}")
+    print(f"Fases: {set(phases)}  |  workers: {n_workers}")
+    print(f"Salidas en: {OUT_DIR}\n")
+
+    # Pre-calentar JARVIS cache en proceso principal (evita descarga concurrente)
+    for mat in mats:
+        if mat in JARVIS_JIDS:
+            _fetch_jarvis_eps(mat)
+
+    work = [(m, phases) for m in mats]
+    if n_workers == 1 or len(mats) == 1:
+        for item in work:
+            print(_run_mat(item))
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as ex:
+            futures = {ex.submit(_run_mat, item): item[0] for item in work}
+            for fut in as_completed(futures):
+                print(fut.result())
+
+    total_figs = len(mats) * len(phases) * 2
+    print(f"\nListo. {len(mats)} mat × {len(phases)} fases = {total_figs} archivos")
 
 
 if __name__ == "__main__":
