@@ -1,0 +1,12 @@
+{
+  "item_type": "material",
+  "material_type": "perovskite",
+  "status": "public",
+  "mat_src": "DFT/surrogate top8 pipeline",
+  "material_db_electrical_params": {
+    "material_blend": "False",
+    "Xi0": -3.9,
+    "Eg0": 1.584,
+    "epsilonr": 8.2
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "Eg_eV": 0.771,
+  "eps_r": 8.0,
+  "m_e": 0.15,
+  "m_h": 0.17,
+  "xi_eV": 3.7,
+  "label": "FASnI3 DFT (m* lit.)",
+  "source": "dft",
+  "status": "parsed",
+  "pce_pct": 7.628325e-06,
+  "voc_V": 0.2927882,
+  "jsc_mA_cm2": -4.014033e-05,
+  "ff": 0.6490747
+}

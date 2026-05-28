@@ -1,0 +1,14 @@
+{
+  "Eg_eV": 1.48,
+  "eps_r": 6.2,
+  "m_e": 0.13,
+  "m_h": 0.14,
+  "xi_eV": 3.8,
+  "label": "FAPbI3 AI (lit. GW+SOC)",
+  "source": "ai",
+  "status": "parsed",
+  "pce_pct": 11.45602,
+  "voc_V": 0.7784183,
+  "jsc_mA_cm2": -23.69218,
+  "ff": 0.6211776
+}

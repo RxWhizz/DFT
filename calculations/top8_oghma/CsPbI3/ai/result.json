@@ -1,0 +1,14 @@
+{
+  "Eg_eV": 1.73,
+  "eps_r": 6.3,
+  "m_e": 0.045,
+  "m_h": 0.053,
+  "xi_eV": 3.9,
+  "label": "CsPbI3 AI (lit. GW+SOC)",
+  "source": "ai",
+  "status": "parsed",
+  "pce_pct": 9.716527,
+  "voc_V": 0.9059347,
+  "jsc_mA_cm2": -15.2706,
+  "ff": 0.7023574
+}

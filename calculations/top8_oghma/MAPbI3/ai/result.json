@@ -1,0 +1,14 @@
+{
+  "Eg_eV": 1.55,
+  "eps_r": 6.5,
+  "m_e": 0.12,
+  "m_h": 0.15,
+  "xi_eV": 3.9,
+  "label": "MAPbI3 AI (lit. GW+SOC)",
+  "source": "ai",
+  "status": "parsed",
+  "pce_pct": 11.19466,
+  "voc_V": 0.8273887,
+  "jsc_mA_cm2": -20.96555,
+  "ff": 0.6453498
+}

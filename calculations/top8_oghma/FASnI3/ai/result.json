@@ -1,0 +1,14 @@
+{
+  "Eg_eV": 1.41,
+  "eps_r": 8.0,
+  "m_e": 0.15,
+  "m_h": 0.17,
+  "xi_eV": 3.7,
+  "label": "FASnI3 AI (lit. GW+SOC)",
+  "source": "ai",
+  "status": "parsed",
+  "pce_pct": 8.23557,
+  "voc_V": 0.7067872,
+  "jsc_mA_cm2": -24.29904,
+  "ff": 0.4795301
+}

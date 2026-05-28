@@ -1,0 +1,11 @@
+{
+	"icon":"cover_flow",
+	"sub_icon":"",
+	"item_type":"snapshots",
+	"default_plot_type":"2d",
+	"multiplot":"false",
+	"pos":0,
+	"list": {
+		"segments":0
+		}
+}
