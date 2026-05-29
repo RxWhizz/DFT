@@ -1,5 +1,57 @@
 # REPO PARTE DFT
 
+## Resumen tecnico del pipeline
+
+Este repositorio implementa un pipeline de investigacion para perovskitas haluro ABX3. Combina:
+
+- Flujo DFT con GPAW/ASE.
+- Flujo surrogate/heuristico para screening composicional.
+- Comparacion entre resultados DFT, surrogate y enfoques mixtos.
+- Generacion de tablas, graficas y reportes para tesis o reportes tecnicos.
+
+La refactorizacion activa debe ser conservadora: preservar nombres cientificos, formulas, unidades, criterios de filtrado, rutas de resultados y archivos existentes de calculo.
+
+### Modos previstos
+
+- `surrogate_only`: evalua candidatos con surrogate/heuristica y no ejecuta GPAW.
+- `dft_only`: ejecuta solo pasos DFT seleccionados.
+- `hybrid`: combina surrogate para priorizar/complementar y DFT para validar candidatos seleccionados.
+
+Estos modos estan documentados y cubiertos por pruebas en modulos aditivos. Todavia no se conectan al CLI principal sin confirmacion especifica.
+
+### Estructura funcional recomendada
+
+- Generacion de candidatos: `src/dft_cspbi3/candidates.py`.
+- Evaluacion surrogate: `src/dft_cspbi3/surrogate_runner.py` y `src/ml_surrogate/`.
+- Preparacion y ejecucion DFT: `src/dft_cspbi3/workflow_manager.py`, `structure_builder.py`, `calculator_factory.py`.
+- Analisis de resultados: `src/dft_cspbi3/analysis/`.
+- Graficas y reportes: `src/dft_cspbi3/plotting.py`, `src/dft_cspbi3/reporting/`, `scripts/generate_*.py`.
+- Configuracion: `configs/*.yaml`, `src/dft_cspbi3/pipeline_modes.py`.
+- Cache de resultados derivados: `src/dft_cspbi3/cache.py`.
+
+Consulta `docs/pipeline_architecture.md` para el informe de arquitectura, riesgos y plan conservador.
+
+### Instalacion rapida
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Para calculos DFT reales se requiere GPAW funcional con datasets PAW instalados.
+
+### Ejemplos de comando
+
+```bash
+# DFT dry-run para validar preparacion sin ejecutar GPAW
+python main.py run --phase alpha --steps relax,scf,bands,dos --dry-run
+
+# Surrogate CLI existente
+python -m ml_surrogate.predict --mat all
+
+# Pruebas ligeras agregadas para arquitectura conservadora
+python -m pytest tests/test_pipeline_modes.py tests/test_candidates_and_scoring.py tests/test_cache.py -v
+```
+
 Paquete DFT automatizado para polimorfos CsPbI₃ (α, γ, δ).
 Backend: **GPAW**. Estructuras: **ASE**.
 
