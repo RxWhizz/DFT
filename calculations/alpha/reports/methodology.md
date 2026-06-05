@@ -1,7 +1,7 @@
 # Metodología computacional
 
 *Perovskitas haluro — metodología computacional integrada: DFT de primeros principios, aprendizaje automático y simulación de dispositivo*
-*Última actualización: 2026-05-25*
+*Última actualización: 2026-06-04*
 
 ---
 
@@ -1278,6 +1278,92 @@ permite automatizar simulaciones en batch desde scripts sin intervención manual
 generando los archivos `device_stack.json` y `oghma_device_result.json` programáticamente.
 
 ---
+
+## 16. Benchmark MPI BUHO para r²SCAN básico
+
+El benchmark MPI BUHO (`scripts/buho_mpi_benchmark.py`) se usa para medir costo de
+inicialización GPAW, tiempo promedio por iteración SCF y estabilidad operativa de los
+layouts MPI antes de lanzar cribados DFT masivos. No se interpreta como cálculo de
+producción de propiedades finales: su función es separar costo computacional, fallos de
+paralelización y patologías SCF.
+
+### 16.1 Casos representativos
+
+El benchmark localiza un candidato por tipo desde `runs/relax_basic/`. En el protocolo
+estándar vigente solo se cronometran las celdas puras; las superceldas quedan
+identificadas pero se marcan `SKIP` por presupuesto de inicialización.
+
+| Tipo | Material actual | Propósito |
+|------|-----------------|-----------|
+| `pure_Pb` | MAPbCl₃ | celda unidad Pb, referencia rápida |
+| `pure_Sn` | MASnCl₃ | celda unidad Sn+U, prueba de estabilidad SCF |
+| `super_Pb` | FAPbBr₀.₁₂Cl₀.₁₂I₀.₇₅₃ | `SKIP`: supercelda mixta Pb, 40 átomos |
+| `super_Sn` | FAGe₀.₂₅Sn₀.₇₅Br₃ | `SKIP`: supercelda mixta Sn/Ge+U |
+| `super_mixed_A` | FA₀.₇₅K₀.₂₅SnI₃ | `SKIP`: mezcla A-site con Sn+U |
+
+### 16.2 Parámetros DFT efectivos
+
+Los inputs generados para benchmark usan r²SCAN en GPAW con criterios relajados para
+cribado:
+
+- `kpts=[4,4,4]` en celdas unidad y `kpts=[2,2,2]` en superceldas mixtas.
+- Criterios SCF: `density=1e-3`, `eigenstates=1e-4`, `energy=1e-4`.
+- `maxiter=300` para evitar heredar `maxiter=2000` de producción.
+- Mixer Sn: `msr1 beta=0.01 nmaxold=14 weight=100`.
+- Mixer Pb/Ge sin Sn: `msr1 beta=0.05 nmaxold=8 weight=50`.
+- Ocupaciones: Fermi-Dirac `width=0.2 eV` para Sn; `width=0.01 eV` en no-Sn.
+- Sn usa `Sn:U=2.5 eV` explícito en benchmark básico.
+- Celdas puras usan inicialización LCAO estándar. El template conserva `random=True`
+  para superceldas en caso de benchmark separado, pero el benchmark estándar las salta.
+- Cutoff efectivo observado: `450 eV`, heredado de `configs/default_params.yaml`
+  por `GPAWCalculatorFactory` cuando la factory está disponible.
+
+### 16.3 Política de U para Sn en benchmark
+
+`U=3.5 eV` queda excluido del benchmark básico para Sn con metilamonio: `MASnCl₃`
+mostró oscilación tipo limit-cycle tras ~56 min y 228 iteraciones, con densidad
+estancada alrededor de `log10(Δdens)≈-2.5` frente al criterio `-3.0`. Con `Sn:U=2.5 eV`,
+el mismo caso converge reproduciblemente en 19 iteraciones (~4.8-4.9 min en 8 ranks).
+
+Para producción fina de Sn se mantiene la estrategia independiente de preconvergencia
+y U-ramping; el benchmark básico no debe cold-startear MA-Sn con `U=3.5 eV`.
+
+### 16.4 Política MPI válida
+
+En la versión actual de GPAW master usada aquí, los benchmarks r²SCAN BUHO solo se
+consideran válidos con paralelización por k-points pura:
+
+- `parallel.domain=1` y `parallel.band=1`.
+- Celdas unidad: hasta 8 ranks (`kpt<=8`).
+- Superceldas: `SKIP` en el benchmark estándar; requieren benchmark separado con
+  presupuesto de inicialización distinto y posiblemente k-points/cutoff reducidos.
+
+Layouts que requieren `domain>1` o `band>1` se marcan `SKIP`, no `FAIL`, porque los
+fallos corresponden a la ruta paralela de GPAW y no a química ni convergencia SCF. La
+evidencia operativa fue:
+
+- `parallel={'kpt':8}` en superceldas abortó cuando la simetría redujo IBZ a 6 k-points.
+- `domain>1` abortó con `AttributeError: ... H_NN` incluso con `random=True`.
+- `band>1` activó fallos de BLACS/ScaLAPACK o inicialización en celdas puras.
+- Superceldas kpt-only sin `random=True` quedaron atascadas en `Converting LCAO to pw
+  mode`; por eso el protocolo usa ondas iniciales aleatorias solo en superceldas.
+- Superceldas kpt-only con `random=True` evitaron LCAO pero no avanzaron de
+  inicialización a SCF en ~16 min para 40 átomos, `2×2×2` k-points y cutoff efectivo
+  `450 eV`; se difieren fuera del benchmark estándar.
+
+Por tanto, las configuraciones MPI se interpretan así:
+
+| Config | Ranks | Estado metodológico |
+|--------|-------|---------------------|
+| E | 8 | válido para celdas puras; superceldas `SKIP` |
+| B | 16 | `SKIP` por requerir `domain/band` |
+| A | 44 | `SKIP` por requerir `domain/band` |
+| C | 4 | válido para celdas puras; superceldas `SKIP` |
+| D | 4 | válido para celdas puras; superceldas `SKIP` |
+
+Los timeouts matan el grupo de proceso de `mpirun`; se evita `pkill -f` por ser demasiado
+amplio. Cada job guarda `stdout.txt` y `stderr.txt` junto con `r2scan.txt` para auditar
+fallos MPI completos.
 
 ## Referencias
 

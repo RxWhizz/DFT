@@ -966,3 +966,223 @@ acq = SurrogateAcquisition(beta=1.0)  # carga modelos/surrogate_bandgap.pkl
 score = acq.score_one("CsPbI3", "Cs", "Pb", "I")
 ```
 Fallback automático a B_BASE+X_SHIFT si el modelo no está entrenado.
+
+---
+
+## 2026-06-04 — Benchmark MPI: MASnCl3 con U=3.5 no converge
+
+### Contexto
+
+Durante el benchmark MPI BUHO (`scripts/buho_mpi_benchmark.py`, config E = 3x8),
+el job `pure_Sn` eligió `MASnCl3`:
+
+```text
+runs/mpi_benchmark/cfg_E/4a9194ded1c9c3a1
+mpirun -n 8 .venv/bin/python3 input.py
+```
+
+Parámetros efectivos leídos de `r2scan.txt`:
+
+```yaml
+xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN
+setups: {"Sn": ":s,3.5"}
+occupations: Fermi-Dirac width=0.2 eV
+mixer: msr1 beta=0.01 nmaxold=14 weight=100
+convergence:
+  density: 1e-3
+  eigenstates: 1e-4
+  energy: 1e-4
+maxiter: 2000  # heredado del YAML r2scan de producción
+```
+
+### Observación
+
+Se mató manualmente a las 17:02 MST tras ~56 min y 228 iteraciones SCF. En la
+ventana final el cálculo no mostraba tendencia real a converger:
+
+- Últimas 80 iteraciones: rango de energía ≈ 1.04 eV.
+- Densidad media log10(Δdens) ≈ -2.55; último valor ≈ -2.58.
+- Criterio requerido: log10(Δdens) <= -3.0.
+- Cambios de signo frecuentes en ΔE: patrón de limit-cycle, no relajación estable.
+
+### Decisión
+
+`U=3.5 eV` queda descartado para jobs básicos Sn con metilamonio (MA-Sn): el benchmark
+termina midiendo patología SCF en vez de scaling MPI. Para continuar benchmarks BUHO:
+
+- Forzar `Sn:U=2.5 eV` en `prepare_relaxation_jobs.py` para jobs r2SCAN básicos.
+- Fijar `maxiter=300` en los inputs de benchmark/screening para no heredar `maxiter=2000`.
+- Calcular `parallel.kpt` como divisor compatible de `N_cores` y `N_kpts`; `1x44` no
+  puede usar `kpt=8`.
+
+Para producción fina de Sn, mantener la metodología auditada: preconv + U-scan/ramping
+y SOC perturbativo; no volver a cold-start r2SCAN+U=3.5 en MA-Sn.
+
+### Verificación posterior
+
+Se relanzó el benchmark con el mismo `MASnCl3` y `Sn:U=2.5 eV` explícito:
+
+```text
+CONFIG E: 3x8
+MASnCl3: Converged in 19 steps
+t_init = 4.092 s
+t_iter_avg = 15.3 s
+total = 4.9 min
+final_energy = -53.575982 eV
+densidad final: log10(Δdens) = -4.09c
+```
+
+Conclusión operacional: para MA-Sn, `U=2.5 eV` convierte el caso de oscilación
+en una corrida corta y medible. Usar `U=3.5 eV` en benchmark básico no es aceptable.
+
+### Nota de paralelización
+
+El primer reinicio del benchmark también expuso un problema independiente de SCF:
+
+- Superceldas Sn mixtas en config E abortaron con
+  `Too few spins (1) and IBZ k-points (6) for 8 ranks`.
+- Config B (`2x16`) con celdas puras abortó rápido con `MPI_ABORT errorcode 42`
+  usando `parallel={'kpt': 8, 'domain': 2}`.
+
+Decisión: para inputs BUHO básicos, usar dos layouts:
+
+- Celdas puras: `domain=1`, k-point alto (`kpt<=8`), ranks sobrantes en `band` si aplica.
+- Superceldas: `band=1`, `kpt<=kpt_rank_cap` y ranks sobrantes en `domain`.
+
+Esto evita pedir más grupos k-point que los k-points irreducibles disponibles después
+de simetría y evita activar BLACS/ScaLAPACK en superceldas.
+
+### Reinicio con ondas iniciales aleatorias
+
+El siguiente reinicio separó otro bug de paralelización en GPAW master: con layouts
+que usan `domain>1` o `band>1`, la inicialización LCAO abortó durante
+`Converting LCAO to pw mode` con `AttributeError: ... H_NN`. Esto ocurrió antes de
+entrar a una dinámica SCF útil, por lo que no es una oscilación física/química.
+
+Decisión operativa para benchmark BUHO:
+
+- Mantener `domain=1, band=1` cuando el reparto por k-points cubre todos los cores.
+- Activar `random=True` solo cuando `parallel.domain>1` o `parallel.band>1`, para
+  inicializar directamente ondas aleatorias en PW y saltar la ruta LCAO problemática.
+- En timeouts, matar el grupo de proceso de `mpirun` en lugar de usar patrones `pkill`,
+  para no dejar jobs huérfanos ni afectar shells auxiliares.
+
+### Corrección final de layout para benchmark
+
+El intento con `random=True` sí llegó a GPAW (`Initializing wave functions with random
+numbers` en `r2scan.txt`), pero las superceldas con `parallel={'kpt': 4, 'domain': 2,
+'band': 1}` siguieron abortando con `H_NN`. Config B (`16` ranks) también falló en
+puros al requerir `band>1`. Conclusión: en este GPAW master, para BUHO r2SCAN básico
+solo se consideran válidos los benchmarks con paralelización k-point pura:
+
+- `domain=1`, `band=1`.
+- Celdas puras: hasta 8 ranks (`kpt<=8`).
+- Superceldas: hasta 4 ranks (`kpt<=4`, por cap/IBZ observado).
+- Configs que requieren `domain>1` o `band>1` se marcan `SKIP` en el benchmark en vez
+  de contarse como fallos químicos o de SCF.
+
+Se relanza el benchmark con esta política para obtener tiempos confiables en E puros
+y C/D completos, y dejar A/B como no soportados por la ruta GPAW actual.
+
+### Estado del relanzamiento kpt-only
+
+Relanzamiento iniciado a las 18:53 MST:
+
+```text
+runs/mpi_benchmark/benchmark_restart_20260604_185339_kptonly.log
+PID benchmark: 298291
+timeout: 25 min/job
+configs: E,B,A,C,D
+```
+
+Primer resultado reproducible:
+
+```text
+CONFIG E, pure_Pb, MAPbCl3, 8 ranks:
+t_init = 3.999 s
+t_iter_avg = 15.0 s
+n_iter = 14
+total = 3.6 min
+status = OK
+```
+
+Segundo resultado reproducible:
+
+```text
+CONFIG E, pure_Sn, MASnCl3, 8 ranks:
+t_init = 3.824 s
+t_iter_avg = 15.1 s
+n_iter = 19
+total = 4.9 min
+status = OK
+densidad final = -4.09c
+```
+
+Esto confirma por segunda vez que `Sn:U=2.5 eV` evita la oscilación observada con
+`U=3.5 eV` en MA-Sn. Parámetro efectivo adicional auditado en `r2scan.txt`: cutoff
+`450 eV`, heredado de `configs/default_params.yaml` vía `GPAWCalculatorFactory`
+(el `ecut: 400` de `config/generator.yaml` solo aplica si se usa el constructor
+fallback).
+
+La política `SKIP` también quedó verificada:
+
+- Config E: superceldas a 8 ranks se saltan porque requieren `domain/band`; el límite
+  kpt-only de superceldas queda en 4 ranks.
+- Config B (`16` ranks): todos los casos se saltan porque requieren `domain/band`.
+- Config A (`44` ranks): todos los casos se saltan porque requieren `domain/band`.
+- Config C (`4` ranks): `pure_Pb` cerró OK con `t_init=4.121 s`,
+  `t_iter_avg=17.8 s`, `n_iter=14`, `total=4.2 min`; `pure_Sn` cerró OK con
+  `t_init=4.033 s`, `t_iter_avg=17.8 s`, `n_iter=19`, `total=5.7 min`.
+  `super_Pb` a 4 ranks arrancó con `parallel={'kpt': 4, 'domain': 1, 'band': 1}`,
+  pero quedó más de 6 min en `Converting LCAO to pw mode` sin avanzar el `r2scan.txt`.
+
+Nueva decisión para superceldas:
+
+- Mantener `kpt-only` (`domain=1`, `band=1`) como requisito duro.
+- Activar `random=True` en superceldas aunque sean kpt-only, para saltar la conversión
+  LCAO pesada y medir SCF real.
+- Mantener `random=False` en celdas puras, porque los casos Pb/Sn puros ya convergen
+  de forma reproducible y rápida con la inicialización LCAO.
+- Se mató el relanzamiento `benchmark_restart_20260604_185339_kptonly.log` antes de
+  que el timeout consumiera 25 min en inicialización LCAO de supercelda.
+- Nuevo relanzamiento con superceldas `random=True` iniciado a las 19:19 MST:
+  `runs/mpi_benchmark/benchmark_restart_20260604_191954_superrandom.log`,
+  PID `317944`.
+- Resultado del intento `super_Pb` en config C: el input sí usó `random=True` y
+  `parallel={'kpt': 4, 'domain': 1, 'band': 1}`, evitando la línea
+  `Converting LCAO to pw mode`; aun así, el `r2scan.txt` no avanzó más allá de
+  `Reference energy` por ~16 min, con ranks usando CPU y ~18 GiB RAM total.
+- Decisión final para el benchmark estándar: todos los `super_*` quedan `SKIP`
+  por presupuesto de inicialización (`40` átomos, `2x2x2`, cutoff efectivo `450 eV`).
+  Las superceldas deben ir a un benchmark separado con k-points/cutoff reducidos o
+  presupuesto de timeout distinto; no contaminar el scaling MPI de celdas puras.
+- Relanzamiento estándar final iniciado a las 19:56 MST:
+  `runs/mpi_benchmark/benchmark_restart_20260604_195612_pureonly.log`.
+  Resultado final en `reports/mpi_benchmark.json` y `reports/mpi_benchmark.md`:
+  `25` filas, `6` OK, `19` SKIP.
+
+Resumen de casos OK:
+
+```text
+E  pure_Pb  MAPbCl3   8 ranks  t_init=4.182 s  t_iter=15.1 s  n_iter=14  total=3.6 min
+E  pure_Sn  MASnCl3   8 ranks  t_init=3.950 s  t_iter=15.1 s  n_iter=19  total=4.8 min
+C  pure_Pb  MAPbCl3   4 ranks  t_init=4.126 s  t_iter=17.8 s  n_iter=14  total=4.2 min
+C  pure_Sn  MASnCl3   4 ranks  t_init=4.004 s  t_iter=17.8 s  n_iter=19  total=5.7 min
+D  pure_Pb  MAPbCl3   4 ranks  t_init=4.065 s  t_iter=17.8 s  n_iter=14  total=4.2 min
+D  pure_Sn  MASnCl3   4 ranks  t_init=4.134 s  t_iter=17.9 s  n_iter=19  total=5.7 min
+```
+
+Lectura operacional:
+
+- 8 ranks mejora `t_iter` de puros de ~17.8-17.9 s a ~15.1 s, una ganancia modesta
+  (~15 %) frente a 4 ranks.
+- `MASnCl3` con `Sn:U=2.5 eV` converge de forma reproducible en 19 iteraciones; no hay
+  oscilación tipo `U=3.5 eV`.
+- Configs A/B no se miden porque requieren `domain/band`, rutas inestables en este
+  GPAW master.
+- Superceldas quedan diferidas a benchmark dedicado.
+
+Se actualizó `calculations/alpha/reports/methodology.md` con la nueva sección
+`16. Benchmark MPI BUHO para r²SCAN básico`, incluyendo política `Sn:U=2.5 eV`,
+criterios SCF, cutoff efectivo, regla `kpt-only`, superceldas diferidas/`SKIP`,
+semántica `SKIP` y manejo de timeouts.
