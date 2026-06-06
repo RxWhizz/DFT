@@ -86,13 +86,20 @@ class GeneratedCandidate:
         return cls(**d)
 
 
-def _canonical_id(fractions: dict) -> str:
-    """SHA1 estable de la composición canónica."""
+def _canonical_id(fractions: dict, grid: float = 0.001) -> str:
+    """SHA1 estable de la composición canónica.
+
+    `grid` define la resolución de dedup: las fracciones se cuantizan a la
+    rejilla más cercana antes de hashear. discreto → 0.001 (fracciones exactas);
+    continuo → 0.02 (epsilon-cluster: composiciones a <2% se consideran iguales,
+    evitando re-DFT de casi-duplicados entre batches).
+    """
     parts = []
     for site in ("A", "B", "X"):
         site_fracs = fractions.get(site, {})
         for sp in sorted(site_fracs):
-            parts.append(f"{site}:{sp}:{round(site_fracs[sp], 3)}")
+            val = round(round(site_fracs[sp] / grid) * grid, 4)
+            parts.append(f"{site}:{sp}:{val}")
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
 
 
@@ -157,6 +164,15 @@ class HeuristicGenerator:
             "X_mixed": True, "multi_mixed": False,
         })
 
+        # Muestreo continuo (active learning por batches): en vez de iterar la
+        # lista discreta de fracciones, se muestrean `n_samples_per_combo` valores
+        # continuos por combinación de sitios. Reproducible vía seed + batch_id.
+        self._fraction_mode: str = gen.get("fraction_mode", "discrete")
+        self._n_samples: int = int(gen.get("n_samples_per_combo", 8))
+        self._batch_size: int = int(gen.get("batch_size", 1000))
+        # Resolución de dedup: 0.001 (discreto exacto) / 0.02 (epsilon continuo)
+        self._id_grid: float = 0.02 if self._fraction_mode == "continuous" else 0.001
+
     # ── Public API ──────────────────────────────────────────────────────────────
 
     def generate(self) -> list[GeneratedCandidate]:
@@ -179,6 +195,86 @@ class HeuristicGenerator:
             candidates.extend(self._generate_multi_mixed())
 
         return self._deduplicate(candidates)
+
+    def generate_batch(
+        self,
+        batch_id: int,
+        batch_size: Optional[int] = None,
+        registry_path: Optional[str | Path] = None,
+    ) -> list[GeneratedCandidate]:
+        """Genera un batch reproducible de candidatos continuos.
+
+        - RNG sembrado con `seed + batch_id` → mismo batch_id ⇒ mismos candidatos.
+        - Dedup dentro del batch y, si se da `registry_path`, contra un registro
+          persistente de candidate_ids ya vistos (dedup entre batches). Los IDs
+          nuevos se anexan al registro.
+        - Trunca a `batch_size` (config `generation.batch_size` por defecto).
+        """
+        size = batch_size if batch_size is not None else self._batch_size
+        self._rng = np.random.RandomState(self._seed + int(batch_id))
+        cands = self._deduplicate(self.generate())
+
+        seen = self._load_registry(registry_path) if registry_path else set()
+        fresh = [c for c in cands if c.candidate_id not in seen]
+        fresh = fresh[:size]
+
+        if registry_path and fresh:
+            self._append_registry(registry_path, [c.candidate_id for c in fresh])
+        return fresh
+
+    @staticmethod
+    def _load_registry(path: str | Path) -> set[str]:
+        p = Path(path)
+        if not p.exists():
+            return set()
+        return {ln.strip() for ln in p.read_text().splitlines() if ln.strip()}
+
+    @staticmethod
+    def _append_registry(path: str | Path, ids: list[str]) -> None:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "a") as f:
+            for cid in ids:
+                f.write(cid + "\n")
+
+    # ── Sampling de fracciones (discreto vs continuo) ─────────────────────────────
+
+    def _binary_fracs(self) -> list[float]:
+        """Fracciones para una mezcla binaria (la otra es 1-f)."""
+        if self._fraction_mode == "continuous":
+            return [round(float(f), 4)
+                    for f in self._rng.uniform(0.05, 0.95, self._n_samples)]
+        return [f for f in self._fractions
+                if abs(f) > 1e-9 and abs(f - 1.0) > 1e-9]
+
+    def _ternary_x_fracs(self) -> list[tuple[float, float, float]]:
+        """Fracciones (xI, xBr, xCl) para mezcla ternaria de haluros."""
+        if self._fraction_mode == "continuous":
+            pts = self._rng.dirichlet([1.0, 1.0, 1.0], self._n_samples)
+            # Derivar la 3ª fracción de las 2 primeras → suma exactamente 1.0
+            out = []
+            for a, b, _ in pts:
+                a4 = round(float(a), 4)
+                b4 = round(float(b), 4)
+                c4 = round(1.0 - a4 - b4, 4)
+                out.append((a4, b4, c4))
+            return out
+        out = []
+        for xI in self._fractions:
+            for xBr in self._fractions:
+                xCl = round(1.0 - xI - xBr, 3)
+                out.append((xI, xBr, xCl))
+        return out
+
+    def _multi_fracs(self) -> list[tuple[float, float]]:
+        """Pares (fA, fX) para multi_mixed (A y X simultáneos)."""
+        if self._fraction_mode == "continuous":
+            fa = self._rng.uniform(0.05, 0.95, self._n_samples)
+            fx = self._rng.uniform(0.05, 0.95, self._n_samples)
+            return [(round(float(a), 4), round(float(x), 4)) for a, x in zip(fa, fx)]
+        base = [f for f in self._fractions
+                if abs(f) > 1e-9 and abs(f - 1.0) > 1e-9]
+        return list(itertools.product(base, base))
 
     @staticmethod
     def save_jsonl(candidates: list[GeneratedCandidate], path: str | Path) -> None:
@@ -221,12 +317,10 @@ class HeuristicGenerator:
             self._B_sites,
             self._X_sites,
         ):
-            for f in self._fractions:
-                if abs(f - 0.0) < 1e-9 or abs(f - 1.0) < 1e-9:
-                    continue
+            for f in self._binary_fracs():
                 c = self._make_candidate(
                     A_sp=[A1, A2], B_sp=[B], X_sp=[X],
-                    A_f={A1: f, A2: round(1.0 - f, 3)},
+                    A_f={A1: f, A2: round(1.0 - f, 4)},
                     B_f={B: 1.0}, X_f={X: 1.0},
                     mode="A_mixed",
                 )
@@ -241,13 +335,11 @@ class HeuristicGenerator:
             itertools.combinations(self._B_sites, 2),
             self._X_sites,
         ):
-            for f in self._fractions:
-                if abs(f - 0.0) < 1e-9 or abs(f - 1.0) < 1e-9:
-                    continue
+            for f in self._binary_fracs():
                 c = self._make_candidate(
                     A_sp=[A], B_sp=[B1, B2], X_sp=[X],
                     A_f={A: 1.0},
-                    B_f={B1: f, B2: round(1.0 - f, 3)},
+                    B_f={B1: f, B2: round(1.0 - f, 4)},
                     X_f={X: 1.0},
                     mode="B_mixed",
                 )
@@ -263,38 +355,34 @@ class HeuristicGenerator:
             self._B_sites,
             itertools.combinations(self._X_sites, 2),
         ):
-            for f in self._fractions:
-                if abs(f - 0.0) < 1e-9 or abs(f - 1.0) < 1e-9:
-                    continue
+            for f in self._binary_fracs():
                 c = self._make_candidate(
                     A_sp=[A], B_sp=[B], X_sp=[X1, X2],
                     A_f={A: 1.0}, B_f={B: 1.0},
-                    X_f={X1: f, X2: round(1.0 - f, 3)},
+                    X_f={X1: f, X2: round(1.0 - f, 4)},
                     mode="X_mixed",
                 )
                 if c is not None:
                     result.append(c)
-        # 3-component X mixtures (I+Br+Cl) with discrete fractions
+        # 3-component X mixtures (I+Br+Cl): grid discreta o simplex Dirichlet
         if len(self._X_sites) >= 3:
             for A, B in itertools.product(self._A_sites, self._B_sites):
-                for xI in self._fractions:
-                    for xBr in self._fractions:
-                        xCl = round(1.0 - xI - xBr, 3)
-                        if xCl < 0.05 or xCl > 0.95:
-                            continue
-                        X_sp = [x for x, f in zip(
-                            self._X_sites, [xI, xBr, xCl]) if f > 0.01]
-                        X_f = {x: f for x, f in zip(
-                            self._X_sites, [xI, xBr, xCl]) if f > 0.01}
-                        if len(X_sp) < 3:
-                            continue  # already covered by 2-component
-                        c = self._make_candidate(
-                            A_sp=[A], B_sp=[B], X_sp=X_sp,
-                            A_f={A: 1.0}, B_f={B: 1.0}, X_f=X_f,
-                            mode="X_mixed",
-                        )
-                        if c is not None:
-                            result.append(c)
+                for xI, xBr, xCl in self._ternary_x_fracs():
+                    if xCl < 0.05 or xCl > 0.95:
+                        continue
+                    X_sp = [x for x, f in zip(
+                        self._X_sites, [xI, xBr, xCl]) if f > 0.01]
+                    X_f = {x: round(f, 4) for x, f in zip(
+                        self._X_sites, [xI, xBr, xCl]) if f > 0.01}
+                    if len(X_sp) < 3:
+                        continue  # already covered by 2-component
+                    c = self._make_candidate(
+                        A_sp=[A], B_sp=[B], X_sp=X_sp,
+                        A_f={A: 1.0}, B_f={B: 1.0}, X_f=X_f,
+                        mode="X_mixed",
+                    )
+                    if c is not None:
+                        result.append(c)
         return result
 
     def _generate_multi_mixed(self) -> list[GeneratedCandidate]:
@@ -305,16 +393,12 @@ class HeuristicGenerator:
             self._B_sites,
             itertools.combinations(self._X_sites, 2),
         ):
-            for fA, fX in itertools.product(self._fractions, self._fractions):
-                if abs(fA - 0.0) < 1e-9 or abs(fA - 1.0) < 1e-9:
-                    continue
-                if abs(fX - 0.0) < 1e-9 or abs(fX - 1.0) < 1e-9:
-                    continue
+            for fA, fX in self._multi_fracs():
                 c = self._make_candidate(
                     A_sp=[A1, A2], B_sp=[B], X_sp=[X1, X2],
-                    A_f={A1: fA, A2: round(1.0 - fA, 3)},
+                    A_f={A1: fA, A2: round(1.0 - fA, 4)},
                     B_f={B: 1.0},
-                    X_f={X1: fX, X2: round(1.0 - fX, 3)},
+                    X_f={X1: fX, X2: round(1.0 - fX, 4)},
                     mode="multi_mixed",
                 )
                 if c is not None:
@@ -353,7 +437,7 @@ class HeuristicGenerator:
         vol = a0 ** 3
 
         fractions = {"A": dict(A_f), "B": dict(B_f), "X": dict(X_f)}
-        cid = _canonical_id(fractions)
+        cid = _canonical_id(fractions, self._id_grid)
         red = _reduced_formula(fractions)
         formula = _build_formula(A_sp, B_sp, X_sp, A_f, B_f, X_f)
 

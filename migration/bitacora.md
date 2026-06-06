@@ -1186,3 +1186,108 @@ Se actualizó `calculations/alpha/reports/methodology.md` con la nueva sección
 `16. Benchmark MPI BUHO para r²SCAN básico`, incluyendo política `Sn:U=2.5 eV`,
 criterios SCF, cutoff efectivo, regla `kpt-only`, superceldas diferidas/`SKIP`,
 semántica `SKIP` y manejo de timeouts.
+
+## 2026-06-05 — Migración a GPAW 24.6 (domain funciona) + single-point + barrido óptimo
+
+### Decisión 1: cribado por SINGLE-POINT (no relajación FIRE)
+La etiqueta DFT alimenta un **generador/surrogate**, no un optimizador. Importa el
+ranking relativo de estabilidad con metodología consistente, no el mínimo geométrico
+exacto. Cambio: `config/generator.yaml` `max_steps: 0` → el template hace solo SCF (sin
+mover átomos). Elimina el multiplicador ~5× de FIRE. Guard de outliers en
+`collect_results.py`: marca `is_outlier`/`trusted_label` por SCF no convergido, energía
+no finita, o z-robusto (MAD) de E/átomo > 5 dentro de cada `generation_mode` (atrapa
+geometrías patológicas de superceldas random).
+
+### Decisión 2: GPAW 24.6.0 estable (conda) en vez de master — domain FUNCIONA
+Hipótesis (correcta) del usuario: el crash `assert c==1` de domain en GPAW master
+(25.7.1b1) era un **bug del build de desarrollo**, no un límite físico. Se instaló
+Miniforge + env `gpaw246` (GPAW 24.6.0, libxc 6.2.2, **scalapack: yes**, mpich). Los
+datasets PAW se reutilizan del venv vía `GPAW_SETUP_PATH` (apples-to-apples). Detalle:
+el `activate.d` del env sobreescribe `GPAW_SETUP_PATH` → exportarlo DENTRO de `bash -c`
+tras `conda run`. Log de 24.6 sin los `|` de master (`iter:  1 HH:MM:SS`).
+
+**Domain escala ~lineal en 24.6** (supercelda 40 átomos, single-point):
+
+```text
+1 core   20.1 s/iter  1.00x
+domain=2 10.9 s/iter  1.80x  (90% efic)
+domain=4  5.9 s/iter  3.27x  (82%)
+domain=8  3.1 s/iter  5.53x  (69%)
+```
+
+Bonus: 24.6 a 1 core (20.1 s/iter) es ~25% más rápido que master (26.6 s/iter).
+
+### Barrido slots×cores (44 cores físicos = 2 sockets × 22; HT off para DFT)
+
+```text
+split  throughput  RAM_pico  ETA_482
+1x44     0.435     13.3GB    8.6h   <- 1 job/44 cores: PEOR (NUMA cross-socket)
+2x22     0.656     13.8GB    5.7h
+3x14     0.682     14.3GB    5.5h
+4x11     0.741     15.3GB    5.1h
+5x8      0.749     16.2GB    5.0h   <- OPTIMO
+8x5      0.703     19.0GB    5.3h
+11x4     0.698     24.2GB    5.4h
+22x2     (inusable: 22-way contencion, no pasa de iter 1)
+```
+
+### Veredicto hyperthreading (presupuesto 88 cores) — NO ayuda, perjudica
+
+```text
+2x44  0.460 (vs 2x22=0.656, -30%)
+4x22  0.560 (vs 4x11=0.741, -24%)
+8x11  0.528    11x8  0.553
+```
+
+PW-DFT es FFT/bandwidth-bound; los 2 hilos del core físico se pelean por la misma FPU y
+bus. Doblar cores vía HT **baja** el throughput. Confirmado: usar 44 físicos.
+
+### Modelo de RAM (ajuste a datos): RAM/job ≈ 1.2 + 0.27·C GB
+Predice bien bajo HT (2×44 pred 26.2 / real 25.4 GB). Permite saltar configs OOM: 44×2
+(~77GB), 88×1 (~129GB). Con ~48-52 GB utilizables, >~32 slots de 1 core revientan.
+
+### Mixer beta=0.10 (vs 0.05): 28 iters vs 33 a convergencia, misma energía.
+
+### CONFIG DE PRODUCCIÓN FIJADA
+- **GPAW 24.6.0** (conda `gpaw246`), single-point PBE, ecut 300, Γ-only superceldas.
+- **5 slots × 8 cores (domain=8)**, stagger 8s, mixer beta=0.10.
+- Throughput 0.749 → **ETA 482 superceldas ≈ 5 h** (vs ~2 días en master 1-core).
+- Runner `buho_relax_runner.py` lanza vía `conda run -n gpaw246 ... mpiexec -n 8`.
+- Scripts: `bench_scf_mpi.py`, `bench_mixer.py`, `bench_gpaw246.py`, `bench_sweep.py`,
+  `bench_ram_domain.py`; reports `reports/*_benchmark.json`.
+
+## 2026-06-06 — Fase 1 active learning: producción 500/500 + generador continuo + surrogate de energía
+
+### Producción DFT inicial (discreta, top-500)
+500/500 convergidos, **0 fallidos** (100%) con la config 5×8 / GPAW 24.6 / single-point.
+Energías en `status.json` (no se relee el gpw). Tiempo real ~5 h.
+
+### Generador continuo + cascada + loop por batches (implementado)
+Espacio composicional infinito → batches reproducibles. Componentes nuevos:
+- `heuristic_generator.py`: `fraction_mode: continuous` (uniform binarias / Dirichlet
+  ternarias), `generate_batch(batch_id)` con seed `random_seed+batch_id`, dedup rejilla
+  ε=0.02 + registro persistente `data/processed/candidate_registry.txt`.
+- `src/buho/screening/cascade.py`: cascada Tier 0-2 (PhysicalFilter → surrogate bandgap →
+  MEGNet/M3GNet Eform). Score adquisición `band + stab(Eform) + β·σ`.
+- `src/buho/active_learning/batch_loop.py` + CLI (`run-batch`, `finalize-batch`, `status`).
+- 34 tests pasan (27 previos + 7 nuevos en `test_buho_continuous.py`).
+
+### Surrogate de energía DFT (lazo cerrado)
+`scripts/train_surrogate_from_dft.py`: target = `energy_per_atom_eV` (fiable; el bandgap
+vía gpw cross-version master↔24.6 da basura: E −58.7 vs −68.5, gap 0.26 eV). 
+**CV MAE 5-fold = 0.0161 eV/átomo** (n=500, rango [−2.46,−1.36]). → `models/surrogate_energy.pkl`.
+
+### Batch 0 lanzado (primer batch continuo)
+1000 generados → 583 pasan filtros/estabilidad → 500 seleccionados. Tras sembrar el
+registro con los 500 originales y quitar 26 solapados (16 puras + 10 mixtas cerca de 0.5),
+**474 jobs nuevos** a DFT en `runs/batches/batch_000/`.
+
+### Bug corregido en el runner
+`get_jobs_by_status` usaba el `RELAX_DIR` global e ignoraba `--relax-dir` → con los 500
+originales ya convergidos, veía 0 pendientes y salía. Ahora acepta `relax_dir` y descubre
+jobs en el directorio del batch.
+
+### Documentación
+`methodology.md` §17 (Fase 1 completa + Fases 2-3 estructura/fase y diseño inverso como
+POR HACER). Alcance Fase 1: solo composición en fase cúbica Pm-3m idealizada — los valores
+PV absolutos están sesgados por fase (corrección = Fase 2).

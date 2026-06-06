@@ -44,21 +44,18 @@ Material  : $formula  |  Sn=$has_sn  |  MA=$has_ma  |  supercell=$is_supercell  
 Candidate : $candidate_id
 Generado  : $generated_at
 
-CONFIG DE CRIBADO PBE (validado FASE 0, 2026-06-04):
-  - XC=PBE (no r2SCAN): GGA estable y rápido; r2SCAN+U+SOC se reserva para
-    refinamiento de candidatos top. domain>1 crashea GPAW master (PBE y MGGA),
-    y r2SCAN Γ a 1-core = 195s/iter (inviable). PBE Γ ecut300 = 37s/iter.
-  - ecut=$ecut eV (cribado; producción usa 450).
-  - k-points: Γ-only [1,1,1] superceldas (la 2x2x2 ya pliega la BZ) /
-    [2,2,2] celdas unidad.
-  - parallel: kpt-only (domain/band rompen GPAW master en modo PW).
-    Superceldas → 1 core/job (1 k-pt); puras → hasta 8 cores.
-  - convergencia relajada: density=1e-3, eigenstates=1e-4, energy=1e-4.
+CONFIG DE CRIBADO PBE SINGLE-POINT (validado 2026-06-05, GPAW 24.6.0 conda):
+  - XC=PBE single-point (max_steps=0): la etiqueta alimenta un GENERADOR, no un
+    optimizador → importa el ranking relativo, no el mínimo geométrico exacto.
+  - GPAW 24.6.0 (conda env gpaw246), NO master: master crasheaba domain>1.
+    En 24.6 domain decomposition escala ~lineal (5.53x en 8 cores).
+  - parallel: domain=$n_cores para superceldas (Γ-only). Óptimo de barrido:
+    5 slots x 8 cores (domain=8) → throughput 0.749 iters/s, ETA 482 ≈ 5h.
+  - ecut=$ecut eV (cribado). k-points: Γ-only superceldas / [2,2,2] puras.
+  - convergencia: density=1e-3, eigenstates=1e-4, energy=1e-4. Mixer beta=0.10.
   - Sn: width=0.2 eV (suaviza estados cerca de E_F); sin Hubbard U en cribado.
+  - Datasets PAW: GPAW_SETUP_PATH apunta a los del venv (vía runner).
 """
-import sys
-sys.path.insert(0, "$src_path")
-
 from pathlib import Path
 from ase.io import read
 from ase.optimize import FIRE
@@ -66,30 +63,24 @@ from gpaw import GPAW, PW, FermiDirac
 from gpaw.mixer import Mixer
 
 # Γ-only para superceldas (40 átomos): la celda 2x2x2 pliega la malla [2,2,2]
-# primitiva en Γ → 1 k-pt suficiente para relajación básica, ~8× más barato.
+# primitiva en Γ → 1 k-pt suficiente para relajación básica.
 _kpts = [1, 1, 1] if $is_supercell else [2, 2, 2]
-_n_kpts = 1 if $is_supercell else 8
 
-# Paralelización kpt-only (domain/band crashean: assert c==1 en GPAW master PW).
-def _kpt_ranks(n_cores, n_kpts):
-    for k in range(min(n_cores, n_kpts), 0, -1):
-        if n_cores % k == 0 and n_kpts % k == 0:
-            return k
-    return 1
-
-_kpt = _kpt_ranks($n_cores, _n_kpts)
-_parallel = {"kpt": _kpt, "domain": 1, "band": 1}
-if _kpt != $n_cores:
-    raise RuntimeError(
-        f"Layout MPI no soportado: n_cores={$n_cores}, k-pts={_n_kpts}. "
-        "GPAW master solo soporta kpt-only (domain/band crashean). "
-        "Superceldas (1 k-pt) deben correr con n_cores=1."
-    )
+# GPAW 24.6 (estable, conda): domain decomposition FUNCIONA en modo PW. GPAW
+# master (25.7.1b1) crasheaba con `assert c==1` → estábamos limitados a 1 core.
+# En 24.6 domain escala ~lineal (5.53x en 8 cores). Barrido 2026-06-05:
+# óptimo de throughput = 5 slots x 8 cores (domain=8). Superceldas Γ-only →
+# domain=$n_cores. Puras (4 k-pts irreducibles) → kpt hasta 4, resto a domain.
+if $is_supercell:
+    _parallel = {"domain": $n_cores, "kpt": 1, "band": 1}
+else:
+    _kpt = min($n_cores, 4)
+    _parallel = {"kpt": _kpt, "domain": max(1, $n_cores // _kpt), "band": 1}
 
 # Ocupaciones: Sn con width amplio (0.2 eV) para suavizar oscilación SCF.
 _occ_width = 0.2 if $has_sn else $smearing
-# Mixer Pulay estándar — PBE converge limpio sin MSR1.
-_mixer = Mixer(0.05, 8, 50)
+# Mixer Pulay beta=0.10 (test 2026-06-05: 28 iters vs 33 con 0.05, misma E).
+_mixer = Mixer(0.10, 8, 50)
 
 calc = GPAW(
     mode=PW($ecut),
@@ -109,15 +100,39 @@ atoms.calc = calc
 from ase.io import write as ase_write
 import json, time
 
-t0 = time.time()
-opt = FIRE(atoms, trajectory="relax.traj", logfile="relax.log")
-try:
-    converged = opt.run(fmax=$fmax, steps=$max_steps)
-except Exception as exc:
-    Path("error.txt").write_text(str(exc))
-    converged = False
+# CRIBADO POR SINGLE-POINT (max_steps<=0): la etiqueta DFT alimenta un
+# GENERADOR/surrogate, no un optimizador. Lo que importa es el ranking
+# relativo de estabilidad con metodología consistente, no el mínimo
+# geométrico exacto. SCF single-point = energía electrónica exacta para la
+# geometría idealizada (cúbica, lattice_est) — ~5× más barato que FIRE.
+# Si max_steps>0 se relaja con FIRE (modo refinamiento).
+_max_steps = $max_steps
 
-e_total = float(atoms.get_potential_energy())
+t0 = time.time()
+fmax_final = None
+if _max_steps and _max_steps > 0:
+    opt = FIRE(atoms, trajectory="relax.traj", logfile="relax.log")
+    try:
+        converged = opt.run(fmax=$fmax, steps=_max_steps)
+        import numpy as _np
+        fmax_final = float(_np.linalg.norm(atoms.get_forces(), axis=1).max())
+    except Exception as exc:
+        Path("error.txt").write_text(str(exc))
+        converged = False
+    e_total = float(atoms.get_potential_energy())
+    mode_label = "relax_fire"
+else:
+    # Single-point: solo SCF, sin mover átomos.
+    try:
+        e_total = float(atoms.get_potential_energy())
+        converged = bool(getattr(atoms.calc, "scf", None) and atoms.calc.scf.converged) \
+            if hasattr(atoms.calc, "scf") else True
+    except Exception as exc:
+        Path("error.txt").write_text(str(exc))
+        e_total = float("nan")
+        converged = False
+    mode_label = "single_point"
+
 ase_write("relaxed.cif", atoms)
 
 try:
@@ -126,20 +141,24 @@ except Exception:
     pass
 
 elapsed = time.time() - t0
+import math as _math
+_e_valid = isinstance(e_total, float) and not _math.isnan(e_total)
 status = {
-    "status": "converged" if converged is not False else "failed",
-    "final_energy_eV": e_total,
-    "energy_per_atom_eV": e_total / len(atoms),
+    "status": "converged" if (converged is not False and _e_valid) else "failed",
+    "final_energy_eV": e_total if _e_valid else None,
+    "energy_per_atom_eV": (e_total / len(atoms)) if _e_valid else None,
     "n_atoms": len(atoms),
+    "forces_max_eVA": fmax_final,
     "xc_method": "PBE",
     "ecut_eV": $ecut,
     "kpts": _kpts,
     "fidelity": "relax_basic",
+    "calc_mode": mode_label,
     "elapsed_s": round(elapsed, 1),
     "finished_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
 }
 Path("status.json").write_text(json.dumps(status, indent=2))
-print(f"Done. E={e_total:.6f} eV  t={elapsed:.0f}s  converged={converged}")
+print(f"Done. E={e_total} eV  t={elapsed:.0f}s  mode={mode_label}  converged={converged}")
 ''')
 
 _RUN_TEMPLATE = '''\

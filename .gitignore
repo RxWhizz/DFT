@@ -24,6 +24,7 @@ __pycache__/
 runs/
 data/raw/
 data/processed/
+data/batches/
 reports/mpi_benchmark.json
 
 # CSVs generados; conservar datos curados de literatura
@@ -35,3 +36,5 @@ reports/mpi_benchmark.json
 # JSONL pesados generados
 *.jsonl
 
+configs/monitor.local.yaml
+configs/monitor.yaml

@@ -92,9 +92,9 @@ def _load_score_map() -> dict:
 _SCORE_MAP = _load_score_map()
 
 
-def get_jobs_by_status(status: str) -> list[Path]:
+def get_jobs_by_status(status: str, relax_dir: Path = RELAX_DIR) -> list[Path]:
     jobs = [
-        d for d in RELAX_DIR.iterdir()
+        d for d in relax_dir.iterdir()
         if d.is_dir() and read_status(d).get("status") == status
     ]
     # Orden por score descendente (mejores primero); sin score → al final
@@ -114,17 +114,25 @@ class Slot:
         return (datetime.now() - self.started).total_seconds() / 60
 
 
+# GPAW 24.6.0 estable (conda env) — domain decomposition funciona aquí, NO en
+# el master del venv. Los jobs corren bajo este env con sus datasets PAW.
+CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
+GPAW_ENV = "gpaw246"
+GPAW_SETUP_PATH = str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages" / "gpaw_data" / "setups")
+
+
 def launch_job(job_dir: Path, n_cores: int, mpirun: str = "mpirun") -> Slot:
-    """Lanza mpirun -n {cores} python input.py en el directorio del job."""
-    python = sys.executable
-    cmd = [mpirun, "-n", str(n_cores), python, "input.py"]
+    """Lanza el job con GPAW 24.6 (conda) + domain=n_cores vía mpiexec del env."""
+    # conda run activa el env (mpich + libs); exportar GPAW_SETUP_PATH DENTRO de
+    # bash (el activate.d del env lo sobreescribe, así gana el nuestro).
+    inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
+             f"exec mpiexec -n {n_cores} python input.py")
+    cmd = [CONDA_BIN, "run", "-n", GPAW_ENV, "bash", "-c", inner]
 
     stdout_log = open(job_dir / "runner_stdout.log", "w")
     stderr_log = open(job_dir / "runner_stderr.log", "w")
 
-    # Pinear BLAS/OMP a 1 thread por job: GPAW PW no escala con threads
-    # (FFT/bandwidth-bound) y sin pin cada job intenta tomar todos los cores
-    # → oversubscription. 1 thread/job + N jobs concurrentes es el modelo correcto.
+    # OMP/BLAS a 1 thread: la paralelización es por MPI domain, no threads.
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = "1"
     env["OPENBLAS_NUM_THREADS"] = "1"
@@ -187,11 +195,12 @@ def check_slot(slot: Slot) -> bool:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="BUHO relax scheduler (2 slots MPI)")
-    ap.add_argument("--slots",  type=int, default=2,    help="Slots MPI simultáneos")
-    ap.add_argument("--cores",  type=int, default=22,   help="Cores MPI por slot")
+    ap.add_argument("--slots",  type=int, default=5,    help="Slots MPI simultáneos (óptimo barrido: 5)")
+    ap.add_argument("--cores",  type=int, default=8,    help="Cores domain por slot (óptimo barrido: 8)")
     ap.add_argument("--relax-dir", default=str(RELAX_DIR), help="Directorio de jobs")
     ap.add_argument("--filter",    default=None, help="Filtrar por modo (ej: pure)")
     ap.add_argument("--poll",   type=int, default=30,   help="Intervalo de polling (s)")
+    ap.add_argument("--stagger", type=int, default=8,   help="Segundos entre arranques (evita lockstep del init/FFT)")
     ap.add_argument("--mpirun", default="mpirun",       help="Ejecutable mpirun")
     ap.add_argument("--dry-run", action="store_true",   help="Solo mostrar jobs, no lanzar")
     args = ap.parse_args()
@@ -209,7 +218,7 @@ def main():
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
-    pending = get_jobs_by_status("pending")
+    pending = get_jobs_by_status("pending", relax_dir)
     if args.filter:
         pending = [d for d in pending
                    if read_status(d).get("generation_mode") == args.filter
@@ -234,7 +243,12 @@ def main():
         active_slots = [s for s in active_slots if not check_slot(s)]
 
         # ── Lanzar nuevos jobs si hay slots libres ──────────────────────────
+        # Stagger: lanzar jobs separados en el tiempo para que NO entren en
+        # lockstep (todos golpeando la FFT memory-heavy a la vez). Jobs en
+        # fases distintas (compute vs memoria) comparten el bus mejor → más
+        # throughput. Ver diagnóstico: lockstep = 305s/iter, desfasado = ~39s/iter.
         slots_free = args.slots - len(active_slots)
+        launched_this_wave = 0
         while slots_free > 0 and idx < len(pending):
             job_dir = pending[idx]
             idx += 1
@@ -245,13 +259,20 @@ def main():
                 slot = launch_job(job_dir, args.cores, args.mpirun)
                 active_slots.append(slot)
                 slots_free -= 1
+                launched_this_wave += 1
+                # Escalonar arranques (excepto el último del wave)
+                if args.stagger > 0 and slots_free > 0 and idx < len(pending):
+                    time.sleep(args.stagger)
+                    # recoger los que terminen durante el stagger
+                    active_slots = [s for s in active_slots if not check_slot(s)]
+                    slots_free = args.slots - len(active_slots)
             except Exception as e:
                 log(f"ERROR lanzando {job_dir.name}: {e}")
 
         # ── Recargar pendientes si hay más en disco ─────────────────────────
         if idx >= len(pending) and active_slots:
             # puede haber llegado más (raro, pero seguro)
-            pending = get_jobs_by_status("pending")
+            pending = get_jobs_by_status("pending", relax_dir)
             if args.filter:
                 pending = [d for d in pending
                            if args.filter in read_status(d).get("formula", "")]
@@ -263,10 +284,10 @@ def main():
             break
 
         # ── Estado rápido cada poll ─────────────────────────────────────────
-        n_conv = len(get_jobs_by_status("converged"))
-        n_fail = len(get_jobs_by_status("failed"))
+        n_conv = len(get_jobs_by_status("converged", relax_dir))
+        n_fail = len(get_jobs_by_status("failed", relax_dir))
         n_run  = len(active_slots)
-        n_pend = len(get_jobs_by_status("pending"))
+        n_pend = len(get_jobs_by_status("pending", relax_dir))
         log(f"STATUS  pendiente={n_pend}  corriendo={n_run}  "
             f"convergido={n_conv}  fallido={n_fail}", also_print=True)
 

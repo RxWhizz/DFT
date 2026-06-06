@@ -1365,6 +1365,121 @@ Los timeouts matan el grupo de proceso de `mpirun`; se evita `pkill -f` por ser 
 amplio. Cada job guarda `stdout.txt` y `stderr.txt` junto con `r2scan.txt` para auditar
 fallos MPI completos.
 
+## 17. BUHO — Descubrimiento por Active Learning en Batches (composicional)
+
+Esta sección documenta el pipeline de descubrimiento auto-mejorante para perovskitas
+ABX₃, que cierra el lazo *generar → cribar barato → DFT → reentrenar → guiar*. **Fase 1
+(composicional, fase cúbica) está implementada y operativa**; las Fases 2-3 quedan como
+trabajo planificado al final de la sección.
+
+### 17.1 — Habilitador: GPAW 24.6 estable y paralelización por domain
+
+El cribado DFT corre en **GPAW 24.6.0** (conda env `gpaw246`, libxc 6.2.2, MPICH,
+scalapack), no en el build de desarrollo (master 25.7.1b1) que crasheaba la *domain
+decomposition* en modo PW (`assert c==1`). En 24.6 el domain escala ~lineal:
+
+| cores (domain) | t/iter | speedup |
+|----------------|--------|---------|
+| 1 | 20.1 s | 1.00× |
+| 4 | 5.9 s | 3.27× |
+| 8 | 3.1 s | 5.53× |
+
+Un barrido de configuraciones (slots × cores, 44 cores físicos = 2 sockets × 22; el
+hyperthreading a 88 *degrada* el throughput −25–40 % por ser PW-DFT FFT/bandwidth-bound)
+fijó el óptimo en **5 slots × 8 cores (domain=8)**: throughput 0.749 iters/s,
+~5 h para 482 superceldas. Datasets PAW reutilizados del venv vía `GPAW_SETUP_PATH`.
+
+### 17.2 — Cribado por single-point (no relajación)
+
+La etiqueta DFT alimenta un **generador/surrogate, no un optimizador**: importa el ranking
+relativo con metodología consistente, no el mínimo geométrico exacto. Se usa **single-point
+SCF** (`max_steps=0`) sobre la celda cúbica idealizada (`lattice_est`), PBE, ecut 300,
+Γ-only en superceldas (la 2×2×2 pliega la BZ), mixer Pulay β=0.10 (~28 iters vs 33 con
+0.05). Esto elimina el multiplicador ~5× de FIRE. Un *guard* de outliers marca etiquetas
+no fiables (SCF no convergido, energía no finita, z-robusto MAD > 5 por `generation_mode`).
+**Producción inicial: 500/500 convergidos, 0 fallidos.**
+
+### 17.3 — Generador composicional continuo
+
+`HeuristicGenerator` con `fraction_mode: continuous` muestrea fracciones **continuas**
+(uniform en mezclas binarias, Dirichlet en ternarias de haluro) en lugar de la grilla
+discreta. El espacio composicional es efectivamente infinito → se procesa en **batches
+reproducibles** (semilla = `random_seed + batch_id`). Dedup por rejilla ε=0.02 +
+**registro persistente** de `candidate_id` entre batches (evita re-DFT de casi-duplicados).
+Neutralidad de carga y validez de especies se imponen en generación.
+
+### 17.4 — Cascada de cribado de costo creciente
+
+Cada batch pasa tiers antes del DFT caro (`buho.screening.ScreeningCascade`):
+
+| Tier | Método | Costo | Salida |
+|------|--------|-------|--------|
+| 0 | descriptores (Goldschmidt t, octaédrico μ, volumen, neutralidad) | instantáneo | filtra inviables |
+| 1 | surrogate de bandgap (RF+GBR, literatura) | ms | Eg_pred ± σ, ventana PV, band_score |
+| 2 | **MLFF: MEGNet/M3GNet energía de formación** | ~s | Eform, estabilidad (Eform<−0.1), descarta inestables |
+
+Score de adquisición (active learning): `total = band_score(PV) + stab_score(Eform) +
+β·σ(UCB)`. La energía de formación de MLFF es el indicador de "físicamente correcto" sin
+DFT (validado: CsPbI₃ −0.89, CsPbCl₃ −1.59 eV/átomo). MEGNet-Eform devuelve NaN
+intermitente → se promedia robustamente solo sobre valores finitos de MEGNet/M3GNet.
+
+### 17.5 — Surrogate de energía DFT (lazo cerrado)
+
+Entrenado sobre los 500 single-points (`scripts/train_surrogate_from_dft.py`):
+**target = `energy_per_atom_eV` de `status.json`** (escrito por GPAW 24.6 → fiable). *No*
+se usa el bandgap: leer el `.gpw` de 24.6 con el master del venv da valores corruptos
+(E −58.7 vs −68.5 real; gap 0.26 eV irreal) y el gap Γ-only single-point es ruidoso.
+
+- Features: 16D composición (radios efectivos, electronegatividades, t, μ, etc.).
+- **CV MAE (5-fold) = 0.0161 eV/átomo** sobre rango [−2.46, −1.36] (~1.5 % del rango).
+- Artefacto: `models/surrogate_energy.pkl`.
+
+Es un predictor rápido composición→energía DFT que complementa el Eform de MLFF y
+demuestra el lazo: datos DFT reales → surrogate → guía de los siguientes batches.
+
+### 17.6 — Orquestación del loop
+
+`python -m buho.active_learning`:
+- `run-batch --batch-id N [--launch]` — genera batch continuo → cascada → selecciona
+  **todos los que pasen estabilidad** (`screening.n_dft_per_batch: 0`; un valor >0 limita a
+  top-N) → prepara jobs DFT (GPAW 24.6, domain=8) → opcionalmente lanza el runner 5×8.
+- `finalize-batch --batch-id N [--retrain]` — recolecta resultados DFT (con guard) →
+  anexa filas confiables al CSV de training → reentrena el surrogate.
+- Artefactos por batch en `data/batches/batch_NNN/`: `candidates.jsonl`,
+  `cascade_scores.csv`, `selected_for_dft.csv`, `dft_results.csv`, `batch_manifest.json`.
+
+### 17.7 — Alcance y limitación estructural (clave para PV)
+
+**Fase 1 explora composición dentro de un único arquetipo: la perovskita cúbica Pm-3m
+idealizada.** No varía fase ni geometría: celda 5-átomos (puras) o supercelda 2×2×2 con
+especies random (mezclas), red estimada, MA/FA con placeholder Cs. Las propiedades
+fotovoltaicas dependen **fuertemente de la fase** (CsPbI₃ cúbica ≈1.7 eV vs δ-fase ≈2.8 eV;
+tilting octaédrico ±0.2–0.5 eV; SOC −0.3–1 eV en Pb). Por tanto, los rankings relativos son
+válidos, pero los **valores absolutos PV están sesgados por fase** — corregir esto es el
+objeto de la Fase 2.
+
+### 17.8 — POR HACER: Fase 2 (estructura/fase) y Fase 3 (diseño inverso)
+
+Arquitectura objetivo: **cascada de fidelidad** que añade estructura sin explotar el costo.
+
+**Fase 2 — pipeline estructura-consciente (pendiente):**
+- Tier de **búsqueda de polimorfo de mínima energía** por MLFF (MACE/M3GNet): para los top
+  candidatos de Fase 1, muestrear fases candidatas (cúbica/tetragonal/ortorrómbica/δ),
+  relajar con MACE y comparar energías → seleccionar la fase estable.
+- DFT de **alta fidelidad sobre la fase correcta relajada**: r²SCAN+U+SOC / G0W0+SOC
+  (maquinaria ya validada para el top-8) → valores PV reales: bandgap con SOC, m\*ₑ/m\*ₕ,
+  función dieléctrica, espectro óptico, solar_score / límite SQ.
+- El surrogate aprende **(composición, fase) → propiedad**, no solo composición.
+
+**Fase 3 — diseño inverso PV (pendiente):**
+- *"Dame una perovskita con propiedad X = Y"* vía (a) **adquisición multi-objetivo**:
+  cambiar el objetivo del loop de "ventana PV" a un target arbitrario (gap, m\*, estabilidad);
+  el loop existente ya lo soporta cambiando la función de score. (b) **Modelo generativo
+  condicional** (cVAE / difusión) sobre el dataset (composición, fase, propiedades) cuando
+  sea suficientemente grande.
+- Vector-objetivo PV ya parcialmente disponible: surrogates de m\*ₑ, m\*ₕ, ε∞, bandgap
+  (literatura) + solar_score / SQ de la metodología existente.
+
 ## Referencias
 
 - Batatia, I. et al. (2023). MACE: Higher order equivariant message passing neural

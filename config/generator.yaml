@@ -19,8 +19,16 @@ chemical_space:
 
 # ── Generación ─────────────────────────────────────────────────────────────────
 generation:
-  # Fracciones discretas para mezclas de sitio
+  # Fracciones discretas para mezclas de sitio (modo "discrete")
   fractions: [0.125, 0.25, 0.5, 0.75, 0.875]
+
+  # ── Muestreo continuo por batches (active learning) ──────────────────────────
+  # "discrete": enumera la grilla de `fractions` (comportamiento original).
+  # "continuous": muestrea fracciones continuas (uniform/Dirichlet) → espacio
+  #   infinito procesado en batches reproducibles (seed = random_seed + batch_id).
+  fraction_mode: continuous
+  n_samples_per_combo: 8       # fracciones continuas muestreadas por combinación de sitios
+  batch_size: 1000            # candidatos únicos objetivo por batch (tras dedup)
 
   # Objetivos de candidatos
   n_candidates_raw: 5000       # target brutos (se genera todo lo que hay, sin límite duro)
@@ -64,8 +72,9 @@ dft_basic:
   ecut: 300            # eV — cribado rápido (producción r2SCAN: 450)
   kpts: [2, 2, 2]      # celdas unidad; superceldas → Γ-only [1,1,1] automático
   smearing: 0.01       # FermiDirac width (eV) — Sn usa 0.2 internamente
-  fmax: 0.05           # eV/Å — criterio FIRE
-  max_steps: 30        # pasos FIRE (cribado: relajación parcial aceptable para ranking)
+  fmax: 0.05           # eV/Å — criterio FIRE (solo si max_steps>0)
+  max_steps: 0         # 0 = SINGLE-POINT (cribado: etiqueta para generador, no optimizador).
+                       # >0 = relajación FIRE (refinamiento de candidatos top).
   maxiter: 200         # iteraciones SCF máximas
   conv_density: 1.0e-3 # convergencia de densidad (cribado)
   soc: false           # SOC reservado para refinamiento de candidatos top
@@ -73,6 +82,19 @@ dft_basic:
   # Legado (no usados con XC=PBE, mantenidos por compat de _write_input):
   sn_u_ev: 2.5
   kpt_rank_cap: 1
+
+# ── Cribado por cascada (active learning por batches) ─────────────────────────
+# Cada batch pasa tiers de costo creciente antes del DFT caro:
+#   Tier 0 descriptores (instantáneo) → Tier 1 surrogate (ms) →
+#   Tier 2 MLFF energía/estabilidad (seg) → Tier 3 DFT single-point (min).
+screening:
+  tier1_surrogate: true        # usar surrogate de bandgap (ventana PV) para rankear
+  tier2_mlff: true             # MACE relax + MEGNet/M3GNet Eform (estabilidad)
+  mlff_relax: false            # true = relajar con MACE antes de Eform (más caro); false = single-point
+  eform_max_eV_atom: 0.20      # descartar si Eform > este umbral (proxy de inestable)
+  mace_model: "small"          # tamaño del modelo MACE-MP-0
+  n_dft_per_batch: 0           # 0 = TODOS los que pasen estabilidad (Eform<=umbral); >0 = top-N
+  registry_path: data/processed/candidate_registry.txt  # dedup persistente entre batches
 
 # ── ML (Fase 2 — diferida) ────────────────────────────────────────────────────
 ml_initial:

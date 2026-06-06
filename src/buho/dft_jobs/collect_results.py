@@ -64,6 +64,59 @@ class ResultCollector:
 
         df = pd.DataFrame(rows)
         df["fidelity"] = self.FIDELITY
+        df = self._flag_outliers(df)
+        return df
+
+    # ── Guard de calidad de etiquetas ────────────────────────────────────────────
+    @staticmethod
+    def _flag_outliers(df: pd.DataFrame, z_thresh: float = 5.0) -> pd.DataFrame:
+        """Marca etiquetas no fiables para el entrenamiento del generador.
+
+        El cribado por single-point sobre geometrías idealizadas (cúbica,
+        lattice_est) puede producir etiquetas patológicas cuando una supercelda
+        random tiene choques atómicos. Esta función NO descarta filas: añade
+        columnas booleanas para que el entrenamiento filtre por `is_outlier`.
+
+        Criterios de outlier:
+          - no convergió el SCF (converged != True), o
+          - energy_per_atom_eV no finita, o
+          - |z robusto (MAD)| de energy_per_atom_eV > z_thresh dentro de su
+            generation_mode (separa puros/mezclas, cuyas energías difieren).
+        """
+        import numpy as np
+
+        df = df.copy()
+        epa = pd.to_numeric(df.get("energy_per_atom_eV"), errors="coerce")
+        df["energy_per_atom_eV"] = epa
+
+        # z-score robusto por grupo (generation_mode); fallback global si falta
+        df["robust_z_epa"] = np.nan
+        grp_key = "generation_mode" if "generation_mode" in df.columns else None
+        groups = df.groupby(grp_key) if grp_key else [(None, df)]
+        for _, idx in (df.groupby(grp_key).groups.items() if grp_key
+                       else [(None, df.index)]):
+            sub = epa.loc[idx].dropna()
+            if len(sub) < 4:
+                continue
+            med = sub.median()
+            mad = (sub - med).abs().median()
+            if mad == 0 or np.isnan(mad):
+                continue
+            # 1.4826 escala MAD a sigma gaussiano
+            z = (epa.loc[idx] - med) / (1.4826 * mad)
+            df.loc[idx, "robust_z_epa"] = z
+
+        not_conv = df.get("converged") != True  # noqa: E712
+        non_finite = ~np.isfinite(epa.fillna(np.nan).to_numpy(dtype=float))
+        energy_outlier = df["robust_z_epa"].abs() > z_thresh
+
+        df["is_outlier"] = (not_conv | non_finite | energy_outlier.fillna(False)).astype(bool)
+        df["trusted_label"] = ~df["is_outlier"]
+
+        n_out = int(df["is_outlier"].sum())
+        n_energy = int(energy_outlier.fillna(False).sum())
+        print(f"Guard: {n_out}/{len(df)} outliers marcados "
+              f"(no_conv={int(not_conv.sum())}, energy_z>{z_thresh}={n_energy})")
         return df
 
     def save(self, df: pd.DataFrame, out_dir: Path) -> None:
