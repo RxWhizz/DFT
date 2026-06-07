@@ -55,6 +55,12 @@ STATE_JSON = ROOT / "data" / "batches" / "orchestrator_state.json"
 MODEL_PKL = ROOT / "models" / "surrogate_energy.pkl"
 
 
+def _runs_batches_dir() -> Path:
+    from buho.active_learning.batch_loop import BatchLoop
+
+    return BatchLoop(project_root=ROOT).runs_dir
+
+
 def _is_test(cid: str) -> bool:
     h = int(hashlib.md5(cid.encode()).hexdigest(), 16)
     return (h % 100) < TEST_FRAC
@@ -220,7 +226,7 @@ class Orchestrator:
             print(f"LOOP DETENIDO: {s.get('reason')}")
             return s
         bid = s["current_batch"]
-        relax_dir = ROOT / "runs" / "batches" / f"batch_{bid:03d}"
+        relax_dir = _runs_batches_dir() / f"batch_{bid:03d}"
 
         # ¿el DFT del batch actual terminó?
         pend = sum(1 for f in relax_dir.glob("*/status.json")

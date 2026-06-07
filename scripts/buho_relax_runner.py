@@ -71,6 +71,90 @@ def is_pid_alive(pid: int) -> bool:
         return False
 
 
+def pid_cwd(pid: int) -> Path | None:
+    try:
+        return Path(f"/proc/{pid}/cwd").resolve()
+    except Exception:
+        return None
+
+
+def pid_matches_job(pid: int, job_dir: Path) -> bool:
+    cwd = pid_cwd(pid)
+    return cwd == job_dir.resolve() if cwd else False
+
+
+def acquire_runner_lock(relax_dir: Path):
+    """Evita dos runners simultáneos sobre el mismo batch/directorio."""
+    import fcntl
+
+    lock_path = relax_dir / ".runner.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fh = open(lock_path, "w")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        log(f"ABORT otro runner ya tiene el candado: {lock_path}")
+        fh.close()
+        return None
+    fh.seek(0)
+    fh.truncate()
+    fh.write(f"pid={os.getpid()} started={datetime.now().isoformat()}Z\n")
+    fh.flush()
+    return fh
+
+
+def cleanup_stale_running(relax_dir: Path) -> int:
+    """Regresa a pending jobs marcados running cuyo PID ya no corresponde al job."""
+    n = 0
+    for job_dir in relax_dir.iterdir():
+        if not job_dir.is_dir():
+            continue
+        st = read_status(job_dir)
+        if st.get("status") != "running":
+            continue
+        pid = st.get("pid")
+        alive = isinstance(pid, int) and is_pid_alive(pid) and pid_matches_job(pid, job_dir)
+        if alive:
+            continue
+        update = {
+            "status": "pending",
+            "candidate_id": st.get("candidate_id", job_dir.name),
+            "formula": st.get("formula", "?"),
+            "recovered_from": "stale-running",
+            "stale_pid": pid,
+            "recovered_at": datetime.now().isoformat() + "Z",
+        }
+        write_status(job_dir, update)
+        for name in ("error.txt", "runner_stdout.log", "runner_stderr.log"):
+            try:
+                (job_dir / name).unlink()
+            except FileNotFoundError:
+                pass
+            except Exception:
+                pass
+        n += 1
+    if n:
+        log(f"RECOVER {n} jobs running con PID muerto/no coincidente -> pending")
+    return n
+
+
+def count_external_running(relax_dir: Path) -> int:
+    n = 0
+    for job_dir in relax_dir.iterdir():
+        if not job_dir.is_dir():
+            continue
+        st = read_status(job_dir)
+        pid = st.get("pid")
+        if (
+            st.get("status") == "running"
+            and isinstance(pid, int)
+            and is_pid_alive(pid)
+            and pid_matches_job(pid, job_dir)
+        ):
+            n += 1
+    return n
+
+
 # Mapa candidate_id → pre_dft_score (los mejores se procesan primero)
 def _load_score_map() -> dict:
     import csv
@@ -168,14 +252,42 @@ def check_slot(slot: Slot) -> bool:
     # Proceso terminado — ver si input.py ya actualizó status
     st = read_status(slot.job_dir)
     if st.get("status") == "running":
-        # input.py no actualizó (crash o kill)
-        outcome = "converged" if ret == 0 else "failed"
-        write_status(slot.job_dir, {
-            "status": outcome,
-            "returncode": ret,
-            "elapsed_min": round(slot.elapsed_min, 1),
-            "finished_at": datetime.now().isoformat() + "Z",
-        })
+        if ret == 0:
+            outcome = "converged"
+            write_status(slot.job_dir, {
+                "status": "converged", "returncode": ret,
+                "elapsed_min": round(slot.elapsed_min, 1),
+                "finished_at": datetime.now().isoformat() + "Z",
+            })
+        else:
+            # ¿Fallo TRANSITORIO de arranque MPI? (0 iteraciones SCF + murió rápido)
+            # → reintentar hasta 2 veces en vez de perder el dato. Fallos reales
+            # (con iters, o lentos) se marcan failed sin reintentar.
+            n_iters = 0
+            r2 = slot.job_dir / "r2scan.txt"
+            if r2.exists():
+                try:
+                    n_iters = r2.read_text(errors="replace").count("iter:")
+                except Exception:
+                    pass
+            retries = int(st.get("retries", 0))
+            if n_iters == 0 and slot.elapsed_min < 2.0 and retries < 2:
+                for x in ("error.txt", "r2scan.txt"):
+                    try: (slot.job_dir / x).unlink()
+                    except Exception: pass
+                write_status(slot.job_dir, {
+                    "status": "pending", "retries": retries + 1,
+                    "candidate_id": slot.job_dir.name,
+                    "formula": st.get("formula", "?"),
+                })
+                outcome = f"retry({retries + 1}, transitorio MPI)"
+            else:
+                outcome = "failed"
+                write_status(slot.job_dir, {
+                    "status": "failed", "returncode": ret,
+                    "elapsed_min": round(slot.elapsed_min, 1),
+                    "finished_at": datetime.now().isoformat() + "Z",
+                })
     else:
         outcome = st.get("status", "?")
 
@@ -206,6 +318,11 @@ def main():
     args = ap.parse_args()
 
     relax_dir = Path(args.relax_dir)
+    global LOG_FILE
+    LOG_FILE = relax_dir / "runner.log"
+    lock_fh = acquire_runner_lock(relax_dir)
+    if lock_fh is None:
+        return
 
     # Señal de parada limpia
     _stop = [False]
@@ -218,6 +335,7 @@ def main():
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
+    cleanup_stale_running(relax_dir)
     pending = get_jobs_by_status("pending", relax_dir)
     if args.filter:
         pending = [d for d in pending
@@ -247,9 +365,11 @@ def main():
         # lockstep (todos golpeando la FFT memory-heavy a la vez). Jobs en
         # fases distintas (compute vs memoria) comparten el bus mejor → más
         # throughput. Ver diagnóstico: lockstep = 305s/iter, desfasado = ~39s/iter.
-        slots_free = args.slots - len(active_slots)
+        cleanup_stale_running(relax_dir)
+        external_running = max(0, count_external_running(relax_dir) - len(active_slots))
+        slots_free = args.slots - len(active_slots) - external_running
         launched_this_wave = 0
-        while slots_free > 0 and idx < len(pending):
+        while slots_free > 0 and idx < len(pending) and not _stop[0]:
             job_dir = pending[idx]
             idx += 1
             # Recheck — puede que otro runner ya lo haya lanzado
@@ -265,7 +385,11 @@ def main():
                     time.sleep(args.stagger)
                     # recoger los que terminen durante el stagger
                     active_slots = [s for s in active_slots if not check_slot(s)]
-                    slots_free = args.slots - len(active_slots)
+                    if _stop[0]:
+                        break
+                    cleanup_stale_running(relax_dir)
+                    external_running = max(0, count_external_running(relax_dir) - len(active_slots))
+                    slots_free = args.slots - len(active_slots) - external_running
             except Exception as e:
                 log(f"ERROR lanzando {job_dir.name}: {e}")
 

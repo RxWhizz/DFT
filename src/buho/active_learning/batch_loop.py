@@ -51,10 +51,19 @@ class BatchLoop:
         self._scr = self._cfg.get("screening", {})
         self._gen = HeuristicGenerator(str(self._config_path))
         self._cascade = ScreeningCascade(self._cfg, project_root=self._root)
-        self._batches_dir = self._root / "data" / "batches"
-        self._runs_dir = self._root / "runs" / "batches"
+        paths = self._cfg.get("paths", {})
+        self._batches_dir = self._resolve_path(paths.get("batch_artifacts_dir", "data/batches"))
+        self._runs_dir = self._resolve_path(paths.get("runs_batches_dir", "runs/batches"))
 
     # ── Utilidades ────────────────────────────────────────────────────────────
+    def _resolve_path(self, value: str | Path) -> Path:
+        p = Path(value)
+        return p if p.is_absolute() else self._root / p
+
+    @property
+    def runs_dir(self) -> Path:
+        return self._runs_dir
+
     def _batch_dir(self, batch_id: int) -> Path:
         d = self._batches_dir / f"batch_{batch_id:03d}"
         d.mkdir(parents=True, exist_ok=True)

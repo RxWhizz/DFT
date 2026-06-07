@@ -1291,3 +1291,69 @@ jobs en el directorio del batch.
 `methodology.md` §17 (Fase 1 completa + Fases 2-3 estructura/fase y diseño inverso como
 POR HACER). Alcance Fase 1: solo composición en fase cúbica Pm-3m idealizada — los valores
 PV absolutos están sesgados por fase (corrección = Fase 2).
+
+## 2026-06-07 — Cierre Fase 1 active learning + plan Fase 2
+
+### Cierre operativo Fase 1
+Batches finalizados: `0, 1, 2, 3, 4`.
+
+DFT continuo: `2508/2508` convergidos, `0` fallidos.
+
+Total dataset surrogate: `3008` puntos.
+
+Motivo de paro: `convergencia (test_mae estancado 2 batches)`.
+
+Métrica final: `test_mae=0.01604 eV/átomo`, `overfit_ratio=1.021`.
+
+### Decisión
+Se pasa a Fase 2 porque la mejora composicional entró en meseta: el surrogate ya no gana
+MAE de forma material al agregar más batches cúbicos idealizados. El siguiente cuello de
+botella ya no es composición sino **fase/geometría**.
+
+### Nota crítica para MACE
+Los single-points de Fase 1 no tienen fuerzas/stress y no entrenan MACE directamente.
+Sirven para ranking composicional, selección diversa y priorización de candidatos, pero el
+fine-tune MACE requiere estructuras con energía + fuerzas + stress consistente.
+
+### Implementación documental Fase 2
+`calculations/alpha/reports/methodology.md` define Fase 2 como plan activo
+estructura-consciente: baseline MACE-MP-0, selección diversa, generación de
+fases/polimorfos, etiquetado DFT, fine-tune MACE, validación estructural y selección de
+fase estable antes de DFT caro.
+
+Se crea el contrato de tablero visual acumulativo en `reports/training fase 2/`, con
+figuras PNG/PDF y manifiesto. Las figuras dependientes de MACE quedan como placeholders
+documentales hasta que existan datos DFT con fuerzas/stress y logs reales de entrenamiento.
+
+## 2026-06-07 — Implementación Fase 2A: DFT E+F(+stress) para seed MACE
+
+### Selección top-diversa
+Se implementó `buho.phase2_force` y wrappers `scripts/phase2_force_*.py`.
+
+`phase2_force_select` combina `data/batches/batch_*/selected_for_dft.csv` con el top inicial
+cuando aplica, deduplica por `candidate_id` y escribe:
+
+- `data/mace_finetune/phase2_candidates_1000.csv`
+- `data/mace_finetune/phase2_batches.json`
+- `data/mace_finetune/batches/batch_000.csv` ... `batch_019.csv`
+
+Resultado de selección: `1000` candidatos únicos, `20` lotes de `50`, `2743` etiquetas DFT
+esperadas por el barrido U de Sn. Distribución resumida: `491 A_mixed`, `302 B_mixed`,
+`198 X_mixed`, `9 pure`; familias B: `374 Sn`, `304 Pb`, `108 SnGe`, `99 SnPb`,
+`95 PbGe`, `20 Ge`.
+
+### Preparación de jobs
+`phase2_force_prepare --all` generó `1000/1000` jobs en `runs/phase2_force/batch_*/`.
+
+Cada job contiene `structure.cif`, `POSCAR`, `structure.traj`, `metadata.json`, `status.json`,
+`generator_config.yaml` e `input.py`. Para Sn se crean subdirectorios `u_scan/U2p00`,
+`U2p25`, `U2p50`, `U2p75`; para no-Sn se crea `r2scan/`.
+
+### Runner y recolección
+`phase2_force_runner` queda listo con lock global, lock por lote, límite `5×8` y guard
+contra procesos DFT activos previos. Dry-run lote 0: `50` pendientes detectados, sin lanzar
+cálculos.
+
+`phase2_force_collect` queda listo para ensamblar `phase2_seed.extxyz` y `splits.json` cuando
+existan `label.extxyz` reales. No se creó dataset vacío para no marcar falsamente como listo
+el entrenamiento MACE.

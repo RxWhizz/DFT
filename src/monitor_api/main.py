@@ -80,6 +80,8 @@ def create_app() -> FastAPI:
         level=logging.INFO,
         format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     app = FastAPI(
         title="DFT Simulation Monitor",

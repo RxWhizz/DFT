@@ -384,6 +384,9 @@ class DFTPoller:
             key=lambda d: int("".join(filter(str.isdigit, d.name)) or "0"),
         )
         for batch_dir in candidates:
+            # Saltar batches ya lanzados por el monitor
+            if (batch_dir / ".runner_launched").exists():
+                continue
             has_pending = any(
                 json.loads((j / "status.json").read_text()).get("status") == "pending"
                 for j in batch_dir.iterdir()
@@ -424,6 +427,10 @@ class DFTPoller:
                  "--slots", str(slots),
                  "--cores", str(cores)],
                 cwd=str(runner.parent.parent),
+                start_new_session=True,
+            )
+            (next_batch / ".runner_launched").write_text(
+                datetime.now().isoformat()
             )
             log.info("Nuevo batch lanzado: %s (%s slots × %s cores)", next_batch.name, slots, cores)
             # Cambiar el poller al nuevo directorio
@@ -440,13 +447,104 @@ class DFTPoller:
                 )
                 await send_telegram(token, chat_id, "PING", "batch-done", {"_raw": text})
         else:
-            log.info("Batch completo, sin siguiente batch disponible")
-            if token and chat_id:
-                text = (
-                    f"✅ <b>Batch completo</b> — {n_conv} conv / {n_fail} fallidos\n"
-                    f"⏳ Sin próximo batch en cola"
+            # No hay batch preparado en cola → disparar el orquestador de active
+            # learning: finaliza el batch actual (acumula + reentrena + evalúa +
+            # grafica) y genera+prepara el siguiente (sin lanzar). El monitor lo
+            # lanzará en un poll posterior al detectar el batch preparado.
+            _ROOT = Path(__file__).resolve().parents[2]
+            al_state_f = _ROOT / "data" / "batches" / "orchestrator_state.json"
+            try:
+                al_state = json.loads(al_state_f.read_text()) if al_state_f.exists() else {}
+            except Exception:
+                al_state = {}
+
+            if al_state.get("stopped"):
+                log.info("Active learning terminado: %s", al_state.get("reason"))
+                if token and chat_id and not getattr(self, "_al_done_notified", False):
+                    self._al_done_notified = True
+                    await send_telegram(token, chat_id, "PING", "al-done",
+                        {"_raw": f"🏁 <b>Active learning terminado</b>\n{al_state.get('reason','')}"})
+            elif not getattr(self, "_orchestrator_running", False):
+                orch = _ROOT / "scripts" / "active_learning_orchestrator.py"
+                subprocess.Popen([sys.executable, str(orch), "advance"], cwd=str(_ROOT))
+                self._orchestrator_running = True
+                self._batch_done_notified = False   # re-chequear hasta que aparezca el batch
+                log.info("Orquestador disparado (retrain + preparar siguiente batch)")
+                if token and chat_id:
+                    await send_telegram(token, chat_id, "PING", "al-prep",
+                        {"_raw": f"✅ <b>Batch completo</b> — {n_conv} conv / {n_fail} fallidos\n"
+                                 f"🧠 Reentrenando surrogate + preparando siguiente batch…"})
+            else:
+                # orquestador trabajando; seguir re-chequeando sin re-spawn
+                self._batch_done_notified = False
+
+    async def _check_runner_alive(self) -> None:
+        """Detecta runner muerto (pending>0, running==0) y lo relanza automáticamente."""
+        if not self._snapshots:
+            return
+        pending = sum(1 for s in self._snapshots.values() if s.status == "pending")
+        running = sum(1 for s in self._snapshots.values()
+                      if s.status in ("running", "stalled", "oscillating"))
+        if pending == 0 or running > 0:
+            self._runner_dead_since = 0.0
+            return
+
+        # pending > 0 y running == 0 — ¿hace cuánto?
+        now = time.time()
+        if not getattr(self, "_runner_dead_since", 0.0):
+            self._runner_dead_since = now
+            return
+
+        # Esperar 2 ciclos completos antes de actuar (evitar falsos positivos al arrancar)
+        wait_sec = self.cfg.get("poll_interval_sec", 30) * 2
+        if now - self._runner_dead_since < wait_sec:
+            return
+
+        # Verificar que no haya un runner corriendo para este directorio.
+        # Comparar paths resueltos evita falsos negativos entre symlink local y disco externo.
+        target_dir = self.runs_dir.resolve()
+
+        def runner_matches(cmd: list[str]) -> bool:
+            if not any("buho_relax_runner.py" in part for part in cmd):
+                return False
+            try:
+                proc_dir = Path(cmd[cmd.index("--relax-dir") + 1]).resolve()
+            except (ValueError, IndexError):
+                return str(target_dir) in " ".join(cmd)
+            return proc_dir == target_dir
+
+        runner_running = any(
+            runner_matches(p.info.get("cmdline") or [])
+            for p in __import__("psutil").process_iter(["cmdline"])
+        )
+        if runner_running:
+            self._runner_dead_since = 0.0
+            return
+
+        # Runner realmente muerto → relanzar
+        self._runner_dead_since = 0.0
+        slots = self.cfg.get("runner_slots", 2)
+        cores = self.cfg.get("runner_cores", 8)
+        runner = Path(__file__).resolve().parents[2] / "scripts" / "buho_relax_runner.py"
+        subprocess.Popen(
+            [sys.executable, str(runner),
+             "--relax-dir", str(self.runs_dir),
+             "--slots", str(slots),
+             "--cores", str(cores)],
+            cwd=str(runner.parent.parent),
+            start_new_session=True,
+        )
+        log.warning("Runner muerto detectado — relanzando para %s", self.runs_dir.name)
+        token   = self.telegram.get("bot_token", "")
+        chat_id = self.telegram.get("chat_id", "")
+        if token and chat_id:
+            await send_telegram(token, chat_id, "PING", "runner-revived", {
+                "_raw": (
+                    f"⚠️ <b>Runner relanzado</b>\n"
+                    f"Batch: <code>{self.runs_dir.name}</code>\n"
+                    f"{pending} jobs pendientes  {slots} slots × {cores} cores"
                 )
-                await send_telegram(token, chat_id, "PING", "batch-done", {"_raw": text})
+            })
 
     async def _check_surrogate(self) -> None:
         """Notifica cuando el surrogate se reentrenó (metrics.json más nuevo)."""
@@ -510,11 +608,54 @@ class DFTPoller:
         except Exception as exc:
             log.error("Error en check_temperatures: %s", exc)
 
+    def _find_active_batch(self) -> Path | None:
+        """Al arrancar: encuentra el batch más reciente con centinela + jobs activos."""
+        _ROOT = Path(__file__).resolve().parents[2]
+        batches_dir = Path(self.cfg.get("batches_dir", "runs/batches"))
+        if not batches_dir.is_absolute():
+            batches_dir = (_ROOT / batches_dir).resolve()
+        if not batches_dir.exists():
+            return None
+        candidates = sorted(
+            (d for d in batches_dir.iterdir()
+             if d.is_dir() and (d / ".runner_launched").exists()),
+            key=lambda d: int("".join(filter(str.isdigit, d.name)) or "0"),
+            reverse=True,
+        )
+        for batch_dir in candidates:
+            has_active = any(
+                json.loads((j / "status.json").read_text()).get("status")
+                in ("pending", "running")
+                for j in batch_dir.iterdir()
+                if j.is_dir() and (j / "status.json").exists()
+            )
+            if has_active:
+                return batch_dir
+        return None
+
     async def run_forever(self, interval: int) -> None:
         log.info("Poller iniciado — directorio=%s  intervalo=%ss", self.runs_dir, interval)
         self._temp_alerted = False
         self._batch_done_notified = False
         self._last_surrogate_mtime = 0.0
+
+        # Al arrancar: si runs_dir no tiene jobs activos, resumir el batch correcto
+        def _has_active(d: Path) -> bool:
+            return any(
+                json.loads((j / "status.json").read_text()).get("status")
+                in ("pending", "running")
+                for j in d.iterdir()
+                if j.is_dir() and (j / "status.json").exists()
+            )
+        try:
+            if not _has_active(self.runs_dir):
+                active = self._find_active_batch()
+                if active:
+                    log.info("Resumiendo batch activo: %s", active.name)
+                    self.runs_dir = active
+                    self._batch_done_notified = False
+        except Exception:
+            pass
 
         while True:
             try:
@@ -523,6 +664,10 @@ class DFTPoller:
                 log.error("Error en poll_once: %s", exc)
 
             await self._check_temperatures()
+            try:
+                await self._check_runner_alive()
+            except Exception as exc:
+                log.error("Error en _check_runner_alive: %s", exc)
             try:
                 await self._check_batch_done()
             except Exception as exc:

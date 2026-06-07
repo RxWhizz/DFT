@@ -24,7 +24,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-RELAX_DIR = Path('/home/luis-ochoa/Documents/Vscode/py/dft/runs/relax_basic')
+PROJECT = Path('/home/luis-ochoa/Documents/Vscode/py/dft')
+RUNS_ROOT = Path(os.environ.get('DFT_RUNS_ROOT', '/media/luis-ochoa/Nuevo vol/dft/runs'))
+RELAX_DIR = Path(os.environ.get('DFT_RELAX_DIR', str(RUNS_ROOT / 'relax_basic')))
 
 
 def ts():
@@ -54,7 +56,7 @@ def swap_used_gb():
 def get_mpi_jobs():
     """Devuelve lista de (pid, rss_mb, job_dir) de procesos mpirun activos."""
     try:
-        pids = subprocess.run(['pgrep', '-f', 'mpirun.*input.py'],
+        pids = subprocess.run(['pgrep', '-f', 'mpi(exec|run).*input.py'],
                               capture_output=True, text=True).stdout.strip().split()
     except Exception:
         return []
@@ -121,7 +123,7 @@ def kill_largest_job(jobs, log):
             pass
 
 
-def downgrade_runner(log, fallback_slots=2, fallback_cores=8):
+def downgrade_runner(log, relax_dir=RELAX_DIR, fallback_slots=2, fallback_cores=8):
     """Mata el runner actual y lo relanza con menos slots."""
     runner_pids = subprocess.run(['pgrep', '-f', 'buho_relax_runner'],
                                  capture_output=True, text=True).stdout.strip().split()
@@ -134,11 +136,11 @@ def downgrade_runner(log, fallback_slots=2, fallback_cores=8):
                 pass
     time.sleep(3)
 
-    project = Path('/home/luis-ochoa/Documents/Vscode/py/dft')
+    project = PROJECT
     python  = str(project / '.venv' / 'bin' / 'python3')
     script  = str(project / 'scripts' / 'buho_relax_runner.py')
-    relax   = str(project / 'runs' / 'relax_basic')
-    log_f   = str(project / 'runs' / 'relax_basic' / 'runner.log')
+    relax   = str(relax_dir)
+    log_f   = str(Path(relax) / 'runner.log')
 
     cmd = [
         python, script,
@@ -169,9 +171,12 @@ def main():
                     help='Slots tras OOM (default: 2)')
     ap.add_argument('--fallback-cores', type=int,   default=8,
                     help='Cores/slot tras OOM (default: 8)')
+    ap.add_argument('--relax-dir', default=str(RELAX_DIR),
+                    help='Directorio de jobs a relanzar tras OOM')
     args = ap.parse_args()
 
-    log_path = RELAX_DIR / 'watchdog.log'
+    relax_dir = Path(args.relax_dir)
+    log_path = relax_dir / 'watchdog.log'
 
     def log(msg):
         line = f'[{ts()}] {msg}'
@@ -208,7 +213,7 @@ def main():
                     log(f'     pid={j[0]}  RSS={j[1]} MB  {j[2].name}')
             kill_largest_job(jobs, log)
             log(f'DOWNGRADE  Swap disparó la alarma → reduciendo a {args.fallback_slots} slots × {args.fallback_cores} cores')
-            downgrade_runner(log, args.fallback_slots, args.fallback_cores)
+            downgrade_runner(log, relax_dir, args.fallback_slots, args.fallback_cores)
 
         elif ram_critical:
             log(f'⚠️  RAM usada={used:.1f} GB ≥ {args.limit} GB — matando job más grande')
@@ -218,7 +223,7 @@ def main():
                     log(f'     pid={j[0]}  RSS={j[1]} MB  {j[2].name}')
             kill_largest_job(jobs, log)
             log(f'DOWNGRADE  RAM disparó la alarma → reduciendo a {args.fallback_slots} slots × {args.fallback_cores} cores')
-            downgrade_runner(log, args.fallback_slots, args.fallback_cores)
+            downgrade_runner(log, relax_dir, args.fallback_slots, args.fallback_cores)
 
         else:
             log(f'OK   RAM={used:.1f} GB  swap={swap:.2f} GB  libre={avail:.1f} GB')

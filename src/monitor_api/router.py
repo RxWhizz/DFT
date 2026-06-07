@@ -130,6 +130,47 @@ async def system_metrics() -> SysMetricsResponse:
     return SysMetricsResponse(**m.__dict__)
 
 
+def _count_total_converged(poller: DFTPoller) -> int:
+    """Cuenta convergidos en todos los batches históricos + relax_basic."""
+    total = 0
+    runs_root = Path(__file__).resolve().parents[2]  # …/dft
+
+    def cfg_path(key: str, default: str) -> Path:
+        p = Path(poller.cfg.get(key, default))
+        return p if p.is_absolute() else runs_root / p
+
+    for search_dir in [
+        cfg_path("runs_dir", "runs/relax_basic"),
+        cfg_path("batches_dir", "runs/batches"),
+    ]:
+        if not search_dir.exists():
+            continue
+        # relax_basic: hijos directos son job_dirs
+        # batches: hijos son batch_NNN/, nietos son job_dirs
+        depth1 = [d for d in search_dir.iterdir() if d.is_dir()]
+        for d1 in depth1:
+            s = d1 / "status.json"
+            if s.exists():
+                # job directo (relax_basic)
+                try:
+                    if json.loads(s.read_text()).get("status") == "converged":
+                        total += 1
+                except Exception:
+                    pass
+            else:
+                # batch_NNN — iterar nietos
+                for d2 in d1.iterdir():
+                    if not d2.is_dir():
+                        continue
+                    s2 = d2 / "status.json"
+                    try:
+                        if s2.exists() and json.loads(s2.read_text()).get("status") == "converged":
+                            total += 1
+                    except Exception:
+                        pass
+    return total
+
+
 def _build_status_report(poller: DFTPoller, metrics: SysMetrics) -> str:
     """Genera el texto HTML del reporte tipo STATUS para Telegram."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -144,8 +185,12 @@ def _build_status_report(poller: DFTPoller, metrics: SysMetrics) -> str:
     n_fail = counts.get("failed",   0) + counts.get("stopped", 0)
     n_pend = counts.get("pending",  0)
 
+    batch_name = poller.runs_dir.name
+    total_conv = _count_total_converged(poller)
+
     lines = [
         f"📊 <b>DFT Status</b> — {now}",
+        f"📦 Batch: <code>{batch_name}</code>   🧮 Total simuladas: <b>{total_conv}</b>",
         "",
         fmt_sys(metrics),
         "",

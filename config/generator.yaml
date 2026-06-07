@@ -113,7 +113,8 @@ paths:
   raw_candidates:      data/raw/generated_candidates.jsonl
   filtered_candidates: data/processed/filtered_candidates.csv
   top_candidates:      data/processed/top500_candidates.csv
-  relax_dir:           runs/relax_basic
+  relax_dir:           /media/luis-ochoa/Nuevo vol/dft/runs/relax_basic
+  runs_batches_dir:    /media/luis-ochoa/Nuevo vol/dft/runs/batches
   results_csv:         data/processed/relax_basic_results.csv
   models_dir:          models/initial_predictors
   reports_dir:         reports
