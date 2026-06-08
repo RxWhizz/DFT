@@ -38,9 +38,11 @@ def main() -> None:
     p_run.add_argument("--poll", type=int, default=30)
     p_run.add_argument("--stagger", type=int, default=8)
     p_run.add_argument("--dry-run", action="store_true")
+    p_run.add_argument("--start-real", action="store_true")
     p_run.add_argument("--resume", action="store_true")
     p_run.add_argument("--override-active", action="store_true")
     p_run.add_argument("--runs-dir", default=str(RUNS_DIR))
+    p_run.add_argument("--limit", type=int, default=None)
 
     p_collect = sub.add_parser("collect")
     p_collect.add_argument("--runs-dir", default=str(RUNS_DIR))
@@ -60,7 +62,8 @@ def main() -> None:
             raise SystemExit("Usa --batch-id N o --all")
     elif args.cmd == "run":
         result = run_batch(args.batch_id, args.slots, args.cores, args.poll, args.stagger,
-                           args.dry_run, args.resume, args.override_active, Path(args.runs_dir))
+                           args.dry_run, args.resume, args.override_active, Path(args.runs_dir),
+                           start_real=args.start_real, limit=args.limit)
     elif args.cmd == "collect":
         result = collect_labels(Path(args.runs_dir), Path(args.out_dir), Path(args.report_dir))
     else:
@@ -70,4 +73,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

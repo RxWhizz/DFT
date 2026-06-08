@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
@@ -13,8 +14,24 @@ from buho.phase2_force import ROOT, U_SCAN
 
 
 OUT_DIR = ROOT / "data" / "mace_finetune"
-RUNS_DIR = ROOT / "runs" / "phase2_force"
+EXTERNAL_RUNS_ROOT = Path(os.environ.get("DFT_RUNS_ROOT", "/media/luis-ochoa/Nuevo vol/dft/runs"))
+
+
+def _default_runs_dir() -> Path:
+    if EXTERNAL_RUNS_ROOT.parent.exists():
+        return EXTERNAL_RUNS_ROOT / "phase2_force"
+    return ROOT / "runs" / "phase2_force"
+
+
+RUNS_DIR = Path(os.environ.get("PHASE2_FORCE_RUNS_DIR", str(_default_runs_dir())))
 REPORT_DIR = ROOT / "reports" / "training fase 2"
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
 
 
 def read_json(path: Path, default: Any = None) -> Any:
@@ -128,4 +145,3 @@ def summarize(rows: Iterable[dict[str, Any]], keys: Iterable[str]) -> dict[str, 
     for key in keys:
         out[key] = dict(Counter(str(row.get(key, "")) for row in materialized))
     return out
-

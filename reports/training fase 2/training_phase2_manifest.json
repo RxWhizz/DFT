@@ -1,6 +1,6 @@
 {
   "report": "Fase 2 - MACE fine-tune estructura-consciente",
-  "generated_at": "2026-06-07T17:34:48.093100+00:00",
+  "generated_at": "2026-06-08T22:45:52.118196+00:00",
   "output_dir": "reports/training fase 2",
   "data_policy": "No se inventan metricas MACE; placeholders hasta tener DFT con energia, fuerzas y stress.",
   "phase1_context": {
@@ -515,6 +515,17 @@
       "png": "benchmark_runtime.png",
       "pdf": "benchmark_runtime.pdf",
       "real_mace_data": false
+    },
+    {
+      "stem": "phase2_force_benchmark_dashboard",
+      "title": "Benchmark Fase 2A DFT E+F con watchdog",
+      "status": "phase2a_benchmark_real",
+      "png": "phase2_force_benchmark_dashboard.png",
+      "pdf": "phase2_force_benchmark_dashboard.pdf",
+      "real_mace_data": false,
+      "dashboard_policy": "solo splits con status ok; cuadrante inferior derecho reemplazado por ETA 143 labels a 15 iter; eliminados documentados en markdown",
+      "convergence_iter_estimate": 15,
+      "phase2_batch0_expected_labels": 143
     }
   ]
 }

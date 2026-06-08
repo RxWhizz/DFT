@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 
 from buho.phase2_force import ROOT
-from buho.phase2_force.common import RUNS_DIR, label_plan_for_formula, read_csv, write_json
+from buho.phase2_force.common import RUNS_DIR, display_path, label_plan_for_formula, read_csv, write_json
 from buho.phase2_force.selection import load_candidate_index
 
 
@@ -32,12 +32,13 @@ from ase.io import read, write
 from ase.optimize import FIRE
 from gpaw import GPAW, PW
 from gpaw.eigensolvers import Davidson
+from gpaw.mixer import Mixer
 
 
 JOB_ROOT = Path(__file__).resolve().parent
 STRUCTURE = JOB_ROOT / "structure.cif"
 METADATA = json.loads((JOB_ROOT / "metadata.json").read_text())
-LABELS = $labels_json
+LABELS = json.loads(r"""$labels_json""")
 N_CORES = $n_cores
 
 
@@ -63,27 +64,24 @@ def _write_status(update):
 
 
 def _kpts_for_atoms(atoms):
-    # Fase 2A usa r2SCAN: paralelizacion por k-points, sin domain.
-    # Superceldas 2x2x2: malla 2x2x2 para habilitar 8 ranks por kpt.
+    # Fase 2A usa r2SCAN con malla 2x2x2 para superceldas grandes.
+    # El reparto MPI debe respetar N_CORES: por ejemplo 8 -> kpt=8/domain=1,
+    # pero 11 -> kpt=1/domain=11.
     return [2, 2, 2] if len(atoms) > 10 else [6, 6, 6]
 
 
-def _kpt_parallel(kpts):
+def _parallel_layout(kpts):
     nk = int(kpts[0] * kpts[1] * kpts[2])
     for k in range(min(N_CORES, nk), 0, -1):
         if nk % k == 0 and N_CORES % k == 0:
-            return k
-    return 1
+            return {"kpt": k, "domain": max(1, N_CORES // k), "band": 1}
+    return {"kpt": 1, "domain": max(1, N_CORES), "band": 1}
 
 
 def _calc_kwargs(atoms, label):
     kpts = _kpts_for_atoms(atoms)
     has_sn = bool(label.get("u_ev") is not None)
-    mixer = (
-        {"backend": "msr1", "beta": 0.002, "nmaxold": 15, "weight": 100}
-        if has_sn else
-        {"backend": "msr1", "beta": 0.05, "nmaxold": 8, "weight": 50}
-    )
+    mixer = Mixer(0.002, 15, 100) if has_sn else Mixer(0.05, 8, 50)
     setups = {"Sn": f":s,{label['u_ev']}"} if has_sn else {}
     return {
         "mode": PW(450),
@@ -91,7 +89,7 @@ def _calc_kwargs(atoms, label):
         "kpts": {"size": kpts, "gamma": True},
         "occupations": {"name": "fermi-dirac", "width": 0.2 if has_sn else 0.05},
         "eigensolver": Davidson(niter=3),
-        "parallel": {"kpt": _kpt_parallel(kpts), "domain": 1, "band": 1},
+        "parallel": _parallel_layout(kpts),
         "convergence": {"density": 1e-4, "eigenstates": 1e-6, "energy": 1e-5},
         "mixer": mixer,
         "maxiter": 2000,
@@ -417,7 +415,7 @@ def prepare_batch(batch_id: int, config_path: Path = ROOT / "config" / "generato
         planned.append({
             "candidate_id": cid,
             "formula": row["formula"],
-            "job_dir": str(job_dir.relative_to(ROOT)),
+            "job_dir": display_path(job_dir),
             "labels": labels,
         })
         if dry_run:
@@ -450,7 +448,7 @@ def prepare_batch(batch_id: int, config_path: Path = ROOT / "config" / "generato
     manifest = {
         "batch_id": batch_id,
         "batch_csv": str(batch_csv.relative_to(ROOT)),
-        "runs_dir": str((runs_dir / f"batch_{batch_id:03d}").relative_to(ROOT)),
+        "runs_dir": display_path(runs_dir / f"batch_{batch_id:03d}"),
         "n_candidates": len(rows),
         "n_planned": len(planned),
         "n_prepared": len(prepared),

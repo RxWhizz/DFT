@@ -292,6 +292,108 @@ class DFTPoller:
     def snapshots(self) -> dict[str, StatsResponse]:
         return self._snapshots
 
+    def _runner_kind(self) -> str:
+        return str(self.cfg.get("runner_kind", "relax"))
+
+    @staticmethod
+    def _batch_id_from_dir(batch_dir: Path) -> int:
+        digits = "".join(filter(str.isdigit, batch_dir.name))
+        return int(digits or "0")
+
+    def _launch_runner(self, batch_dir: Path) -> None:
+        """Lanza el runner configurado para el batch actual."""
+        root = Path(__file__).resolve().parents[2]
+        slots = self.cfg.get("runner_slots", 2)
+        cores = self.cfg.get("runner_cores", 8)
+        kind = self._runner_kind()
+        if kind == "phase2_force":
+            runner = root / "scripts" / "phase2_force_runner.py"
+            batch_id = self._batch_id_from_dir(batch_dir)
+            runs_dir = Path(self.cfg.get("phase2_runs_dir", batch_dir.parent))
+            if not runs_dir.is_absolute():
+                runs_dir = (root / runs_dir).resolve()
+            env = os.environ.copy()
+            env.setdefault("DFT_RUNS_ROOT", str(runs_dir.parent))
+            env["PHASE2_FORCE_RUNS_DIR"] = str(runs_dir)
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    str(runner),
+                    "--batch-id",
+                    str(batch_id),
+                    "--slots",
+                    str(slots),
+                    "--cores",
+                    str(cores),
+                    "--resume",
+                    "--start-real",
+                    "--runs-dir",
+                    str(runs_dir),
+                ],
+                cwd=str(root),
+                env=env,
+                start_new_session=True,
+            )
+            return
+
+        runner = root / "scripts" / "buho_relax_runner.py"
+        subprocess.Popen(
+            [
+                sys.executable,
+                str(runner),
+                "--relax-dir",
+                str(batch_dir),
+                "--slots",
+                str(slots),
+                "--cores",
+                str(cores),
+            ],
+            cwd=str(root),
+            start_new_session=True,
+        )
+
+    def _runner_running_for(self, batch_dir: Path) -> bool:
+        target_dir = batch_dir.resolve()
+        kind = self._runner_kind()
+        batch_id = self._batch_id_from_dir(batch_dir)
+        runs_dir = Path(self.cfg.get("phase2_runs_dir", batch_dir.parent)).resolve()
+
+        def runner_matches(cmd: list[str]) -> bool:
+            if kind == "phase2_force":
+                if not any("phase2_force_runner.py" in part for part in cmd):
+                    return False
+                joined = " ".join(cmd)
+                if str(target_dir) in joined:
+                    return True
+                if "--batch-id" in cmd:
+                    try:
+                        if int(cmd[cmd.index("--batch-id") + 1]) != batch_id:
+                            return False
+                    except (ValueError, IndexError):
+                        return False
+                else:
+                    return False
+                if "--runs-dir" in cmd:
+                    try:
+                        proc_runs = Path(cmd[cmd.index("--runs-dir") + 1]).resolve()
+                    except (ValueError, IndexError):
+                        return False
+                    return proc_runs == runs_dir
+                return str(runs_dir) in joined
+
+            if not any("buho_relax_runner.py" in part for part in cmd):
+                return False
+            try:
+                proc_dir = Path(cmd[cmd.index("--relax-dir") + 1]).resolve()
+            except (ValueError, IndexError):
+                return str(target_dir) in " ".join(cmd)
+            return proc_dir == target_dir
+
+        return any(
+            runner_matches(p.info.get("cmdline") or [])
+            for p in __import__("psutil").process_iter(["cmdline"])
+        )
+
     async def poll_once(self) -> None:
         if not self.runs_dir.exists():
             return
@@ -420,15 +522,7 @@ class DFTPoller:
         if next_batch:
             slots = self.cfg.get("runner_slots", 2)
             cores = self.cfg.get("runner_cores", 22)
-            runner = Path(__file__).resolve().parents[2] / "scripts" / "buho_relax_runner.py"
-            subprocess.Popen(
-                [sys.executable, str(runner),
-                 "--relax-dir", str(next_batch),
-                 "--slots", str(slots),
-                 "--cores", str(cores)],
-                cwd=str(runner.parent.parent),
-                start_new_session=True,
-            )
+            self._launch_runner(next_batch)
             (next_batch / ".runner_launched").write_text(
                 datetime.now().isoformat()
             )
@@ -500,24 +594,7 @@ class DFTPoller:
         if now - self._runner_dead_since < wait_sec:
             return
 
-        # Verificar que no haya un runner corriendo para este directorio.
-        # Comparar paths resueltos evita falsos negativos entre symlink local y disco externo.
-        target_dir = self.runs_dir.resolve()
-
-        def runner_matches(cmd: list[str]) -> bool:
-            if not any("buho_relax_runner.py" in part for part in cmd):
-                return False
-            try:
-                proc_dir = Path(cmd[cmd.index("--relax-dir") + 1]).resolve()
-            except (ValueError, IndexError):
-                return str(target_dir) in " ".join(cmd)
-            return proc_dir == target_dir
-
-        runner_running = any(
-            runner_matches(p.info.get("cmdline") or [])
-            for p in __import__("psutil").process_iter(["cmdline"])
-        )
-        if runner_running:
+        if self._runner_running_for(self.runs_dir):
             self._runner_dead_since = 0.0
             return
 
@@ -525,15 +602,7 @@ class DFTPoller:
         self._runner_dead_since = 0.0
         slots = self.cfg.get("runner_slots", 2)
         cores = self.cfg.get("runner_cores", 8)
-        runner = Path(__file__).resolve().parents[2] / "scripts" / "buho_relax_runner.py"
-        subprocess.Popen(
-            [sys.executable, str(runner),
-             "--relax-dir", str(self.runs_dir),
-             "--slots", str(slots),
-             "--cores", str(cores)],
-            cwd=str(runner.parent.parent),
-            start_new_session=True,
-        )
+        self._launch_runner(self.runs_dir)
         log.warning("Runner muerto detectado — relanzando para %s", self.runs_dir.name)
         token   = self.telegram.get("bot_token", "")
         chat_id = self.telegram.get("chat_id", "")

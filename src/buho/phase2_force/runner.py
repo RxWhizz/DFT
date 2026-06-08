@@ -12,13 +12,13 @@ from datetime import datetime
 from pathlib import Path
 
 from buho.phase2_force import ROOT
-from buho.phase2_force.common import RUNS_DIR
+from buho.phase2_force.common import RUNS_DIR, display_path
 
 
 CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
 GPAW_ENV = "gpaw246"
 GPAW_SETUP_PATH = str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages" / "gpaw_data" / "setups")
-ACTIVE_PATTERN = ("buho_relax_runner", "phase2_force_runner", "mpiexec", "mpirun", "gpaw", "input.py", "conda run")
+ACTIVE_PATTERN = ("buho_relax_runner", "phase2_force_runner", "mpiexec", "mpirun", "input.py", "conda run")
 
 
 def ts() -> str:
@@ -54,14 +54,39 @@ def acquire_lock(lock_path: Path):
 
 
 def active_dft_processes() -> list[str]:
+    current_tree = {os.getpid()}
+    pid = os.getpid()
+    while True:
+        try:
+            status = Path(f"/proc/{pid}/status").read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            break
+        ppid = None
+        for line in status.splitlines():
+            if line.startswith("PPid:"):
+                try:
+                    ppid = int(line.split()[1])
+                except Exception:
+                    ppid = None
+                break
+        if not ppid or ppid in current_tree:
+            break
+        current_tree.add(ppid)
+        pid = ppid
     try:
         proc = subprocess.run(["pgrep", "-af", "|".join(ACTIVE_PATTERN)], capture_output=True, text=True)
     except Exception:
         return []
     lines = []
-    this_pid = str(os.getpid())
     for line in proc.stdout.splitlines():
-        if this_pid in line or "pgrep -af" in line:
+        parts = line.split(maxsplit=1)
+        try:
+            pid = int(parts[0])
+        except Exception:
+            pid = None
+        if pid in current_tree or "pgrep -af" in line:
+            continue
+        if "phase2_force_smoke_benchmark.py" in line:
             continue
         lines.append(line)
     return lines
@@ -164,10 +189,14 @@ def check_slot(batch_dir: Path, slot: Slot) -> bool:
 
 def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, stagger: int = 8,
               dry_run: bool = False, resume: bool = False, override_active: bool = False,
-              runs_dir: Path = RUNS_DIR) -> dict:
+              runs_dir: Path = RUNS_DIR, start_real: bool = False,
+              limit: int | None = None) -> dict:
     batch_dir = runs_dir / f"batch_{batch_id:03d}"
     if not batch_dir.exists():
         raise FileNotFoundError(f"No existe {batch_dir}; prepara el lote primero.")
+
+    if not dry_run and not start_real:
+        raise RuntimeError("Guard activo: usa --dry-run o confirma una corrida real con --start-real.")
 
     active = active_dft_processes()
     if active and not override_active and not dry_run:
@@ -188,12 +217,15 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
         cleanup_stale_running(batch_dir)
 
     pending = jobs_by_status(batch_dir, {"pending"} if not resume else {"pending", "failed"})
+    if limit is not None:
+        pending = pending[:limit]
     summary = {
         "batch_id": batch_id,
-        "batch_dir": str(batch_dir.relative_to(ROOT)),
+        "batch_dir": display_path(batch_dir),
         "slots": slots,
         "cores": cores,
         "n_pending": len(pending),
+        "limit": limit,
         "dry_run": dry_run,
     }
     log(batch_dir, f"PHASE2 FORCE runner batch={batch_id} pending={len(pending)} slots={slots} cores={cores}")
@@ -257,12 +289,17 @@ def main() -> None:
     parser.add_argument("--poll", type=int, default=30)
     parser.add_argument("--stagger", type=int, default=8)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--start-real", action="store_true",
+                        help="Confirmacion explicita para lanzar DFT real; sin esto solo se permite --dry-run.")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--override-active", action="store_true")
     parser.add_argument("--runs-dir", default=str(RUNS_DIR))
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Maximo de jobs logicos a lanzar en esta invocacion.")
     args = parser.parse_args()
     result = run_batch(args.batch_id, args.slots, args.cores, args.poll, args.stagger,
-                       args.dry_run, args.resume, args.override_active, Path(args.runs_dir))
+                       args.dry_run, args.resume, args.override_active, Path(args.runs_dir),
+                       start_real=args.start_real, limit=args.limit)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
