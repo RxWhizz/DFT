@@ -1357,3 +1357,29 @@ cálculos.
 `phase2_force_collect` queda listo para ensamblar `phase2_seed.extxyz` y `splits.json` cuando
 existan `label.extxyz` reales. No se creó dataset vacío para no marcar falsamente como listo
 el entrenamiento MACE.
+
+## 2026-06-08 — Self-healing U-scan Fase 2A: aceptar U previa ante oscilación
+
+Se añade una regla operacional para Fase 2A: si un label Sn `u_scan/U*` entra en
+oscilación SCF, el self-healer puede matar el candidato lógico, conservar la U inmediata
+anterior si ya convergió y marcar el candidato como `partial` en vez de fallo químico.
+
+Evidencia que justifica la regla:
+
+- `2026-05-24`: en CsSnI3, `U=3.5 eV` osciló/sobrecorrigió; el barrido fino
+  `U=2.0, 2.25, 2.5, 2.75 eV` convergió en `16-19` iteraciones.
+- `2026-06-04`: en MASnCl3, `U=3.5 eV` fue matado tras `228` iteraciones con rango de
+  energía aproximado `1.04 eV` y densidad estancada cerca de `log10(delta dens)=-2.55`;
+  el mismo caso con `U=2.5 eV` convergió en `19` iteraciones.
+- En Fase 2A, los Sn mixtos pueden mostrar oscilación fuerte temprana en `U2p00`; si no
+  existe U previa convergida, el candidato se marca `failed_oscillating_no_previous_u` y
+  no se inventa etiqueta PBE/no-U para MACE.
+
+Umbrales activos:
+
+- Oscilación fuerte: `>=10` iteraciones, ventana `6`, `std(E)>=5 eV` o rango `E>=15 eV`.
+- Limit-cycle lento: `>=80` iteraciones, ventana `40`, rango `E>=0.75 eV`, densidad por
+  encima de `-3.0` y sin mejora clara.
+
+Artefacto nuevo por candidato: `u_scan_decision.json`, con U rechazada, U aceptada si
+existe, ventanas de energía/densidad y PIDs terminados por el self-healer.

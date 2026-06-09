@@ -18,7 +18,7 @@ from buho.phase2_force.selection import load_candidate_index
 
 
 INPUT_TEMPLATE = string.Template(r'''#!/usr/bin/env python3
-"""Job Fase 2A: r2SCAN/r2SCAN+U + FIRE(2) + etiqueta MACE extxyz."""
+"""Job Fase 2A: PBE/PBE+U + FIRE(2) + etiqueta MACE extxyz."""
 from __future__ import annotations
 
 import json
@@ -33,6 +33,7 @@ from ase.optimize import FIRE
 from gpaw import GPAW, PW
 from gpaw.eigensolvers import Davidson
 from gpaw.mixer import Mixer
+from gpaw.mpi import world
 
 
 JOB_ROOT = Path(__file__).resolve().parent
@@ -40,6 +41,7 @@ STRUCTURE = JOB_ROOT / "structure.cif"
 METADATA = json.loads((JOB_ROOT / "metadata.json").read_text())
 LABELS = json.loads(r"""$labels_json""")
 N_CORES = $n_cores
+IS_MASTER = world.rank == 0
 
 
 def _now():
@@ -48,23 +50,41 @@ def _now():
 
 
 def _read_status():
+    base = {
+        "candidate_id": METADATA.get("candidate_id"),
+        "formula": METADATA.get("formula"),
+        "phase2_batch_id": METADATA.get("phase2_batch_id"),
+        "selection_rank": METADATA.get("selection_rank"),
+        "n_labels_expected": len(LABELS),
+        "labels_expected": LABELS,
+    }
     p = JOB_ROOT / "status.json"
     if not p.exists():
-        return {}
+        return base
     try:
-        return json.loads(p.read_text())
+        status = json.loads(p.read_text())
     except Exception:
-        return {}
+        return base
+    if not status.get("candidate_id"):
+        base.update(status)
+        return base
+    return status
 
 
 def _write_status(update):
+    if not IS_MASTER:
+        world.barrier()
+        return
     status = _read_status()
     status.update(update)
-    (JOB_ROOT / "status.json").write_text(json.dumps(status, indent=2))
+    tmp = JOB_ROOT / "status.json.tmp"
+    tmp.write_text(json.dumps(status, indent=2))
+    tmp.replace(JOB_ROOT / "status.json")
+    world.barrier()
 
 
 def _kpts_for_atoms(atoms):
-    # Fase 2A usa r2SCAN con malla 2x2x2 para superceldas grandes.
+    # Fase 2A usa PBE con malla 2x2x2 para superceldas grandes.
     # El reparto MPI debe respetar N_CORES: por ejemplo 8 -> kpt=8/domain=1,
     # pero 11 -> kpt=1/domain=11.
     return [2, 2, 2] if len(atoms) > 10 else [6, 6, 6]
@@ -85,7 +105,7 @@ def _calc_kwargs(atoms, label):
     setups = {"Sn": f":s,{label['u_ev']}"} if has_sn else {}
     return {
         "mode": PW(450),
-        "xc": "MGGA_X_R2SCAN+MGGA_C_R2SCAN",
+        "xc": "PBE",
         "kpts": {"size": kpts, "gamma": True},
         "occupations": {"name": "fermi-dirac", "width": 0.2 if has_sn else 0.05},
         "eigensolver": Davidson(niter=3),
@@ -94,6 +114,7 @@ def _calc_kwargs(atoms, label):
         "mixer": mixer,
         "maxiter": 2000,
         "setups": setups,
+        # Nombre legacy para compatibilidad con monitores ya desplegados.
         "txt": str(JOB_ROOT / label["relative_dir"] / "r2scan.txt"),
     }
 
@@ -152,12 +173,14 @@ def _run_label(label):
         if stress is not None:
             atoms.info["stress"] = stress.tolist()
 
-        write(str(work / "relaxed.cif"), atoms)
-        write(str(work / "label.extxyz"), atoms, format="extxyz")
+        if IS_MASTER:
+            write(str(work / "relaxed.cif"), atoms)
+            write(str(work / "label.extxyz"), atoms, format="extxyz")
         try:
             calc.write(str(work / "label.gpw"))
         except Exception as exc:
-            (work / "gpw_write_error.txt").write_text(str(exc))
+            if IS_MASTER:
+                (work / "gpw_write_error.txt").write_text(str(exc))
 
         metrics = {
             "status": "converged",
@@ -179,7 +202,8 @@ def _run_label(label):
             "volume_A3": float(atoms.get_volume()),
             "kpts": kwargs["kpts"]["size"],
             "parallel": kwargs["parallel"],
-            "xc_method": "r2SCAN+U" if label.get("u_ev") is not None else "r2SCAN",
+            "xc_method": label["method"],
+            "xc": kwargs["xc"],
             "fire_steps_requested": 2,
             "elapsed_s": round(time.time() - t0, 1),
             "finished_at": _now(),
@@ -198,9 +222,12 @@ def _run_label(label):
             "elapsed_s": round(time.time() - t0, 1),
             "finished_at": _now(),
         }
-        (work / "error.txt").write_text(metrics["traceback"])
+        if IS_MASTER:
+            (work / "error.txt").write_text(metrics["traceback"])
 
-    metrics_path.write_text(json.dumps(metrics, indent=2))
+    if IS_MASTER:
+        metrics_path.write_text(json.dumps(metrics, indent=2))
+    world.barrier()
     return metrics
 
 
@@ -370,7 +397,7 @@ def _write_job_metadata(job_dir: Path, row: dict[str, str], labels: list[dict[st
         "slot_in_batch": int(row["slot_in_batch"]),
         "dft_labels_expected": labels,
         "fire_steps_requested": 2,
-        "dft_policy": "Sn -> r2SCAN+U sweep; non-Sn -> r2SCAN",
+        "dft_policy": "Sn -> PBE+U sweep; non-Sn -> PBE+FIRE",
         "selection_row": row,
         "prepared_at": datetime.utcnow().isoformat() + "Z",
     })
@@ -428,7 +455,7 @@ def prepare_batch(batch_id: int, config_path: Path = ROOT / "config" / "generato
         if st_path.exists():
             try:
                 st = json.loads(st_path.read_text(encoding="utf-8"))
-                if st.get("status") in {"running", "converged", "partial"}:
+                if st.get("status") in {"running", "converged", "partial", "failed"}:
                     skipped.append(cid)
                     continue
             except Exception:

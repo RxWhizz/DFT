@@ -14,6 +14,11 @@ from pathlib import Path
 
 from buho.phase2_force import ROOT
 from buho.phase2_force.common import RUNS_DIR, display_path
+from buho.phase2_force.self_heal import (
+    evaluate_u_oscillation_self_heal,
+    status_update_for_u_decision,
+    write_u_scan_decision,
+)
 
 
 CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
@@ -37,7 +42,10 @@ def read_status(job_dir: Path) -> dict:
 def write_status(job_dir: Path, update: dict) -> None:
     status = read_status(job_dir)
     status.update(update)
-    (job_dir / "status.json").write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    status_path = job_dir / "status.json"
+    tmp_path = status_path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp_path.replace(status_path)
 
 
 def acquire_lock(lock_path: Path):
@@ -293,6 +301,34 @@ def self_heal_slot(batch_dir: Path, slot: Slot, reason: str) -> bool:
     return True
 
 
+def self_heal_u_oscillation_slot(batch_dir: Path, slot: Slot) -> bool:
+    st = read_status(slot.job_dir)
+    decision = evaluate_u_oscillation_self_heal(
+        slot.job_dir,
+        st,
+        started_epoch=parse_epoch(st.get("started_at") or st.get("start_time")),
+    )
+    if not decision:
+        return False
+    pid = st.get("pid")
+    write_status(slot.job_dir, status_update_for_u_decision(decision, []))
+    killed = kill_job_processes(batch_dir, slot.job_dir, pid if isinstance(pid, int) else slot.proc.pid)
+    write_u_scan_decision(slot.job_dir, decision, killed)
+    write_status(slot.job_dir, status_update_for_u_decision(decision, killed))
+    try:
+        slot.proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+    log(
+        batch_dir,
+        "SELF-HEAL U-SCAN DONE "
+        f"{slot.job_dir.name} action={decision['self_heal_action']} "
+        f"accepted_u={decision.get('accepted_u_ev')} rejected_u={decision.get('rejected_u_ev')} "
+        f"reason={decision['reason']}",
+    )
+    return True
+
+
 def cleanup_stale_running(batch_dir: Path) -> int:
     n = 0
     for job_dir in sorted(d for d in batch_dir.iterdir() if d.is_dir()):
@@ -436,6 +472,9 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
         for slot in active_slots:
             reason = stalled_no_scf_reason(slot, no_scf_stall_minutes)
             if reason and self_heal_slot(batch_dir, slot, reason):
+                healed_slots.append(slot)
+                continue
+            if self_heal_u_oscillation_slot(batch_dir, slot):
                 healed_slots.append(slot)
         if healed_slots:
             active_slots = [slot for slot in active_slots if slot not in healed_slots]

@@ -91,13 +91,13 @@ def label_plan_for_formula(formula: str) -> list[dict[str, Any]]:
         return [
             {
                 "label": u_stem(u_ev),
-                "method": "r2SCAN+U",
+                "method": "PBE+U",
                 "u_ev": u_ev,
                 "relative_dir": f"u_scan/{u_stem(u_ev)}",
             }
             for u_ev in U_SCAN
         ]
-    return [{"label": "r2scan", "method": "r2SCAN", "u_ev": None, "relative_dir": "r2scan"}]
+    return [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]
 
 
 def classify_formula(formula: str, x_fractions: dict[str, float] | None = None) -> dict[str, Any]:
