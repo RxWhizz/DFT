@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import signal
 import statistics
 import subprocess
 import sys
@@ -76,6 +77,143 @@ def _read_status(job_dir: Path) -> dict:
         except Exception:
             data["formula"] = job_dir.name
     return data
+
+
+def _write_status_update(job_dir: Path, update: dict[str, Any]) -> None:
+    p = job_dir / "status.json"
+    data = _read_status(job_dir)
+    data.update(update)
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _parse_epoch(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt.timestamp()
+    except Exception:
+        return None
+
+
+def _phase2_label_log_paths(job_dir: Path, st: dict[str, Any]) -> list[Path]:
+    paths: list[Path] = []
+    for label in st.get("labels_expected") or []:
+        rel = label.get("relative_dir")
+        if rel:
+            paths.append(job_dir / rel / "r2scan.txt")
+    paths.extend(job_dir.glob("r2scan/r2scan.txt"))
+    paths.extend(job_dir.glob("u_scan/*/r2scan.txt"))
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        out.append(path)
+    return out
+
+
+def _phase2_scf_progress(job_dir: Path, st: dict[str, Any]) -> dict[str, Any]:
+    started_epoch = _parse_epoch(st.get("started_at") or st.get("start_time"))
+    newest: dict[str, Any] | None = None
+    total_iters = 0
+    now = time.time()
+    for path in _phase2_label_log_paths(job_dir, st):
+        if not path.exists():
+            continue
+        stat = path.stat()
+        if started_epoch is not None and stat.st_mtime < started_epoch - 120:
+            continue
+        try:
+            text = path.read_text(errors="replace")
+        except Exception:
+            text = ""
+        matches = _SCF_RE.findall(text)
+        last_iter = int(matches[-1][0]) if matches else 0
+        total_iters += last_iter
+        item = {
+            "relative_path": str(path.relative_to(job_dir)),
+            "mtime": stat.st_mtime,
+            "age_min": round((now - stat.st_mtime) / 60, 1),
+            "last_iter": last_iter,
+            "size": stat.st_size,
+        }
+        if newest is None or stat.st_mtime > float(newest["mtime"]):
+            newest = item
+    return {"newest": newest, "total_iters": total_iters}
+
+
+def _job_processes(job_dir: Path, root_pid: int | None = None) -> set[int]:
+    root = str(job_dir.resolve())
+    pids: set[int] = set()
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        pid = int(proc.name)
+        try:
+            cwd = os.readlink(proc / "cwd")
+        except Exception:
+            continue
+        if cwd == root or cwd.startswith(root + os.sep):
+            pids.add(pid)
+
+    if isinstance(root_pid, int):
+        pids.add(root_pid)
+        changed = True
+        while changed:
+            changed = False
+            for proc in Path("/proc").iterdir():
+                if not proc.name.isdigit():
+                    continue
+                pid = int(proc.name)
+                if pid in pids:
+                    continue
+                try:
+                    status = (proc / "status").read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                ppid = None
+                for line in status.splitlines():
+                    if line.startswith("PPid:"):
+                        try:
+                            ppid = int(line.split()[1])
+                        except Exception:
+                            ppid = None
+                        break
+                if ppid in pids:
+                    pids.add(pid)
+                    changed = True
+    return pids
+
+
+def _kill_job_processes(job_dir: Path, root_pid: int | None = None) -> list[int]:
+    pids = _job_processes(job_dir, root_pid)
+    pgids: set[int] = set()
+    for pid in sorted(pids):
+        try:
+            pgids.add(os.getpgid(pid))
+        except ProcessLookupError:
+            pass
+    for pgid in sorted(pgids):
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+    for pid in sorted(pids):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+    time.sleep(3)
+    for pid in sorted(pids):
+        if not Path(f"/proc/{pid}").exists():
+            continue
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    return sorted(pids)
 
 
 # ── Log parsers ───────────────────────────────────────────────────────────────
@@ -615,6 +753,70 @@ class DFTPoller:
                 )
             })
 
+    async def _check_phase2_no_scf_self_heal(self) -> None:
+        """Mata jobs Fase 2A vivos que no producen ninguna iteracion SCF."""
+        if self._runner_kind() != "phase2_force":
+            return
+        threshold = float(self.cfg.get("phase2_no_scf_stall_minutes", 60))
+        if threshold <= 0 or not self.runs_dir.exists():
+            return
+        token = self.telegram.get("bot_token", "")
+        chat_id = self.telegram.get("chat_id", "")
+
+        for job_dir in sorted(self.runs_dir.iterdir()):
+            if not job_dir.is_dir():
+                continue
+            st = _read_status(job_dir)
+            if st.get("status") != "running":
+                continue
+            pid = st.get("pid")
+            if isinstance(pid, int) and not _is_pid_alive(pid):
+                continue
+            started_epoch = _parse_epoch(st.get("started_at") or st.get("start_time"))
+            if started_epoch is None:
+                continue
+            elapsed_min = (time.time() - started_epoch) / 60
+            if elapsed_min < threshold:
+                continue
+
+            progress = _phase2_scf_progress(job_dir, st)
+            newest = progress.get("newest")
+            reason = None
+            if newest and int(newest.get("last_iter") or 0) == 0 and float(newest.get("age_min") or 0) >= threshold:
+                reason = (
+                    f"no_scf_iterations_after_{elapsed_min:.1f}min; "
+                    f"latest_log={newest['relative_path']}; "
+                    f"log_age={float(newest['age_min']):.1f}min; "
+                    f"log_size={newest['size']}"
+                )
+            elif not newest:
+                reason = f"no_phase2_scf_log_after_{elapsed_min:.1f}min"
+            if not reason:
+                continue
+
+            now = datetime.utcnow().isoformat() + "Z"
+            _write_status_update(job_dir, {
+                "status": "failed",
+                "self_healed": True,
+                "self_heal_action": "monitor_killed_stalled_no_scf_job",
+                "self_heal_reason": reason,
+                "finished_at": now,
+                "updated_at": now,
+            })
+            killed = _kill_job_processes(job_dir, pid if isinstance(pid, int) else None)
+            _write_status_update(job_dir, {"self_heal_pids": killed})
+            log.warning("Self-healer mato job sin SCF: %s reason=%s", job_dir.name, reason)
+            if token and chat_id:
+                await send_telegram(token, chat_id, "PING", "phase2-self-heal", {
+                    "_raw": (
+                        "🩺 <b>Self-healer Fase 2A</b>\n"
+                        f"Job: <code>{job_dir.name}</code>\n"
+                        f"Formula: <code>{st.get('formula', job_dir.name)}</code>\n"
+                        f"Motivo: <code>{reason}</code>\n"
+                        "Accion: marcado failed y procesos terminados."
+                    )
+                })
+
     async def _check_surrogate(self) -> None:
         """Notifica cuando el surrogate se reentrenó (metrics.json más nuevo)."""
         _ROOT = Path(__file__).resolve().parents[2]
@@ -737,6 +939,10 @@ class DFTPoller:
                 await self._check_runner_alive()
             except Exception as exc:
                 log.error("Error en _check_runner_alive: %s", exc)
+            try:
+                await self._check_phase2_no_scf_self_heal()
+            except Exception as exc:
+                log.error("Error en _check_phase2_no_scf_self_heal: %s", exc)
             try:
                 await self._check_batch_done()
             except Exception as exc:

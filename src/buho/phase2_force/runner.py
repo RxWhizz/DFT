@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from buho.phase2_force import ROOT
@@ -19,6 +20,7 @@ CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
 GPAW_ENV = "gpaw246"
 GPAW_SETUP_PATH = str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages" / "gpaw_data" / "setups")
 ACTIVE_PATTERN = ("buho_relax_runner", "phase2_force_runner", "mpiexec", "mpirun", "input.py", "conda run")
+SCF_ITER_RE = re.compile(r"iter:\s*(\d+)\s+\d{1,2}:\d{2}:\d{2}")
 
 
 def ts() -> str:
@@ -108,6 +110,189 @@ def pid_alive(pid: int) -> bool:
         return False
 
 
+def parse_epoch(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        return None
+
+
+def label_log_paths(job_dir: Path) -> list[Path]:
+    st = read_status(job_dir)
+    paths: list[Path] = []
+    for label in st.get("labels_expected") or []:
+        rel = label.get("relative_dir")
+        if rel:
+            paths.append(job_dir / rel / "r2scan.txt")
+    paths.extend(job_dir.glob("r2scan/r2scan.txt"))
+    paths.extend(job_dir.glob("u_scan/*/r2scan.txt"))
+    deduped: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path not in seen:
+            seen.add(path)
+            deduped.append(path)
+    return deduped
+
+
+def scf_log_progress(job_dir: Path) -> dict:
+    st = read_status(job_dir)
+    started_epoch = parse_epoch(st.get("started_at") or st.get("start_time"))
+    newest: dict | None = None
+    fresh_logs = 0
+    total_iters = 0
+    now = time.time()
+
+    for path in label_log_paths(job_dir):
+        if not path.exists():
+            continue
+        stat = path.stat()
+        if started_epoch is not None and stat.st_mtime < started_epoch - 120:
+            continue
+        fresh_logs += 1
+        try:
+            text = path.read_text(errors="replace")
+        except Exception:
+            text = ""
+        matches = [int(value) for value in SCF_ITER_RE.findall(text)]
+        last_iter = matches[-1] if matches else 0
+        total_iters += last_iter
+        item = {
+            "path": path,
+            "relative_path": str(path.relative_to(job_dir)),
+            "mtime": stat.st_mtime,
+            "age_min": (now - stat.st_mtime) / 60,
+            "last_iter": last_iter,
+            "size": stat.st_size,
+        }
+        if newest is None or stat.st_mtime > newest["mtime"]:
+            newest = item
+
+    return {
+        "fresh_logs": fresh_logs,
+        "total_iters": total_iters,
+        "newest": newest,
+    }
+
+
+def processes_under_job(job_dir: Path, root_pid: int | None = None) -> set[int]:
+    job_root = str(job_dir.resolve())
+    pids: set[int] = set()
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        pid = int(proc.name)
+        try:
+            cwd = os.readlink(proc / "cwd")
+        except Exception:
+            continue
+        if cwd == job_root or cwd.startswith(job_root + os.sep):
+            pids.add(pid)
+
+    if isinstance(root_pid, int):
+        pids.add(root_pid)
+        changed = True
+        while changed:
+            changed = False
+            for proc in Path("/proc").iterdir():
+                if not proc.name.isdigit():
+                    continue
+                pid = int(proc.name)
+                if pid in pids:
+                    continue
+                try:
+                    status = (proc / "status").read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                ppid = None
+                for line in status.splitlines():
+                    if line.startswith("PPid:"):
+                        try:
+                            ppid = int(line.split()[1])
+                        except Exception:
+                            ppid = None
+                        break
+                if ppid in pids:
+                    pids.add(pid)
+                    changed = True
+    return pids
+
+
+def kill_job_processes(batch_dir: Path, job_dir: Path, root_pid: int | None) -> list[int]:
+    pids = processes_under_job(job_dir, root_pid)
+    pgids: set[int] = set()
+    for pid in sorted(pids):
+        try:
+            pgids.add(os.getpgid(pid))
+        except ProcessLookupError:
+            pass
+    for pgid in sorted(pgids):
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+            log(batch_dir, f"SELF-HEAL SIGTERM pgid={pgid} job={job_dir.name}")
+        except ProcessLookupError:
+            pass
+    for pid in sorted(pids):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+    time.sleep(3)
+    for pid in sorted(pids):
+        if not Path(f"/proc/{pid}").exists():
+            continue
+        try:
+            os.kill(pid, signal.SIGKILL)
+            log(batch_dir, f"SELF-HEAL SIGKILL pid={pid} job={job_dir.name}")
+        except (ProcessLookupError, PermissionError):
+            pass
+    return sorted(pids)
+
+
+def stalled_no_scf_reason(slot: Slot, threshold_min: float) -> str | None:
+    if threshold_min <= 0 or slot.elapsed_min < threshold_min:
+        return None
+    progress = scf_log_progress(slot.job_dir)
+    newest = progress.get("newest")
+    if newest and int(newest.get("last_iter") or 0) == 0 and float(newest.get("age_min") or 0) >= threshold_min:
+        return (
+            f"no_scf_iterations_after_{slot.elapsed_min:.1f}min; "
+            f"latest_log={newest['relative_path']}; "
+            f"log_age={float(newest['age_min']):.1f}min; "
+            f"log_size={newest['size']}"
+        )
+    if not newest and slot.elapsed_min >= threshold_min:
+        return f"no_phase2_scf_log_after_{slot.elapsed_min:.1f}min"
+    return None
+
+
+def self_heal_slot(batch_dir: Path, slot: Slot, reason: str) -> bool:
+    st = read_status(slot.job_dir)
+    pid = st.get("pid")
+    now = datetime.now(timezone.utc).isoformat()
+    write_status(slot.job_dir, {
+        "status": "failed",
+        "self_healed": True,
+        "self_heal_action": "killed_stalled_no_scf_job",
+        "self_heal_reason": reason,
+        "finished_at": now,
+        "updated_at": now,
+    })
+    killed = kill_job_processes(batch_dir, slot.job_dir, pid if isinstance(pid, int) else slot.proc.pid)
+    write_status(slot.job_dir, {"self_heal_pids": killed})
+    try:
+        slot.proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+    log(batch_dir, f"SELF-HEAL DONE {slot.job_dir.name} reason={reason}")
+    return True
+
+
 def cleanup_stale_running(batch_dir: Path) -> int:
     n = 0
     for job_dir in sorted(d for d in batch_dir.iterdir() if d.is_dir()):
@@ -190,7 +375,7 @@ def check_slot(batch_dir: Path, slot: Slot) -> bool:
 def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, stagger: int = 8,
               dry_run: bool = False, resume: bool = False, override_active: bool = False,
               runs_dir: Path = RUNS_DIR, start_real: bool = False,
-              limit: int | None = None) -> dict:
+              limit: int | None = None, no_scf_stall_minutes: float = 60.0) -> dict:
     batch_dir = runs_dir / f"batch_{batch_id:03d}"
     if not batch_dir.exists():
         raise FileNotFoundError(f"No existe {batch_dir}; prepara el lote primero.")
@@ -247,6 +432,13 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
     idx = 0
     while not stop[0]:
         active_slots = [slot for slot in active_slots if not check_slot(batch_dir, slot)]
+        healed_slots: list[Slot] = []
+        for slot in active_slots:
+            reason = stalled_no_scf_reason(slot, no_scf_stall_minutes)
+            if reason and self_heal_slot(batch_dir, slot, reason):
+                healed_slots.append(slot)
+        if healed_slots:
+            active_slots = [slot for slot in active_slots if slot not in healed_slots]
         free = slots - len(active_slots)
         while free > 0 and idx < len(pending) and not stop[0]:
             job = pending[idx]
@@ -296,10 +488,13 @@ def main() -> None:
     parser.add_argument("--runs-dir", default=str(RUNS_DIR))
     parser.add_argument("--limit", type=int, default=None,
                         help="Maximo de jobs logicos a lanzar en esta invocacion.")
+    parser.add_argument("--no-scf-stall-minutes", type=float, default=60.0,
+                        help="Self-heal: mata jobs Fase 2A sin iteraciones SCF en el log activo tras este tiempo; 0 desactiva.")
     args = parser.parse_args()
     result = run_batch(args.batch_id, args.slots, args.cores, args.poll, args.stagger,
                        args.dry_run, args.resume, args.override_active, Path(args.runs_dir),
-                       start_real=args.start_real, limit=args.limit)
+                       start_real=args.start_real, limit=args.limit,
+                       no_scf_stall_minutes=args.no_scf_stall_minutes)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

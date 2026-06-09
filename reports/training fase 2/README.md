@@ -33,6 +33,8 @@ fuerzas/stress. Sirven para el surrogate composicional, pero no entrenan MACE di
 
 - [Benchmark Fase 2A](phase2_force_benchmark.md): barrido de concurrencia con watchdog anti-swap y recomendación numérica.
 - [Dashboard benchmark Fase 2A](phase2_force_benchmark_dashboard.pdf): panel tipo performance dashboard con throughput, RAM, swap y KPIs; grafica solo splits `ok`.
+- [ETA vivo Fase 2A](phase2_force_live_eta.md): estimación operativa desde los `r2scan.txt` activos.
+- [Dashboard ETA vivo Fase 2A](phase2_force_live_eta.pdf): progreso SCF activo, t/iter y ETA del lote actual.
 - Conclusión benchmark Fase 2A: usar `2x8` como configuración conservadora de producción; `4x11` queda como techo de throughput medido para corridas manuales controladas. Los splits eliminados se documentan solo en el Markdown del benchmark.
 - [Informe de memoria Fase 2A](phase2_force_memory_report.md): explica por qué el setup `5x8` saturó RAM/swap en r2SCAN E+F.
 - [Smoke benchmark Fase 2A](phase2_force_smoke_benchmark.md): validación seca de 10 jobs lógicos y cobertura de métodos.
@@ -64,6 +66,7 @@ MPLCONFIGDIR=/tmp/mpl-phase2 /home/luis-ochoa/miniforge3/envs/gpaw246/bin/python
 | `learning_curve` | [learning_curve.png](learning_curve.png) / [learning_curve.pdf](learning_curve.pdf) | pending_mace_data |
 | `benchmark_runtime` | [benchmark_runtime.png](benchmark_runtime.png) / [benchmark_runtime.pdf](benchmark_runtime.pdf) | pending_mace_data |
 | `phase2_force_benchmark_dashboard` | [phase2_force_benchmark_dashboard.png](phase2_force_benchmark_dashboard.png) / [phase2_force_benchmark_dashboard.pdf](phase2_force_benchmark_dashboard.pdf) | phase2a_benchmark_real |
+| `phase2_force_live_eta` | [phase2_force_live_eta.png](phase2_force_live_eta.png) / [phase2_force_live_eta.pdf](phase2_force_live_eta.pdf) | phase2a_live_eta |
 
 Estados:
 
@@ -71,6 +74,7 @@ Estados:
 - `planned_placeholder`: define el embudo/contrato operativo sin métricas reales.
 - `pending_mace_data`: figura reservada hasta tener baseline, fine-tune o validación MACE.
 - `phase2a_benchmark_real`: usa mediciones reales del benchmark DFT Fase 2A; las configuraciones eliminadas no se grafican.
+- `phase2a_live_eta`: estimación operativa generada desde logs vivos; no es una métrica MACE.
 
 ## Política De Datos
 

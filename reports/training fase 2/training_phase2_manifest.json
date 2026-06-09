@@ -526,6 +526,30 @@
       "dashboard_policy": "solo splits con status ok; cuadrante inferior derecho reemplazado por ETA 143 labels a 15 iter; eliminados documentados en markdown",
       "convergence_iter_estimate": 15,
       "phase2_batch0_expected_labels": 143
+    },
+    {
+      "stem": "phase2_force_live_eta",
+      "title": "ETA vivo Fase 2A DFT E+F",
+      "status": "phase2a_live_eta",
+      "png": "phase2_force_live_eta.png",
+      "pdf": "phase2_force_live_eta.pdf",
+      "markdown": "phase2_force_live_eta.md",
+      "json": "phase2_force_live_eta.json",
+      "real_mace_data": false,
+      "target_iters_per_label": 15,
+      "phase2_batch0_expected_labels": 143
     }
-  ]
+  ],
+  "updated_at": "2026-06-09T02:52:08.888217+00:00",
+  "phase2a_live_eta": {
+    "batch_id": 0,
+    "target_iters_per_label": 15,
+    "expected_labels": 143,
+    "eta_h_live": 116.94,
+    "throughput_iter_s_live": 0.004988,
+    "productive_running_labels": 3,
+    "warming_up_running_labels": 1,
+    "blocked_running_labels": 0,
+    "source": "phase2_force_live_eta.json"
+  }
 }
