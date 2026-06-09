@@ -1,0 +1,256 @@
+{
+  "generated_at": "2026-06-08T06:34:51.240938+00:00",
+  "startup_gate": {
+    "status": "pass",
+    "reason": "All smokes passed; it is safe to start the runner with the configured storage policy."
+  },
+  "checks": [
+    {
+      "name": "py_compile",
+      "status": "pass",
+      "elapsed_s": 0.033,
+      "error": null,
+      "n_files": 14,
+      "files": [
+        "src/buho/phase2_force/__init__.py",
+        "src/buho/phase2_force/common.py",
+        "src/buho/phase2_force/selection.py",
+        "src/buho/phase2_force/prepare.py",
+        "src/buho/phase2_force/runner.py",
+        "src/buho/phase2_force/collect.py",
+        "src/buho/phase2_force/__main__.py",
+        "scripts/phase2_force_select.py",
+        "scripts/phase2_force_prepare.py",
+        "scripts/phase2_force_runner.py",
+        "scripts/phase2_force_collect.py",
+        "scripts/generate_phase2_training_report.py",
+        "scripts/phase2_force_smoke_benchmark.py",
+        "tests/test_phase2_force.py"
+      ]
+    },
+    {
+      "name": "direct_tests",
+      "status": "pass",
+      "elapsed_s": 0.005,
+      "error": null,
+      "n_tests": 4,
+      "tests": [
+        "label_plan_for_sn_uses_u_scan",
+        "label_plan_for_non_sn_uses_single_r2scan",
+        "assign_batches_round_robin_balances_ranks",
+        "collect_labels_writes_extxyz_splits_and_metrics"
+      ]
+    },
+    {
+      "name": "gpaw_env",
+      "status": "pass",
+      "elapsed_s": 0.275,
+      "error": null,
+      "versions": {
+        "ase": "3.28.0",
+        "gpaw": "24.6.0",
+        "numpy": "1.26.4",
+        "yaml": "6.0.3"
+      },
+      "mpiexec": "/usr/bin/mpiexec"
+    },
+    {
+      "name": "selection",
+      "status": "pass",
+      "elapsed_s": 0.02,
+      "error": null,
+      "n_candidates": 1000,
+      "n_unique": 1000,
+      "n_batches": 20,
+      "batch_sizes": [
+        50
+      ],
+      "expected_dft_labels": 2743,
+      "sn_per_batch_min": 22,
+      "sn_per_batch_max": 32,
+      "generation_mode": {
+        "A_mixed": 491,
+        "X_mixed": 198,
+        "B_mixed": 302,
+        "pure": 9
+      },
+      "b_family": {
+        "Sn": 374,
+        "Pb": 304,
+        "SnGe": 108,
+        "SnPb": 99,
+        "PbGe": 95,
+        "Ge": 20
+      },
+      "dominant_halide": {
+        "I": 734,
+        "Cl": 100,
+        "Br": 166
+      }
+    },
+    {
+      "name": "method_plan",
+      "status": "pass",
+      "elapsed_s": 0.001,
+      "error": null,
+      "sn_plan": [
+        "U2p00",
+        "U2p25",
+        "U2p50",
+        "U2p75"
+      ],
+      "non_sn_plan": [
+        "r2scan"
+      ],
+      "batch0_sn_jobs": 31,
+      "batch0_non_sn_jobs": 19
+    },
+    {
+      "name": "prepare_and_runner_dry_run",
+      "status": "pass",
+      "elapsed_s": 0.882,
+      "error": null,
+      "smoke_runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/_phase2_force_smokes/20260608T063450Z",
+      "n_prepared": 10,
+      "n_benchmark_jobs": 10,
+      "labels_seen": [
+        "U2p00",
+        "U2p25",
+        "U2p50",
+        "U2p75",
+        "r2scan"
+      ],
+      "runner_dry_run": {
+        "batch_id": 0,
+        "batch_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/_phase2_force_smokes/20260608T063450Z/batch_000",
+        "slots": 5,
+        "cores": 8,
+        "n_pending": 10,
+        "dry_run": true
+      }
+    },
+    {
+      "name": "active_processes",
+      "status": "pass",
+      "elapsed_s": 0.097,
+      "error": null,
+      "active_processes": []
+    },
+    {
+      "name": "storage",
+      "status": "pass",
+      "elapsed_s": 0.0,
+      "error": null,
+      "repo_free_gb": 18.41,
+      "repo_total_gb": 108.44,
+      "external_volume": "/media/luis-ochoa/Nuevo vol",
+      "external_exists": true,
+      "external_mounted": true,
+      "external_usage": {
+        "total_gb": 931.5,
+        "free_gb": 820.33
+      },
+      "default_runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force",
+      "require_external": true
+    }
+  ],
+  "benchmark": {
+    "performance_reference": {
+      "source": "reports/performance_benchmark.csv",
+      "available": true,
+      "recommended_split": "5x8",
+      "slots": 5,
+      "cores_per_slot": 8,
+      "total_cores": 40,
+      "throughput_iter_s": 0.7485,
+      "t_iter_s": 6.68,
+      "peak_ram_gb": 16.15,
+      "eta_482_h": 5.0
+    },
+    "selection": {
+      "name": "selection",
+      "status": "pass",
+      "elapsed_s": 0.02,
+      "error": null,
+      "n_candidates": 1000,
+      "n_unique": 1000,
+      "n_batches": 20,
+      "batch_sizes": [
+        50
+      ],
+      "expected_dft_labels": 2743,
+      "sn_per_batch_min": 22,
+      "sn_per_batch_max": 32,
+      "generation_mode": {
+        "A_mixed": 491,
+        "X_mixed": 198,
+        "B_mixed": 302,
+        "pure": 9
+      },
+      "b_family": {
+        "Sn": 374,
+        "Pb": 304,
+        "SnGe": 108,
+        "SnPb": 99,
+        "PbGe": 95,
+        "Ge": 20
+      },
+      "dominant_halide": {
+        "I": 734,
+        "Cl": 100,
+        "Br": 166
+      }
+    },
+    "prepare_smoke": {
+      "name": "prepare_and_runner_dry_run",
+      "status": "pass",
+      "elapsed_s": 0.882,
+      "error": null,
+      "smoke_runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/_phase2_force_smokes/20260608T063450Z",
+      "n_prepared": 10,
+      "n_benchmark_jobs": 10,
+      "labels_seen": [
+        "U2p00",
+        "U2p25",
+        "U2p50",
+        "U2p75",
+        "r2scan"
+      ],
+      "runner_dry_run": {
+        "batch_id": 0,
+        "batch_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/_phase2_force_smokes/20260608T063450Z/batch_000",
+        "slots": 5,
+        "cores": 8,
+        "n_pending": 10,
+        "dry_run": true
+      }
+    },
+    "storage": {
+      "name": "storage",
+      "status": "pass",
+      "elapsed_s": 0.0,
+      "error": null,
+      "repo_free_gb": 18.41,
+      "repo_total_gb": 108.44,
+      "external_volume": "/media/luis-ochoa/Nuevo vol",
+      "external_exists": true,
+      "external_mounted": true,
+      "external_usage": {
+        "total_gb": 931.5,
+        "free_gb": 820.33
+      },
+      "default_runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force",
+      "require_external": true
+    },
+    "official_run_state": {
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force",
+      "exists": true,
+      "n_jobs": 1000,
+      "statuses": {
+        "pending": 1000
+      }
+    }
+  },
+  "next_dry_run_command_if_pass": "PYTHONPATH=src python3 scripts/phase2_force_runner.py --batch-id 0 --slots 5 --cores 8 --dry-run",
+  "real_run_requires_explicit_command": "PYTHONPATH=src python3 scripts/phase2_force_runner.py --batch-id 0 --slots 5 --cores 8 --resume --start-real"
+}

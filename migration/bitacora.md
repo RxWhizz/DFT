@@ -966,3 +966,394 @@ acq = SurrogateAcquisition(beta=1.0)  # carga modelos/surrogate_bandgap.pkl
 score = acq.score_one("CsPbI3", "Cs", "Pb", "I")
 ```
 Fallback automático a B_BASE+X_SHIFT si el modelo no está entrenado.
+
+---
+
+## 2026-06-04 — Benchmark MPI: MASnCl3 con U=3.5 no converge
+
+### Contexto
+
+Durante el benchmark MPI BUHO (`scripts/buho_mpi_benchmark.py`, config E = 3x8),
+el job `pure_Sn` eligió `MASnCl3`:
+
+```text
+runs/mpi_benchmark/cfg_E/4a9194ded1c9c3a1
+mpirun -n 8 .venv/bin/python3 input.py
+```
+
+Parámetros efectivos leídos de `r2scan.txt`:
+
+```yaml
+xc: MGGA_X_R2SCAN+MGGA_C_R2SCAN
+setups: {"Sn": ":s,3.5"}
+occupations: Fermi-Dirac width=0.2 eV
+mixer: msr1 beta=0.01 nmaxold=14 weight=100
+convergence:
+  density: 1e-3
+  eigenstates: 1e-4
+  energy: 1e-4
+maxiter: 2000  # heredado del YAML r2scan de producción
+```
+
+### Observación
+
+Se mató manualmente a las 17:02 MST tras ~56 min y 228 iteraciones SCF. En la
+ventana final el cálculo no mostraba tendencia real a converger:
+
+- Últimas 80 iteraciones: rango de energía ≈ 1.04 eV.
+- Densidad media log10(Δdens) ≈ -2.55; último valor ≈ -2.58.
+- Criterio requerido: log10(Δdens) <= -3.0.
+- Cambios de signo frecuentes en ΔE: patrón de limit-cycle, no relajación estable.
+
+### Decisión
+
+`U=3.5 eV` queda descartado para jobs básicos Sn con metilamonio (MA-Sn): el benchmark
+termina midiendo patología SCF en vez de scaling MPI. Para continuar benchmarks BUHO:
+
+- Forzar `Sn:U=2.5 eV` en `prepare_relaxation_jobs.py` para jobs r2SCAN básicos.
+- Fijar `maxiter=300` en los inputs de benchmark/screening para no heredar `maxiter=2000`.
+- Calcular `parallel.kpt` como divisor compatible de `N_cores` y `N_kpts`; `1x44` no
+  puede usar `kpt=8`.
+
+Para producción fina de Sn, mantener la metodología auditada: preconv + U-scan/ramping
+y SOC perturbativo; no volver a cold-start r2SCAN+U=3.5 en MA-Sn.
+
+### Verificación posterior
+
+Se relanzó el benchmark con el mismo `MASnCl3` y `Sn:U=2.5 eV` explícito:
+
+```text
+CONFIG E: 3x8
+MASnCl3: Converged in 19 steps
+t_init = 4.092 s
+t_iter_avg = 15.3 s
+total = 4.9 min
+final_energy = -53.575982 eV
+densidad final: log10(Δdens) = -4.09c
+```
+
+Conclusión operacional: para MA-Sn, `U=2.5 eV` convierte el caso de oscilación
+en una corrida corta y medible. Usar `U=3.5 eV` en benchmark básico no es aceptable.
+
+### Nota de paralelización
+
+El primer reinicio del benchmark también expuso un problema independiente de SCF:
+
+- Superceldas Sn mixtas en config E abortaron con
+  `Too few spins (1) and IBZ k-points (6) for 8 ranks`.
+- Config B (`2x16`) con celdas puras abortó rápido con `MPI_ABORT errorcode 42`
+  usando `parallel={'kpt': 8, 'domain': 2}`.
+
+Decisión: para inputs BUHO básicos, usar dos layouts:
+
+- Celdas puras: `domain=1`, k-point alto (`kpt<=8`), ranks sobrantes en `band` si aplica.
+- Superceldas: `band=1`, `kpt<=kpt_rank_cap` y ranks sobrantes en `domain`.
+
+Esto evita pedir más grupos k-point que los k-points irreducibles disponibles después
+de simetría y evita activar BLACS/ScaLAPACK en superceldas.
+
+### Reinicio con ondas iniciales aleatorias
+
+El siguiente reinicio separó otro bug de paralelización en GPAW master: con layouts
+que usan `domain>1` o `band>1`, la inicialización LCAO abortó durante
+`Converting LCAO to pw mode` con `AttributeError: ... H_NN`. Esto ocurrió antes de
+entrar a una dinámica SCF útil, por lo que no es una oscilación física/química.
+
+Decisión operativa para benchmark BUHO:
+
+- Mantener `domain=1, band=1` cuando el reparto por k-points cubre todos los cores.
+- Activar `random=True` solo cuando `parallel.domain>1` o `parallel.band>1`, para
+  inicializar directamente ondas aleatorias en PW y saltar la ruta LCAO problemática.
+- En timeouts, matar el grupo de proceso de `mpirun` en lugar de usar patrones `pkill`,
+  para no dejar jobs huérfanos ni afectar shells auxiliares.
+
+### Corrección final de layout para benchmark
+
+El intento con `random=True` sí llegó a GPAW (`Initializing wave functions with random
+numbers` en `r2scan.txt`), pero las superceldas con `parallel={'kpt': 4, 'domain': 2,
+'band': 1}` siguieron abortando con `H_NN`. Config B (`16` ranks) también falló en
+puros al requerir `band>1`. Conclusión: en este GPAW master, para BUHO r2SCAN básico
+solo se consideran válidos los benchmarks con paralelización k-point pura:
+
+- `domain=1`, `band=1`.
+- Celdas puras: hasta 8 ranks (`kpt<=8`).
+- Superceldas: hasta 4 ranks (`kpt<=4`, por cap/IBZ observado).
+- Configs que requieren `domain>1` o `band>1` se marcan `SKIP` en el benchmark en vez
+  de contarse como fallos químicos o de SCF.
+
+Se relanza el benchmark con esta política para obtener tiempos confiables en E puros
+y C/D completos, y dejar A/B como no soportados por la ruta GPAW actual.
+
+### Estado del relanzamiento kpt-only
+
+Relanzamiento iniciado a las 18:53 MST:
+
+```text
+runs/mpi_benchmark/benchmark_restart_20260604_185339_kptonly.log
+PID benchmark: 298291
+timeout: 25 min/job
+configs: E,B,A,C,D
+```
+
+Primer resultado reproducible:
+
+```text
+CONFIG E, pure_Pb, MAPbCl3, 8 ranks:
+t_init = 3.999 s
+t_iter_avg = 15.0 s
+n_iter = 14
+total = 3.6 min
+status = OK
+```
+
+Segundo resultado reproducible:
+
+```text
+CONFIG E, pure_Sn, MASnCl3, 8 ranks:
+t_init = 3.824 s
+t_iter_avg = 15.1 s
+n_iter = 19
+total = 4.9 min
+status = OK
+densidad final = -4.09c
+```
+
+Esto confirma por segunda vez que `Sn:U=2.5 eV` evita la oscilación observada con
+`U=3.5 eV` en MA-Sn. Parámetro efectivo adicional auditado en `r2scan.txt`: cutoff
+`450 eV`, heredado de `configs/default_params.yaml` vía `GPAWCalculatorFactory`
+(el `ecut: 400` de `config/generator.yaml` solo aplica si se usa el constructor
+fallback).
+
+La política `SKIP` también quedó verificada:
+
+- Config E: superceldas a 8 ranks se saltan porque requieren `domain/band`; el límite
+  kpt-only de superceldas queda en 4 ranks.
+- Config B (`16` ranks): todos los casos se saltan porque requieren `domain/band`.
+- Config A (`44` ranks): todos los casos se saltan porque requieren `domain/band`.
+- Config C (`4` ranks): `pure_Pb` cerró OK con `t_init=4.121 s`,
+  `t_iter_avg=17.8 s`, `n_iter=14`, `total=4.2 min`; `pure_Sn` cerró OK con
+  `t_init=4.033 s`, `t_iter_avg=17.8 s`, `n_iter=19`, `total=5.7 min`.
+  `super_Pb` a 4 ranks arrancó con `parallel={'kpt': 4, 'domain': 1, 'band': 1}`,
+  pero quedó más de 6 min en `Converting LCAO to pw mode` sin avanzar el `r2scan.txt`.
+
+Nueva decisión para superceldas:
+
+- Mantener `kpt-only` (`domain=1`, `band=1`) como requisito duro.
+- Activar `random=True` en superceldas aunque sean kpt-only, para saltar la conversión
+  LCAO pesada y medir SCF real.
+- Mantener `random=False` en celdas puras, porque los casos Pb/Sn puros ya convergen
+  de forma reproducible y rápida con la inicialización LCAO.
+- Se mató el relanzamiento `benchmark_restart_20260604_185339_kptonly.log` antes de
+  que el timeout consumiera 25 min en inicialización LCAO de supercelda.
+- Nuevo relanzamiento con superceldas `random=True` iniciado a las 19:19 MST:
+  `runs/mpi_benchmark/benchmark_restart_20260604_191954_superrandom.log`,
+  PID `317944`.
+- Resultado del intento `super_Pb` en config C: el input sí usó `random=True` y
+  `parallel={'kpt': 4, 'domain': 1, 'band': 1}`, evitando la línea
+  `Converting LCAO to pw mode`; aun así, el `r2scan.txt` no avanzó más allá de
+  `Reference energy` por ~16 min, con ranks usando CPU y ~18 GiB RAM total.
+- Decisión final para el benchmark estándar: todos los `super_*` quedan `SKIP`
+  por presupuesto de inicialización (`40` átomos, `2x2x2`, cutoff efectivo `450 eV`).
+  Las superceldas deben ir a un benchmark separado con k-points/cutoff reducidos o
+  presupuesto de timeout distinto; no contaminar el scaling MPI de celdas puras.
+- Relanzamiento estándar final iniciado a las 19:56 MST:
+  `runs/mpi_benchmark/benchmark_restart_20260604_195612_pureonly.log`.
+  Resultado final en `reports/mpi_benchmark.json` y `reports/mpi_benchmark.md`:
+  `25` filas, `6` OK, `19` SKIP.
+
+Resumen de casos OK:
+
+```text
+E  pure_Pb  MAPbCl3   8 ranks  t_init=4.182 s  t_iter=15.1 s  n_iter=14  total=3.6 min
+E  pure_Sn  MASnCl3   8 ranks  t_init=3.950 s  t_iter=15.1 s  n_iter=19  total=4.8 min
+C  pure_Pb  MAPbCl3   4 ranks  t_init=4.126 s  t_iter=17.8 s  n_iter=14  total=4.2 min
+C  pure_Sn  MASnCl3   4 ranks  t_init=4.004 s  t_iter=17.8 s  n_iter=19  total=5.7 min
+D  pure_Pb  MAPbCl3   4 ranks  t_init=4.065 s  t_iter=17.8 s  n_iter=14  total=4.2 min
+D  pure_Sn  MASnCl3   4 ranks  t_init=4.134 s  t_iter=17.9 s  n_iter=19  total=5.7 min
+```
+
+Lectura operacional:
+
+- 8 ranks mejora `t_iter` de puros de ~17.8-17.9 s a ~15.1 s, una ganancia modesta
+  (~15 %) frente a 4 ranks.
+- `MASnCl3` con `Sn:U=2.5 eV` converge de forma reproducible en 19 iteraciones; no hay
+  oscilación tipo `U=3.5 eV`.
+- Configs A/B no se miden porque requieren `domain/band`, rutas inestables en este
+  GPAW master.
+- Superceldas quedan diferidas a benchmark dedicado.
+
+Se actualizó `calculations/alpha/reports/methodology.md` con la nueva sección
+`16. Benchmark MPI BUHO para r²SCAN básico`, incluyendo política `Sn:U=2.5 eV`,
+criterios SCF, cutoff efectivo, regla `kpt-only`, superceldas diferidas/`SKIP`,
+semántica `SKIP` y manejo de timeouts.
+
+## 2026-06-05 — Migración a GPAW 24.6 (domain funciona) + single-point + barrido óptimo
+
+### Decisión 1: cribado por SINGLE-POINT (no relajación FIRE)
+La etiqueta DFT alimenta un **generador/surrogate**, no un optimizador. Importa el
+ranking relativo de estabilidad con metodología consistente, no el mínimo geométrico
+exacto. Cambio: `config/generator.yaml` `max_steps: 0` → el template hace solo SCF (sin
+mover átomos). Elimina el multiplicador ~5× de FIRE. Guard de outliers en
+`collect_results.py`: marca `is_outlier`/`trusted_label` por SCF no convergido, energía
+no finita, o z-robusto (MAD) de E/átomo > 5 dentro de cada `generation_mode` (atrapa
+geometrías patológicas de superceldas random).
+
+### Decisión 2: GPAW 24.6.0 estable (conda) en vez de master — domain FUNCIONA
+Hipótesis (correcta) del usuario: el crash `assert c==1` de domain en GPAW master
+(25.7.1b1) era un **bug del build de desarrollo**, no un límite físico. Se instaló
+Miniforge + env `gpaw246` (GPAW 24.6.0, libxc 6.2.2, **scalapack: yes**, mpich). Los
+datasets PAW se reutilizan del venv vía `GPAW_SETUP_PATH` (apples-to-apples). Detalle:
+el `activate.d` del env sobreescribe `GPAW_SETUP_PATH` → exportarlo DENTRO de `bash -c`
+tras `conda run`. Log de 24.6 sin los `|` de master (`iter:  1 HH:MM:SS`).
+
+**Domain escala ~lineal en 24.6** (supercelda 40 átomos, single-point):
+
+```text
+1 core   20.1 s/iter  1.00x
+domain=2 10.9 s/iter  1.80x  (90% efic)
+domain=4  5.9 s/iter  3.27x  (82%)
+domain=8  3.1 s/iter  5.53x  (69%)
+```
+
+Bonus: 24.6 a 1 core (20.1 s/iter) es ~25% más rápido que master (26.6 s/iter).
+
+### Barrido slots×cores (44 cores físicos = 2 sockets × 22; HT off para DFT)
+
+```text
+split  throughput  RAM_pico  ETA_482
+1x44     0.435     13.3GB    8.6h   <- 1 job/44 cores: PEOR (NUMA cross-socket)
+2x22     0.656     13.8GB    5.7h
+3x14     0.682     14.3GB    5.5h
+4x11     0.741     15.3GB    5.1h
+5x8      0.749     16.2GB    5.0h   <- OPTIMO
+8x5      0.703     19.0GB    5.3h
+11x4     0.698     24.2GB    5.4h
+22x2     (inusable: 22-way contencion, no pasa de iter 1)
+```
+
+### Veredicto hyperthreading (presupuesto 88 cores) — NO ayuda, perjudica
+
+```text
+2x44  0.460 (vs 2x22=0.656, -30%)
+4x22  0.560 (vs 4x11=0.741, -24%)
+8x11  0.528    11x8  0.553
+```
+
+PW-DFT es FFT/bandwidth-bound; los 2 hilos del core físico se pelean por la misma FPU y
+bus. Doblar cores vía HT **baja** el throughput. Confirmado: usar 44 físicos.
+
+### Modelo de RAM (ajuste a datos): RAM/job ≈ 1.2 + 0.27·C GB
+Predice bien bajo HT (2×44 pred 26.2 / real 25.4 GB). Permite saltar configs OOM: 44×2
+(~77GB), 88×1 (~129GB). Con ~48-52 GB utilizables, >~32 slots de 1 core revientan.
+
+### Mixer beta=0.10 (vs 0.05): 28 iters vs 33 a convergencia, misma energía.
+
+### CONFIG DE PRODUCCIÓN FIJADA
+- **GPAW 24.6.0** (conda `gpaw246`), single-point PBE, ecut 300, Γ-only superceldas.
+- **5 slots × 8 cores (domain=8)**, stagger 8s, mixer beta=0.10.
+- Throughput 0.749 → **ETA 482 superceldas ≈ 5 h** (vs ~2 días en master 1-core).
+- Runner `buho_relax_runner.py` lanza vía `conda run -n gpaw246 ... mpiexec -n 8`.
+- Scripts: `bench_scf_mpi.py`, `bench_mixer.py`, `bench_gpaw246.py`, `bench_sweep.py`,
+  `bench_ram_domain.py`; reports `reports/*_benchmark.json`.
+
+## 2026-06-06 — Fase 1 active learning: producción 500/500 + generador continuo + surrogate de energía
+
+### Producción DFT inicial (discreta, top-500)
+500/500 convergidos, **0 fallidos** (100%) con la config 5×8 / GPAW 24.6 / single-point.
+Energías en `status.json` (no se relee el gpw). Tiempo real ~5 h.
+
+### Generador continuo + cascada + loop por batches (implementado)
+Espacio composicional infinito → batches reproducibles. Componentes nuevos:
+- `heuristic_generator.py`: `fraction_mode: continuous` (uniform binarias / Dirichlet
+  ternarias), `generate_batch(batch_id)` con seed `random_seed+batch_id`, dedup rejilla
+  ε=0.02 + registro persistente `data/processed/candidate_registry.txt`.
+- `src/buho/screening/cascade.py`: cascada Tier 0-2 (PhysicalFilter → surrogate bandgap →
+  MEGNet/M3GNet Eform). Score adquisición `band + stab(Eform) + β·σ`.
+- `src/buho/active_learning/batch_loop.py` + CLI (`run-batch`, `finalize-batch`, `status`).
+- 34 tests pasan (27 previos + 7 nuevos en `test_buho_continuous.py`).
+
+### Surrogate de energía DFT (lazo cerrado)
+`scripts/train_surrogate_from_dft.py`: target = `energy_per_atom_eV` (fiable; el bandgap
+vía gpw cross-version master↔24.6 da basura: E −58.7 vs −68.5, gap 0.26 eV). 
+**CV MAE 5-fold = 0.0161 eV/átomo** (n=500, rango [−2.46,−1.36]). → `models/surrogate_energy.pkl`.
+
+### Batch 0 lanzado (primer batch continuo)
+1000 generados → 583 pasan filtros/estabilidad → 500 seleccionados. Tras sembrar el
+registro con los 500 originales y quitar 26 solapados (16 puras + 10 mixtas cerca de 0.5),
+**474 jobs nuevos** a DFT en `runs/batches/batch_000/`.
+
+### Bug corregido en el runner
+`get_jobs_by_status` usaba el `RELAX_DIR` global e ignoraba `--relax-dir` → con los 500
+originales ya convergidos, veía 0 pendientes y salía. Ahora acepta `relax_dir` y descubre
+jobs en el directorio del batch.
+
+### Documentación
+`methodology.md` §17 (Fase 1 completa + Fases 2-3 estructura/fase y diseño inverso como
+POR HACER). Alcance Fase 1: solo composición en fase cúbica Pm-3m idealizada — los valores
+PV absolutos están sesgados por fase (corrección = Fase 2).
+
+## 2026-06-07 — Cierre Fase 1 active learning + plan Fase 2
+
+### Cierre operativo Fase 1
+Batches finalizados: `0, 1, 2, 3, 4`.
+
+DFT continuo: `2508/2508` convergidos, `0` fallidos.
+
+Total dataset surrogate: `3008` puntos.
+
+Motivo de paro: `convergencia (test_mae estancado 2 batches)`.
+
+Métrica final: `test_mae=0.01604 eV/átomo`, `overfit_ratio=1.021`.
+
+### Decisión
+Se pasa a Fase 2 porque la mejora composicional entró en meseta: el surrogate ya no gana
+MAE de forma material al agregar más batches cúbicos idealizados. El siguiente cuello de
+botella ya no es composición sino **fase/geometría**.
+
+### Nota crítica para MACE
+Los single-points de Fase 1 no tienen fuerzas/stress y no entrenan MACE directamente.
+Sirven para ranking composicional, selección diversa y priorización de candidatos, pero el
+fine-tune MACE requiere estructuras con energía + fuerzas + stress consistente.
+
+### Implementación documental Fase 2
+`calculations/alpha/reports/methodology.md` define Fase 2 como plan activo
+estructura-consciente: baseline MACE-MP-0, selección diversa, generación de
+fases/polimorfos, etiquetado DFT, fine-tune MACE, validación estructural y selección de
+fase estable antes de DFT caro.
+
+Se crea el contrato de tablero visual acumulativo en `reports/training fase 2/`, con
+figuras PNG/PDF y manifiesto. Las figuras dependientes de MACE quedan como placeholders
+documentales hasta que existan datos DFT con fuerzas/stress y logs reales de entrenamiento.
+
+## 2026-06-07 — Implementación Fase 2A: DFT E+F(+stress) para seed MACE
+
+### Selección top-diversa
+Se implementó `buho.phase2_force` y wrappers `scripts/phase2_force_*.py`.
+
+`phase2_force_select` combina `data/batches/batch_*/selected_for_dft.csv` con el top inicial
+cuando aplica, deduplica por `candidate_id` y escribe:
+
+- `data/mace_finetune/phase2_candidates_1000.csv`
+- `data/mace_finetune/phase2_batches.json`
+- `data/mace_finetune/batches/batch_000.csv` ... `batch_019.csv`
+
+Resultado de selección: `1000` candidatos únicos, `20` lotes de `50`, `2743` etiquetas DFT
+esperadas por el barrido U de Sn. Distribución resumida: `491 A_mixed`, `302 B_mixed`,
+`198 X_mixed`, `9 pure`; familias B: `374 Sn`, `304 Pb`, `108 SnGe`, `99 SnPb`,
+`95 PbGe`, `20 Ge`.
+
+### Preparación de jobs
+`phase2_force_prepare --all` generó `1000/1000` jobs en `runs/phase2_force/batch_*/`.
+
+Cada job contiene `structure.cif`, `POSCAR`, `structure.traj`, `metadata.json`, `status.json`,
+`generator_config.yaml` e `input.py`. Para Sn se crean subdirectorios `u_scan/U2p00`,
+`U2p25`, `U2p50`, `U2p75`; para no-Sn se crea `r2scan/`.
+
+### Runner y recolección
+`phase2_force_runner` queda listo con lock global, lock por lote, límite `5×8` y guard
+contra procesos DFT activos previos. Dry-run lote 0: `50` pendientes detectados, sin lanzar
+cálculos.
+
+`phase2_force_collect` queda listo para ensamblar `phase2_seed.extxyz` y `splits.json` cuando
+existan `label.extxyz` reales. No se creó dataset vacío para no marcar falsamente como listo
+el entrenamiento MACE.

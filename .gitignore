@@ -14,6 +14,27 @@ __pycache__/
 *.out
 *.png
 *.jpg
+*.pdf
 *.hdf5
 *.h5
+*.pkl
 
+# BUHO pipeline — datos generados (regenerables desde el generador)
+# (sin comentarios inline: en .gitignore '#' solo inicia comentario al principio de línea)
+runs/
+data/raw/
+data/processed/
+data/batches/
+reports/mpi_benchmark.json
+
+# CSVs generados; conservar datos curados de literatura
+*.csv
+!data/meff_lit.csv
+!data/dielectric_lit.csv
+!data/surrogate_training.csv
+
+# JSONL pesados generados
+*.jsonl
+
+configs/monitor.local.yaml
+configs/monitor.yaml

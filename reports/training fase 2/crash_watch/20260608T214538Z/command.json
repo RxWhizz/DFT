@@ -1,0 +1,21 @@
+{
+  "started_at": "2026-06-08T21:45:38.079593+00:00",
+  "start_local": "2026-06-08 14:45:38",
+  "cwd": "/home/luis-ochoa/Documents/Vscode/py/dft",
+  "cmd": [
+    "/home/luis-ochoa/miniforge3/envs/gpaw246/bin/python3",
+    "/home/luis-ochoa/Documents/Vscode/py/dft/scripts/phase2_force_benchmark.py",
+    "--maxiter",
+    "2",
+    "--swap-limit-gb",
+    "10.0",
+    "--ram-limit-gb",
+    "60.0",
+    "--min-available-gb",
+    "4.0",
+    "--splits",
+    "all",
+    "--resume"
+  ],
+  "interval_s": 5.0
+}

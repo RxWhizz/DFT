@@ -43,7 +43,7 @@ dft-converge = "dft_cspbi3.cli:run_convergence_test"
 dft-scissor = "dft_cspbi3.cli:apply_scissor"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/dft_cspbi3"]
+packages = ["src/dft_cspbi3", "src/ml_surrogate", "src/buho"]
 
 [tool.ruff]
 line-length = 100
