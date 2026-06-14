@@ -1,102 +1,316 @@
-# REPO PARTE DFT
+# DFT Perovskitas Haluros | GPAW
 
-Paquete DFT automatizado para polimorfos CsPbI₃ (α, γ, δ).
-Backend: **GPAW**. Estructuras: **ASE**.
+Pipeline de cálculos DFT para comparación experimental-ML de perovskitas haluro ABX₃.  
+**Backend**: GPAW (Python nativo). **Estructuras**: ASE.  
+**Fecha estado**: 2026-06-14
 
-## Por qué GPAW sobre VASP
+---
 
-| Aspecto | GPAW | VASP |
-|---|---|---|
-| Licencia | GPLv3 (open-source) | Comercial (~4 000 €/grupo) |
-| Método PAW | Nativo (`gpaw-setups`) | Nativo (`POTCAR`) |
-| Integración Python | Directa (objetos ASE, API Python) | Limitada (archivos POSCAR/INCAR) |
-| Pseudopotenciales externos | No necesita — datasets propios | Requiere POTCAR compilado |
-| SOC | `spinorbit_eigenvalues()` + no-colineal | `LSORBIT = .TRUE.` + `LNONCOLLINEAR` |
-| Híbridos | HSE06 vía `xc={'name':'HSE06','omega':0.11}` | `HFSCREEN`, `AEXX` |
-| Ondas planas | `mode=PW(450)` | `ENCUT = 450` |
-| Workflows Python | Clases nativas, sin wrappers | Requiere pyiron, AiiDA, atomate, etc. |
-| Paralelización | MPI + OpenMP nativo | MPI nativo |
+## Objetivo del proyecto
 
-## Equivalencias VASP → GPAW
+Construir una base DFT rigurosa para 8 materiales candidatos identificados por ML:
+- **4 Pb-based**: CsPbI3, MAPbI3, FAPbI3, FAPbBr3 → G0W0@PBE + SOC
+- **4 Sn-based**: CsSnI3, MASnI3, FASnI3, FASnBr3 → r²SCAN+U + SOC (U=2.5 eV)
 
-| VASP | GPAW | Notas |
-|---|---|---|
-| `ENCUT = 450` | `mode=PW(450)` | Ecut en eV — idéntico significado físico |
-| `POTCAR` (Cs_sv, Pb_d, I) | `setups={'Cs':'Cs.9.PBE','Pb':'Pb.14.PBE','I':'I.7.PBE'}` | Datasets PAW equivalentes |
-| `LSORBIT = .TRUE.` | `spinorbit_eigenvalues(calc)` | SOC perturbativo post-SCF |
-| `LNONCOLLINEAR = .TRUE.` | `nspins=4` en GPAW | SOC no-colineal completo |
-| `ICHARG = 11` | `GPAW('scf.gpw', fixdensity=True)` | Cálculo non-SCF con densidad fija |
-| `IBRION = 2` | `BFGS(atoms)` | Optimización de geometría |
-| `EDIFF = 1e-6` | `convergence={'energy': 1e-6}` | Criterio de convergencia SCF |
-| `EDIFFG = -0.01` | `fmax=0.01` en BFGS | Criterio de convergencia fuerzas (eV/Å) |
-| `ISMEAR = -1; SIGMA = 0.05` | `occupations={'name':'fermi-dirac','width':0.05}` | Ocupaciones térmicas |
-| `NSW = 333` | `maxiter=333` | Máximo de pasos SCF |
-| `ISYM = 2` | `symmetry='on'` | Uso de simetría |
-| `KPOINTS` (Monkhorst-Pack) | `kpts={'size':[6,6,6],'gamma':True}` | Malla k con punto Γ |
-| `LORBIT = 11` | `dos.get_dos(atom=i, orbital='p')` | DOS proyectado por orbital |
-| `GGA = PS` (PBEsol) | `xc='PBEsol'` | Funcional de intercambio-correlación |
-| `HFSCREEN = 0.2` | `xc={'name':'HSE06','omega':0.11}` | ω(Bohr⁻¹) ≈ 0.2 Å⁻¹ |
+Comparar directamente propiedades DFT vs predicciones ML (ALIGNN, MACE, mBJ).
+
+---
+
+## Materiales y estado de cálculos
+
+| Material | Fórmula | Estado relax | Estado SCF | Gap PBE | Gap final | Notas |
+|----------|---------|---|---|---|---|---|
+| **CsPbI3-α** | Cs1Pb1I3 | ✅ | ✅ DOS, bandas, SOC | 1.089 eV | G0W0 en curso | Hessiano estable; fonones 20/30 |
+| **MAPbI3** | (CH3NH3)1Pb1I3 | ⏳ | ⏳ | — | G0W0 pendiente | Catión orgánico MA |
+| **FAPbI3** | (HC(NH2)2)1Pb1I3 | ⏳ | ⏳ | — | G0W0 pendiente | Catión orgánico FA |
+| **FAPbBr3** | (HC(NH2)2)1Pb1Br3 | ⏳ | ⏳ | — | G0W0 pendiente | Haluro Br |
+| **CsSnI3** | Cs1Sn1I3 | ✅ | ✅ U-scan | 1.872 eV @ U=2.5 | **1.359 eV** ✓ exp~1.3 | r²SCAN+U validado |
+| **MASnI3** | (CH3NH3)1Sn1I3 | ⏳ | ⏳ | — | r²SCAN+U pendiente | Target: 1.1–1.4 eV |
+| **FASnI3** | (HC(NH2)2)1Sn1I3 | ⏳ | ⏳ | — | r²SCAN+U pendiente | Target: 1.2–1.5 eV |
+| **FASnBr3** | (HC(NH2)2)1Sn1Br3 | ✅ preconv | ⏳ | 1.558 eV (PBE+U) | r²SCAN+U pendiente | Target: 1.8–2.3 eV |
+
+---
+
+## Metodología DFT
+
+### Estructura común para todos los materiales
+
+| Parámetro | Valor | Comentario |
+|-----------|-------|-----------|
+| Método PAW | GPAW | Setups PBE vía `gpaw install-data` |
+| Corte ondas planas | 450 eV | Convergencia típica ABX3 |
+| Malla k (relax/SCF) | 6×6×6 Γ-centrada | Primitiva de 5 átomos (Cs) o 1 fórmula |
+| Convergencia SCF | densidad 1e-4 | Criterio dominante para convergencia |
+| Fermi-Dirac smearing | 0.2 eV (r²SCAN), 0.1 eV (PBE+U) | Evita oscilaciones en Sn-based |
+
+### Para **Sn-based** (CsSnI3, MASnI3, FASnI3, FASnBr3)
+
+**Funcional**: r²SCAN+U (metaGGA + Hubbard en Sn-5s)  
+**U calibrado**: 2.5 eV (validado en CsSnI3 — reproduce gap exp. 1.3 eV)  
+**Pipeline** (u_scan_r2scan.py):
+
+```
+1. preconv PBEsol+U (density=1e-2)  →  estructura inicial para U-scan
+2. U-ramping r²SCAN  →  [U=0, 1.0, 2.0]  (warm starts)
+3. U fine-scan  →  [U=2.0, 2.25, 2.5, 2.75] eV  (16–19 iters cada uno)
+4. SOC perturbativo  →  ignora XC (MGGA)  →  Δ_SOC ≈ −0.51 eV
+5. PDOS  →  Reader API directo  →  caracteres orbital (I-p, Sn-p, etc)
+```
+
+**Por qué U-ramping:**  
+Convergencia directa a U=3.5 falla (falsos mínimos locales en paisaje DFT+U de Sn-5s).  
+U-ramping desde U=0 guía al mixer al mínimo correcto. Descubrimiento: **U=3.5 sobrecorrige** — U=2.5 es óptimo.
+
+**CsSnI3 — referencia validada**:
+| U (eV) | gap r²SCAN | gap + SOC | Δ_SOC | Exp. |
+|--------|-----------|----------|-------|------|
+| 2.5 | 1.872 | **1.359** | −0.514 | **1.30 ✓** |
+
+### Para **Pb-based** (CsPbI3, MAPbI3, FAPbI3, FAPbBr3)
+
+**Funcional**: G0W0@PBE (perturbación MBPT sin parámetros empíricos)  
+**Ventaja**: benchmark independiente para validar si Pb necesita corrección Hubbard  
+**Pipeline** (g0w0_groundstate.py + g0w0_run.py):
+
+```
+1. Relax PBE  →  estructura relajada
+2. Groundstate PBE (600 bandas, Ecut=600 eV)
+3. G0W0 PPA (Plasmon-Pole Approximation, ecut_gw=100 eV, extrapol. 74/86/100)
+4. Ecut extrapolation  →  Σ(∞) = A + B/ecut³
+5. SOC perturbativo  →  sobre G0W0@PBE
+```
+
+**CsPbI3 — en curso (2026-05-25)**:
+- Groundstate PBE: gap=1.288 eV, 600 bandas ✅
+- G0W0 PPA: 4/19 k-puntos off-Γ completados 🔄
+
+---
 
 ## Estructura del repositorio
 
 ```
-dft-cspbi3-gpaw/
+dft/
 ├── README.md
 ├── pyproject.toml
 ├── requirements.txt
+│
 ├── configs/
-│   └── default_params.yaml          # Parámetros DFT centralizados
-├── structures/
-│   ├── alpha_cubic.json             # α-Pm̄3m, 5 átomos
-│   ├── gamma_ortho.json             # γ-Pnma, 20 átomos
-│   └── delta_ortho.json             # δ-Pnma, 20 átomos (fase amarilla)
+│   └── default_params.yaml          # Parámetros DFT, YAML centralizado
+│
+├── calculations/                    # Resultados por material y paso
+│   ├── alpha/
+│   │   ├── 01_relax/
+│   │   ├── 02_scf/
+│   │   ├── 03_bands/
+│   │   ├── 04_dos/
+│   │   ├── 05_soc/
+│   │   ├── 07_vibrational/
+│   │   └── ...
+│   └── [otros materiales]/
+│
 ├── src/
-│   └── dft_cspbi3/
-│       ├── __init__.py
-│       ├── structure_builder.py     # crystal() ASE para las 3 fases
-│       ├── calculator_factory.py    # GPAW calculators desde YAML
-│       ├── workflow_manager.py      # relax→scf→bands→dos→soc
-│       ├── convergence.py           # barrido Ecut y k-mesh
-│       ├── postprocessing.py        # extrae Eg, DOS, bandas
-│       ├── bandgap_correction.py    # scissor operator χSOC + χHSE
-│       └── plotting.py              # band structure, DOS, convergencia
-├── scripts/
-│   ├── run_full_workflow.py         # CLI completo (Click)
-│   ├── run_convergence_test.py      # CLI de convergencia
-│   └── apply_scissor.py            # CLI corrección scissor
+│   ├── dft_cspbi3/                 # Core DFT workflows
+│   │   ├── structure_builder.py    # ASE crystal() para ABX3
+│   │   ├── calculator_factory.py   # GPAW desde YAML
+│   │   ├── workflow_manager.py     # orquestar pasos: relax→scf→bands→dos→soc
+│   │   ├── convergence.py          # barridos Ecut, k-mesh
+│   │   ├── postprocessing.py       # extrae Eg, DOS, bandas
+│   │   ├── bandgap_correction.py   # scissor operator
+│   │   ├── top8.py                 # generador Top-8 estructuras
+│   │   ├── analysis/               # análisis por material
+│   │   ├── validation/             # validación phonons, hessian
+│   │   ├── reporting/              # reportes y tablas DFT vs ML
+│   │   └── plotting.py             # banda, DOS, convergencia
+│   │
+│   ├── ml_surrogate/               # Modelos ML (ALIGNN, MACE)
+│   ├── buho/                       # Herramientas secundarias
+│   └── monitor_api/                # Monitor de convergencia
+│
+├── scripts/                        # CLI principales
+│   ├── main.py                     # CLI maestro (Click)
+│   ├── u_ramp_r2scan.py            # U-ramping para Sn-based
+│   ├── u_scan_r2scan.py            # U fine-scan r²SCAN+U
+│   ├── u_scan_soc_dos.py           # SOC + DOS post-U-scan
+│   ├── u_scan_pdos.py              # PDOS con Reader API
+│   ├── g0w0_groundstate.py         # Groundstate 600 bandas para G0W0
+│   ├── g0w0_run.py                 # G0W0 PPA runner
+│   ├── g0w0_soc.py                 # SOC sobre G0W0
+│   └── [otros scripts]/
+│
+├── migration/
+│   ├── bitacora.md                 # Timeline experimentos, hallazgos claves
+│   └── [documentos convergencia]/
+│
 └── tests/
     ├── test_structure_builder.py
-    ├── test_calculator_factory.py
-    ├── test_bandgap_correction.py
-    └── test_postprocessing.py
+    ├── test_workflow_manager.py
+    └── ...
 ```
 
-## Instalación
+---
 
-### Paso 1: Instalar GPAW y ASE
+## Instalación y configuración
+
+### 1. Instalar GPAW con MPI
 
 ```bash
-pip install gpaw ase
+# Dependencias (Ubuntu/Debian)
+sudo apt-get install libxc-dev libfftw3-dev libopenblas-dev libopenmpi-dev
+
+# GPAW desde pip
+pip install gpaw>=24.1.0 ase>=3.23.0
+
+# Descargar datasets PAW
+gpaw install-data ~/.gpaw/gpaw-setups-24.11.0
+export GPAW_SETUP_PATH=~/.gpaw/gpaw-setups-24.11.0
 ```
 
-Para compilar GPAW con soporte MPI completo (recomendado para producción):
+### 2. Clonar y configurar proyecto
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libxc-dev libfftw3-dev libopenblas-dev
-pip install gpaw
-
-# Verificar instalación
-python -c "import gpaw; print(gpaw.__version__)"
+git clone <repo> dft
+cd dft
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
 
-### Paso 2: Descargar los datasets PAW
+### 3. Variables de entorno (MPI, cálculos)
 
 ```bash
-gpaw install-data ~/.gpaw/datasets
-# O en directorio personalizado:
-gpaw install-data /path/to/datasets --register
+# Configuración por sesión
+export GPAW_SETUP_PATH=~/.gpaw/gpaw-setups-24.11.0
+export GPAW_CONFIG=$(pwd)/siteconfig.py
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+
+# siteconfig.py debe especificar:
+# - compiler = 'mpicc'
+# - libxc_version = '5.2.3'
 ```
+
+---
+
+## Uso: ejecutar cálculos
+
+### CsSnI3 (Sn-based): reproducir U=2.5 eV validado
+
+```bash
+# 1. Preconv PBEsol+U
+mpirun -n 7 python scripts/u_ramp_r2scan.py --mat CsSnI3
+
+# 2. U fine-scan r²SCAN+U [2.0, 2.25, 2.5, 2.75] eV
+mpirun -n 22 python scripts/u_scan_r2scan.py --mat CsSnI3
+
+# 3. SOC + DOS
+mpirun -n 4 python scripts/u_scan_soc_dos.py --mat CsSnI3
+
+# 4. PDOS
+python scripts/u_scan_pdos.py --mat CsSnI3
+```
+
+Resultado esperado: **gap(SOC @ U=2.5) = 1.359 eV** ✓ (exp ~1.3 eV)
+
+### CsPbI3 (Pb-based): correr G0W0
+
+```bash
+# 1. Groundstate PBE (600 bandas)
+mpirun -n 22 python scripts/g0w0_groundstate.py --mat CsPbI3
+
+# 2. G0W0 PPA (ecut=100 eV, extrapolación)
+mpirun -n 4 python scripts/g0w0_run.py --mat CsPbI3
+
+# 3. SOC perturbativo
+python scripts/g0w0_soc.py --mat CsPbI3
+```
+
+### CLI maestro: ejecutar múltiples pasos
+
+```bash
+python main.py run --phase alpha --steps relax scf bands dos soc --validate
+python main.py run --material CsSnI3 --method r2scan-u --u-scan 2.0 2.25 2.5 2.75
+```
+
+---
+
+## Hallazgos principales
+
+### Convergencia SCF para Sn-based
+
+**Problema**: oscilación energética ±1–4 eV sin convergencia densidad.  
+**Causa raíz**: doble pozo en paisaje DFT+U de Sn-5s → mixer salta entre mínimos locales.  
+**Solución**: U-ramping desde U=0 (guía al mínimo correcto) + beta pequeño (movimiento local).
+
+### U óptimo para Sn
+
+| Material | U testeado | U óptimo | Gap SOC | Exp |
+|----------|-----------|---------|---------|-----|
+| CsSnI3 | 0–3.5 eV | **2.5 eV** | 1.359 eV | 1.30 eV ✓ |
+| MASnI3 | pendiente | ~2.5? | pendiente | 1.24 eV |
+| FASnI3 | pendiente | ~2.5? | pendiente | 1.41 eV |
+| FASnBr3 | pendiente | ~2.5? | pendiente | 2.05 eV |
+
+**Descubrimiento**: U=3.5 eV sobrecorrige el gap (fue ansatz inicial incorrecto).
+
+### G0W0 como benchmark (Pb-based)
+
+G0W0 evita parámetros empíricos. En progreso:
+- **CsPbI3**: groundstate ✅, G0W0 4/19 q-puntos 🔄
+- **MAPbI3, FAPbI3, FAPbBr3**: pendientes
+
+---
+
+## Comparación DFT vs ML
+
+Base de validación construida en [migration/DFT_CONTEXT_TOP8.md](migration/DFT_CONTEXT_TOP8.md):
+
+| Propiedad | DFT | ML (ALIGNN) | Diferencia |
+|-----------|-----|-----------|-----------|
+| Bandgap CsPbI3 | 1.29–1.59 eV (G0W0) | 1.598 eV (mBJ) | < 0.05 eV |
+| Energía formación | DFT ref | ML gap | en auditoría |
+| Masa efectiva e⁻ | DFT PBE+SOC | ALIGNN | en auditoría |
+| Dielectrico | DFT RPA | ALIGNN | en auditoría |
+
+---
+
+## Dependencias
+
+Mínimas (pyproject.toml):
+```
+gpaw>=24.1.0          # DFT solver
+ase>=3.23.0           # Estructuras/optimización
+numpy, pandas, scipy  # Cálculos numéricos
+pyyaml                # Archivos de configuración
+click                 # CLI
+phonopy>=2.20         # Fonones
+spglib>=2.0           # Simetría
+matplotlib            # Gráficos
+```
+
+---
+
+## Referencia rápida
+
+| Tarea | Comando | Tiempo |
+|-------|---------|--------|
+| Relax CsPbI3 (PBE, 7 cores) | `mpirun -n 7 ... main.py run --steps relax` | ~30 min |
+| U-scan CsSnI3 (r²SCAN+U, 22 cores) | `mpirun -n 22 python scripts/u_scan_r2scan.py` | ~15 min (5 U-puntos) |
+| Fonones α (supercelda 2×2×2, MPI) | `mpirun -n 7 main.py run --steps phonons --validate` | ~6 h (10 desplazamientos) |
+| G0W0 CsPbI3 (4 cores, ecut=100) | `mpirun -n 4 python scripts/g0w0_run.py` | ~40 h (full BZ) |
+
+---
+
+## Citas y referencias
+
+- **GPAW**: J. J. Mortensen et al., Phys. Rev. B **71**, 035109 (2005)
+- **r²SCAN**: J. Sun et al., Phys. Rev. Lett. **115**, 036402 (2015)
+- **G0W0**: M. S. Hybertsen & S. G. Louie, Phys. Rev. B **34**, 5390 (1986)
+- **Perovskitas haluro**: Top-8 ML validados en [DFT_CONTEXT_TOP8.md](migration/DFT_CONTEXT_TOP8.md)
+
+---
+
+**Última actualización**: 2026-06-14  
+**Estado proyecto**: Sn-based metodología ✅, Pb-based G0W0 en curso 🔄
 
 Datasets usados para CsPbI₃:
 - `Cs.9.PBE` — semicore 5s²5p⁶6s¹ (9 electrones de valencia)
