@@ -1,0 +1,17 @@
+{
+  "status": "pending",
+  "candidate_id": "6a755a87d15c7481",
+  "formula": "MAGe0.23Sn0.77I3",
+  "phase2_batch_id": 10,
+  "selection_rank": 281,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-11T06:40:03.835837Z"
+}

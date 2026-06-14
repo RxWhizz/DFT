@@ -16,20 +16,65 @@ from buho.phase2_force import ROOT
 from buho.phase2_force.common import RUNS_DIR, display_path, label_plan_for_formula, read_csv, write_json
 from buho.phase2_force.selection import load_candidate_index
 
+# k-points para superceldas: [2,2,2] (test de convergencia 2026-06-09: Γ-only da 0.2 eV/átomo
+# de error en Sn; [2,2,2] converge a 0.015 vs [3,3,3]). Con PBE single-point ~6 GB/job.
+SUPERCELL_KPTS = [2, 2, 2]
+# Single-points por candidato: config 0 = semilla relajada; 1..K-1 = rattled (diversidad).
+N_RATTLE = 4
+RATTLE_STDEV = 0.08  # Å
+
+# Relajacion previa con MACE-MP-0: la semilla cubica idealizada usa lattice_est = 2√2(r_B+r_X)
+# que SOBRE-expande ~50% (CsSnI3 sale a 9.56 Å vs ~6.1 real) -> estructura casi metalica ->
+# SCF oscila y los forces son no-fisicos. Relajar con MACE-MP-0 contrae la red al equilibrio
+# de MACE; el DFT single-point alrededor de ese equilibrio da el Δ(DFT-MACE) que necesita el
+# fine-tuning. Calculadora cacheada (se carga una vez por corrida de prepare).
+_MACE_CALC = None
+
+
+def _get_mace_calc():
+    global _MACE_CALC
+    if _MACE_CALC is None:
+        from mace.calculators import mace_mp
+        _MACE_CALC = mace_mp(model="small", dispersion=False,
+                             default_dtype="float64", device="cpu")
+    return _MACE_CALC
+
+
+def _relax_with_mace(structure_path: Path, fmax: float = 0.05, steps: int = 120) -> dict:
+    """Relaja in-place la estructura con MACE-MP-0 (celda+posiciones). Sobrescribe el cif."""
+    from ase.filters import FrechetCellFilter
+    from ase.io import read as _read
+    from ase.io import write as _write
+    from ase.optimize import FIRE
+    atoms = _read(str(structure_path))
+    vol0 = atoms.get_volume() / len(atoms)
+    atoms.calc = _get_mace_calc()
+    opt = FIRE(FrechetCellFilter(atoms), logfile=None)
+    converged = opt.run(fmax=fmax, steps=steps)
+    vol1 = atoms.get_volume() / len(atoms)
+    atoms.calc = None
+    _write(str(structure_path), atoms)
+    return {"mace_relaxed": True, "mace_converged": bool(converged),
+            "vol_per_atom_before": round(float(vol0), 2),
+            "vol_per_atom_after": round(float(vol1), 2)}
+
 
 INPUT_TEMPLATE = string.Template(r'''#!/usr/bin/env python3
-"""Job Fase 2A: PBE/PBE+U + FIRE(2) + etiqueta MACE extxyz."""
+"""Job Fase 2A: PBE single-point E+F(+stress) sobre K estructuras rattled -> extxyz MACE.
+
+Sin Hubbard U (consistente con MPtrj/MACE-MP-0) y sin FIRE: para datos de fine-tuning de
+un MLIP se quieren E+F sobre estructuras DIVERSAS (rattled), no la relajacion al minimo.
+"""
 from __future__ import annotations
 
 import json
-import math
 import time
 import traceback
 from pathlib import Path
 
 import numpy as np
+from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read, write
-from ase.optimize import FIRE
 from gpaw import GPAW, PW
 from gpaw.eigensolvers import Davidson
 from gpaw.mixer import Mixer
@@ -41,6 +86,9 @@ STRUCTURE = JOB_ROOT / "structure.cif"
 METADATA = json.loads((JOB_ROOT / "metadata.json").read_text())
 LABELS = json.loads(r"""$labels_json""")
 N_CORES = $n_cores
+KPTS_SUPERCELL = $kpts_supercell
+N_RATTLE = $n_rattle
+RATTLE_STDEV = $rattle_stdev
 IS_MASTER = world.rank == 0
 
 
@@ -84,38 +132,31 @@ def _write_status(update):
 
 
 def _kpts_for_atoms(atoms):
-    # Fase 2A usa PBE con malla 2x2x2 para superceldas grandes.
-    # El reparto MPI debe respetar N_CORES: por ejemplo 8 -> kpt=8/domain=1,
-    # pero 11 -> kpt=1/domain=11.
-    return [2, 2, 2] if len(atoms) > 10 else [6, 6, 6]
+    # [2,2,2] para superceldas (test de convergencia 2026-06-09: Γ-only da 0.2 eV/átomo de
+    # error en Sn; [2,2,2] converge a 0.015 eV/átomo vs [3,3,3]).
+    return KPTS_SUPERCELL if len(atoms) > 10 else [4, 4, 4]
 
 
-def _parallel_layout(kpts):
-    nk = int(kpts[0] * kpts[1] * kpts[2])
-    for k in range(min(N_CORES, nk), 0, -1):
-        if nk % k == 0 and N_CORES % k == 0:
-            return {"kpt": k, "domain": max(1, N_CORES // k), "band": 1}
-    return {"kpt": 1, "domain": max(1, N_CORES), "band": 1}
-
-
-def _calc_kwargs(atoms, label):
+def _calc_kwargs(atoms):
     kpts = _kpts_for_atoms(atoms)
-    has_sn = bool(label.get("u_ev") is not None)
-    mixer = Mixer(0.002, 15, 100) if has_sn else Mixer(0.05, 8, 50)
-    setups = {"Sn": f":s,{label['u_ev']}"} if has_sn else {}
+    has_sn = "Sn" in (METADATA.get("formula") or "")
+    # SIN Hubbard U (consistente MPtrj). Sn: smearing ancho (0.2) + mixer estandar (0.05)
+    # para suavizar la oscilacion SCF — NO Mixer(0.002) que es lentisimo, ni U.
     return {
         "mode": PW(450),
         "xc": "PBE",
         "kpts": {"size": kpts, "gamma": True},
         "occupations": {"name": "fermi-dirac", "width": 0.2 if has_sn else 0.05},
         "eigensolver": Davidson(niter=3),
-        "parallel": _parallel_layout(kpts),
+        # parallel: omitido -> GPAW auto-decide (robusto para cualquier N_CORES; evita el
+        # bug de divisibilidad kpt/cores, p.ej. 11 cores con 4 k-points IBZ).
         "convergence": {"density": 1e-4, "eigenstates": 1e-6, "energy": 1e-5},
-        "mixer": mixer,
-        "maxiter": 2000,
-        "setups": setups,
-        # Nombre legacy para compatibilidad con monitores ya desplegados.
-        "txt": str(JOB_ROOT / label["relative_dir"] / "r2scan.txt"),
+        "mixer": Mixer(0.05, 8, 50),
+        "maxiter": 333,
+        # Nombre legacy r2scan.txt: el runner/monitor detectan progreso SCF y stall por este
+        # archivo (label_log_paths usa rel_dir/r2scan.txt). Cada config rattled lo reescribe;
+        # el mtime fresco evita falsos "no-SCF stall".
+        "txt": str(JOB_ROOT / "pbe" / "r2scan.txt"),
     }
 
 
@@ -125,139 +166,154 @@ def _json_float_list(array):
     return np.asarray(array, dtype=float).tolist()
 
 
-def _run_label(label):
+def _single_point(atoms, calc):
+    # UN proceso MPI = UN calculo GPAW. Cualquier intento de correr varios GPAW en
+    # secuencia dentro del mismo proceso (calc nuevo por config O calc compartido)
+    # produce deadlock MPI en GPAW 24.6 + OpenMPI (collectives desfasados, CPU al
+    # 100% sin output). job.sh lanza un mpiexec POR config (aislamiento total).
+    atoms.calc = calc
+    energy = float(atoms.get_potential_energy())
+    forces = np.asarray(atoms.get_forces(), dtype=float)
+    fmax = float(np.linalg.norm(forces, axis=1).max())
+    stress = None
+    stress_error = None
+    try:
+        stress = np.asarray(atoms.get_stress(voigt=True), dtype=float)
+    except Exception as exc:
+        stress_error = str(exc)
+    return energy, forces, fmax, stress, stress_error
+
+
+def run_config(k: int) -> None:
+    """Computa SOLO la config k (proceso MPI fresco). Idempotente via frame_k.json."""
+    label = LABELS[0]   # unico label PBE (sin U-scan)
     work = JOB_ROOT / label["relative_dir"]
     work.mkdir(parents=True, exist_ok=True)
-    metrics_path = work / "metrics.json"
-    if metrics_path.exists():
+    frame_path = work / f"frame_{k}.json"
+    if frame_path.exists():
         try:
-            old = json.loads(metrics_path.read_text())
-            if old.get("status") == "converged":
-                return old
+            if json.loads(frame_path.read_text()).get("status") == "ok":
+                return   # ya computada (resume)
         except Exception:
             pass
 
+    if k == 0:
+        _write_status({"status": "running", "started_at": _now()})
+        if IS_MASTER:
+            for old in (work / "label.extxyz", work / "metrics.json"):
+                if old.exists():
+                    old.unlink()
+    world.barrier()
+
     t0 = time.time()
     atoms = read(str(STRUCTURE))
-    kwargs = _calc_kwargs(atoms, label)
-    calc = GPAW(**kwargs)
-    atoms.calc = calc
+    if k > 0:
+        atoms.rattle(stdev=RATTLE_STDEV, seed=1000 + k)
 
     try:
-        opt = FIRE(atoms, trajectory=str(work / "relax.traj"), logfile=str(work / "relax.log"))
-        opt.run(fmax=0.0, steps=2)
-
-        energy = float(atoms.get_potential_energy())
-        forces = np.asarray(atoms.get_forces(), dtype=float)
-        fmax = float(np.linalg.norm(forces, axis=1).max())
-        stress = None
-        stress_error = None
-        try:
-            stress = np.asarray(atoms.get_stress(voigt=True), dtype=float)
-        except Exception as exc:
-            stress_error = str(exc)
-
-        atoms.arrays["forces"] = forces
-        atoms.info.update({
-            "energy": energy,
-            "candidate_id": METADATA["candidate_id"],
-            "formula": METADATA.get("formula"),
-            "phase": "cubic_pm3m_seed_fire2",
-            "method": label["method"],
-            "u_ev": label.get("u_ev"),
-            "fidelity": "phase2_force",
-            "fire_steps_requested": 2,
-            "forces_max_eVA": fmax,
-            "stress_available": stress is not None,
-        })
+        calc = GPAW(**_calc_kwargs(atoms))
+        energy, forces, fmax, stress, stress_error = _single_point(atoms, calc)
+        # SinglePointCalculator: forma canonica de guardar E+F+stress en extxyz para
+        # MLIP (no poner energy/stress en info: colisiona al escribir).
+        at_out = atoms.copy()
+        # Limpiar claves heredadas del CIF que rompen el parser extxyz de ASE
+        # (occupancy contiene JSON con comillas escapadas; spacegroup/unit_cell son
+        # metadata estructural irrelevante para el entrenamiento de MACE).
+        for _k in ("occupancy", "spacegroup", "unit_cell"):
+            at_out.info.pop(_k, None)
+        spc = {"energy": energy, "forces": forces}
         if stress is not None:
-            atoms.info["stress"] = stress.tolist()
-
-        if IS_MASTER:
-            write(str(work / "relaxed.cif"), atoms)
-            write(str(work / "label.extxyz"), atoms, format="extxyz")
-        try:
-            calc.write(str(work / "label.gpw"))
-        except Exception as exc:
-            if IS_MASTER:
-                (work / "gpw_write_error.txt").write_text(str(exc))
-
-        metrics = {
-            "status": "converged",
+            spc["stress"] = stress
+        at_out.calc = SinglePointCalculator(at_out, **spc)
+        at_out.info.update({
             "candidate_id": METADATA["candidate_id"],
             "formula": METADATA.get("formula"),
-            "method": label["method"],
-            "u_ev": label.get("u_ev"),
-            "label": label["label"],
-            "relative_dir": label["relative_dir"],
-            "energy_eV": energy,
-            "energy_per_atom_eV": energy / len(atoms),
-            "n_atoms": len(atoms),
-            "forces_max_eVA": fmax,
-            "forces_shape": list(forces.shape),
-            "stress": _json_float_list(stress),
-            "stress_available": stress is not None,
-            "stress_error": stress_error,
-            "cell_A": _json_float_list(atoms.cell.array),
-            "volume_A3": float(atoms.get_volume()),
-            "kpts": kwargs["kpts"]["size"],
-            "parallel": kwargs["parallel"],
-            "xc_method": label["method"],
-            "xc": kwargs["xc"],
-            "fire_steps_requested": 2,
-            "elapsed_s": round(time.time() - t0, 1),
-            "finished_at": _now(),
+            "config_index": k,
+            "rattle_stdev": (0.0 if k == 0 else RATTLE_STDEV),
+            "method": "PBE",
+            "fidelity": "phase2_force",
+        })
+        frame = {
+            "config_index": k, "status": "ok",
+            "energy_eV": energy, "energy_per_atom_eV": energy / len(atoms),
+            "forces_max_eVA": fmax, "stress": _json_float_list(stress),
+            "stress_available": stress is not None, "stress_error": stress_error,
+            "n_atoms": len(atoms), "kpts": _kpts_for_atoms(atoms),
+            "elapsed_s": round(time.time() - t0, 1), "finished_at": _now(),
         }
+        if IS_MASTER:
+            write(str(work / "label.extxyz"), at_out, format="extxyz", append=True)
+            frame_path.write_text(json.dumps(frame, indent=2))
     except Exception as exc:
-        metrics = {
-            "status": "failed",
-            "candidate_id": METADATA["candidate_id"],
-            "formula": METADATA.get("formula"),
-            "method": label["method"],
-            "u_ev": label.get("u_ev"),
-            "label": label["label"],
-            "relative_dir": label["relative_dir"],
-            "error_message": str(exc),
-            "traceback": traceback.format_exc(),
-            "elapsed_s": round(time.time() - t0, 1),
-            "finished_at": _now(),
-        }
         if IS_MASTER:
-            (work / "error.txt").write_text(metrics["traceback"])
-
-    if IS_MASTER:
-        metrics_path.write_text(json.dumps(metrics, indent=2))
+            frame_path.write_text(json.dumps({
+                "config_index": k, "status": "failed", "error_message": str(exc),
+                "elapsed_s": round(time.time() - t0, 1), "finished_at": _now(),
+            }, indent=2))
+            (work / f"error_config{k}.txt").write_text(traceback.format_exc())
     world.barrier()
-    return metrics
 
 
-def main():
-    _write_status({"status": "running", "started_at": _now()})
-    results = []
-    for label in LABELS:
-        results.append(_run_label(label))
-
-    n_ok = sum(1 for item in results if item.get("status") == "converged")
-    n_fail = sum(1 for item in results if item.get("status") == "failed")
-    if n_ok == len(results):
-        status = "converged"
-    elif n_ok > 0:
-        status = "partial"
-    else:
-        status = "failed"
-    _write_status({
+def finalize() -> None:
+    """Agrega frame_*.json -> metrics.json + status final. Correr SIN mpiexec."""
+    label = LABELS[0]
+    work = JOB_ROOT / label["relative_dir"]
+    frames = []
+    for k in range(N_RATTLE):
+        p = work / f"frame_{k}.json"
+        if p.exists():
+            try:
+                frames.append(json.loads(p.read_text()))
+                continue
+            except Exception:
+                pass
+        frames.append({"config_index": k, "status": "failed",
+                       "error_message": "frame_json_missing (proceso murio sin escribir)"})
+    n_ok = sum(1 for m in frames if m.get("status") == "ok")
+    status = "converged" if n_ok == N_RATTLE else ("partial" if n_ok > 0 else "failed")
+    metrics = {
         "status": status,
-        "n_labels_converged": n_ok,
-        "n_labels_failed": n_fail,
-        "labels": results,
+        "candidate_id": METADATA["candidate_id"],
+        "formula": METADATA.get("formula"),
+        "method": "PBE",
+        "n_frames": n_ok,
+        "n_frames_requested": N_RATTLE,
+        "rattle_stdev": RATTLE_STDEV,
+        "xc": "PBE",
+        "frames": frames,
         "finished_at": _now(),
-    })
+    }
+    (work / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    _write_status({"status": status, "n_frames": n_ok,
+                   "n_frames_requested": N_RATTLE, "finished_at": _now()})
     if status == "failed":
         raise SystemExit(1)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-index", type=int, default=None)
+    parser.add_argument("--finalize", action="store_true")
+    args = parser.parse_args()
+    if args.finalize:
+        finalize()
+    elif args.config_index is not None:
+        run_config(args.config_index)
+    else:
+        raise SystemExit("Usa --config-index K (bajo mpiexec) o --finalize (sin mpiexec).")
+''')
+
+
+JOB_SH_TEMPLATE = string.Template(r'''#!/bin/bash
+# Un mpiexec POR config (aislamiento de procesos MPI; ver input.py).
+# El runner exporta GPAW_SETUP_PATH y NCORES; conda env ya activo.
+set -u
+cd "$$(dirname "$$0")"
+for k in $config_indices; do
+    mpiexec -n "$${NCORES:-$n_cores}" python input.py --config-index "$$k"
+done
+exec python input.py --finalize
 ''')
 
 
@@ -288,7 +344,11 @@ def _build_phase1_seed_structure(candidate: dict[str, Any], cfg: dict[str, Any],
     supercell_pure = list(structure_cfg.get("supercell_pure", [1, 1, 1]))
     formats = list(structure_cfg.get("export_formats", ["cif", "poscar", "traj"]))
 
-    a0 = float(candidate.get("a0_est_A") or candidate.get("lattice_constant_A") or 6.0)
+    # Corrección de red: a0_est_A/lattice_constant_A vienen de lattice_est = 2√2·(r_B+r_X),
+    # que sobre-expande √2× (CsSnI3 → 9.56 Å). La red cúbica de perovskita Pm-3m es
+    # a = 2·(r_B+r_X) = lattice_est/√2 (B-X = a/2). Esto arranca el MACE relax cerca del
+    # equilibrio (rápido) en vez de desde una estructura casi metálica sobre-expandida.
+    a0 = float(candidate.get("a0_est_A") or candidate.get("lattice_constant_A") or 8.49) / (2.0 ** 0.5)
     a_species = list(candidate.get("A_site_species", []))
     b_species = list(candidate.get("B_site_species", []))
     x_species = list(candidate.get("X_site_species", []))
@@ -380,13 +440,24 @@ def _write_input(job_dir: Path, labels: list[dict[str, Any]], n_cores: int) -> N
     script = INPUT_TEMPLATE.substitute(
         labels_json=json.dumps(labels, indent=2),
         n_cores=int(n_cores),
+        kpts_supercell=json.dumps(SUPERCELL_KPTS),
+        n_rattle=int(N_RATTLE),
+        rattle_stdev=repr(float(RATTLE_STDEV)),
     )
     path = job_dir / "input.py"
     path.write_text(script, encoding="utf-8")
     path.chmod(0o755)
+    job_sh = JOB_SH_TEMPLATE.substitute(
+        config_indices=" ".join(str(k) for k in range(N_RATTLE)),
+        n_cores=int(n_cores),
+    )
+    sh_path = job_dir / "job.sh"
+    sh_path.write_text(job_sh, encoding="utf-8")
+    sh_path.chmod(0o755)
 
 
-def _write_job_metadata(job_dir: Path, row: dict[str, str], labels: list[dict[str, Any]]) -> None:
+def _write_job_metadata(job_dir: Path, row: dict[str, str], labels: list[dict[str, Any]],
+                        mace_info: dict[str, Any] | None = None) -> None:
     metadata_path = job_dir / "metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.exists() else {}
     metadata.update({
@@ -396,8 +467,11 @@ def _write_job_metadata(job_dir: Path, row: dict[str, str], labels: list[dict[st
         "selection_rank": int(row["selection_rank"]),
         "slot_in_batch": int(row["slot_in_batch"]),
         "dft_labels_expected": labels,
-        "fire_steps_requested": 2,
-        "dft_policy": "Sn -> PBE+U sweep; non-Sn -> PBE+FIRE",
+        "n_rattle": N_RATTLE,
+        "rattle_stdev": RATTLE_STDEV,
+        "kpts_supercell": SUPERCELL_KPTS,
+        "mace_prerelax": mace_info or {},
+        "dft_policy": "MACE-MP-0 relax -> PBE single-point E+F sobre K rattled (sin U, MPtrj)",
         "selection_row": row,
         "prepared_at": datetime.utcnow().isoformat() + "Z",
     })
@@ -463,10 +537,16 @@ def prepare_batch(batch_id: int, config_path: Path = ROOT / "config" / "generato
 
         candidate = _load_candidate(cid, candidate_index)
         _build_phase1_seed_structure(candidate, cfg, job_dir)
+        # Relajar la semilla con MACE-MP-0 (corrige la sobre-expansion de lattice_est y da
+        # estructuras fisicas -> SCF converge y los forces DFT son significativos).
+        try:
+            mace_info = _relax_with_mace(job_dir / "structure.cif")
+        except Exception as exc:
+            mace_info = {"mace_relaxed": False, "mace_error": str(exc)[:200]}
         for label in labels:
             (job_dir / label["relative_dir"]).mkdir(parents=True, exist_ok=True)
         _write_input(job_dir, labels, n_cores=n_cores)
-        _write_job_metadata(job_dir, row, labels)
+        _write_job_metadata(job_dir, row, labels, mace_info)
         _write_status(job_dir, row, labels)
         if config_path.exists():
             shutil.copy2(config_path, job_dir / "generator_config.yaml")

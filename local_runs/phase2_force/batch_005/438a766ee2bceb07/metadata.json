@@ -1,0 +1,95 @@
+{
+  "candidate_id": "438a766ee2bceb07",
+  "formula": "RbGe0.29Sn0.71I3",
+  "reduced_formula": "RbGe0.295Sn0.705I",
+  "generation_mode": "B_mixed",
+  "A_site_species": [
+    "Rb"
+  ],
+  "B_site_species": [
+    "Sn",
+    "Ge"
+  ],
+  "X_site_species": [
+    "I"
+  ],
+  "fractions": {
+    "A": {
+      "Rb": 1.0
+    },
+    "B": {
+      "Sn": 0.7054,
+      "Ge": 0.2946
+    },
+    "X": {
+      "I": 1.0
+    }
+  },
+  "molecular_A_placeholder": false,
+  "lattice_constant_A": 6.4948,
+  "supercell": [
+    2,
+    2,
+    2
+  ],
+  "n_atoms": 40,
+  "tolerance_t": 0.81001,
+  "oct_factor": 0.4761,
+  "random_seed": 42,
+  "build_date": "2026-06-10T07:58:32.540562Z",
+  "phase": "2A",
+  "fidelity": "phase2_force",
+  "phase2_batch_id": 5,
+  "selection_rank": 386,
+  "slot_in_batch": 19,
+  "dft_labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "n_rattle": 4,
+  "rattle_stdev": 0.08,
+  "kpts_supercell": [
+    2,
+    2,
+    2
+  ],
+  "mace_prerelax": {
+    "mace_relaxed": true,
+    "mace_converged": true,
+    "vol_per_atom_before": 54.79,
+    "vol_per_atom_after": 46.6
+  },
+  "dft_policy": "MACE-MP-0 relax -> PBE single-point E+F sobre K rattled (sin U, MPtrj)",
+  "selection_row": {
+    "selection_rank": "386",
+    "phase2_batch_id": "5",
+    "slot_in_batch": "19",
+    "candidate_id": "438a766ee2bceb07",
+    "formula": "RbGe0.29Sn0.71I3",
+    "generation_mode": "B_mixed",
+    "source_type": "cascade",
+    "source_batch": "batch_000",
+    "source_file": "data/batches/batch_000/selected_for_dft.csv",
+    "selection_score": "0.904654",
+    "score_raw": "1.9457",
+    "total_score": "1.9457",
+    "pre_dft_score": "",
+    "is_organic_A": "False",
+    "contains_sn": "True",
+    "contains_pb": "False",
+    "contains_ge": "True",
+    "b_family": "SnGe",
+    "dominant_halide": "I",
+    "n_dft_labels_expected": "4",
+    "dft_plan": "U2p00+U2p25+U2p50+U2p75",
+    "tolerance_t": "0.81001",
+    "oct_factor": "0.4761",
+    "vol_est_A3": "774.916",
+    "candidate_json_source": "data/batches/batch_000/candidates.jsonl"
+  },
+  "prepared_at": "2026-06-10T07:58:35.239424Z"
+}

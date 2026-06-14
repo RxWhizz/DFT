@@ -1,0 +1,29 @@
+{
+  "status": "failed",
+  "candidate_id": "7faa0bc2ae2a10f5",
+  "formula": "FAGe0.25Pb0.75Br3",
+  "phase2_batch_id": 1,
+  "selection_rank": 522,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:48:30.922291Z",
+  "pid": 11866,
+  "mpi_cores": 8,
+  "start_time": "2026-06-11T20:49:34.256068Z",
+  "retries": 2,
+  "self_healed": true,
+  "self_heal_action": "monitor_killed_stalled_no_scf_job",
+  "self_heal_reason": "no_phase2_scf_log_after_420.0min",
+  "finished_at": "2026-06-12T03:49:34.452339Z",
+  "updated_at": "2026-06-12T03:49:34.452339Z",
+  "self_heal_pids": [
+    11866
+  ]
+}

@@ -7,10 +7,12 @@ from buho.phase2_force.common import classify_formula, label_plan_for_formula, s
 from buho.phase2_force.selection import assign_batches
 
 
-def test_label_plan_for_sn_uses_u_scan():
+def test_label_plan_for_sn_uses_single_pbe_no_u():
+    # Sin Hubbard U: MPtrj/MACE-MP-0 no aplica U a Sn/bloque-p; un solo label PBE consistente
+    # (antes era un U-scan inconsistente y 4× más caro). Ver bitácora 2026-06-09.
     labels = label_plan_for_formula("CsSnI3")
-    assert [item["label"] for item in labels] == ["U2p00", "U2p25", "U2p50", "U2p75"]
-    assert all(item["method"] == "PBE+U" for item in labels)
+    assert labels == [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]
+    assert all(item["method"] == "PBE" and item["u_ev"] is None for item in labels)
 
 
 def test_label_plan_for_non_sn_uses_single_pbe():

@@ -209,8 +209,13 @@ def launch_job(job_dir: Path, n_cores: int, mpirun: str = "mpirun") -> Slot:
     """Lanza el job con GPAW 24.6 (conda) + domain=n_cores vía mpiexec del env."""
     # conda run activa el env (mpich + libs); exportar GPAW_SETUP_PATH DENTRO de
     # bash (el activate.d del env lo sobreescribe, así gana el nuestro).
-    inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
-             f"exec mpiexec -n {n_cores} python input.py")
+    if (job_dir / "job.sh").exists():
+        # Phase 2A: job.sh lanza un mpiexec por config (aislamiento de procesos MPI).
+        inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
+                 f"export NCORES={n_cores}; exec bash job.sh")
+    else:
+        inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
+                 f"exec mpiexec -n {n_cores} python input.py")
     cmd = [CONDA_BIN, "run", "-n", GPAW_ENV, "bash", "-c", inner]
 
     stdout_log = open(job_dir / "runner_stdout.log", "w")

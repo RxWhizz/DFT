@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 _HELP = (
     "🤖 <b>DFT Monitor — comandos</b>\n\n"
     "/status — reporte completo (sistema + jobs)\n"
+    "/statusfull — detalle SCF por iteración de cada job activo\n"
     "/converged [N] — lista convergidos (default 50)\n"
     "/ping &lt;job_id&gt; — ping instantáneo a un job\n"
     "/search &lt;query&gt; — busca jobs por fórmula\n"
@@ -51,6 +52,13 @@ async def _handle(token: str, chat_id: str | int, text: str, poller) -> None:
         from .sysmetrics import collect
         report = _build_status_report(poller, collect())
         await _send(token, chat_id, report)
+
+    elif cmd in ("statusfull", "sf"):
+        from .router import _build_statusfull_report
+        from .sysmetrics import collect
+        msgs = _build_statusfull_report(poller, collect())
+        for msg in msgs:
+            await _send(token, chat_id, msg)
 
     elif cmd in ("converged", "c"):
         from .router import _build_converged_text

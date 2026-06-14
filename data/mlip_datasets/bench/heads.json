@@ -1,0 +1,17 @@
+{
+  "phase2a": {
+    "train_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/phase2a_train.xyz",
+    "valid_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/phase2a_valid.xyz",
+    "E0s": "average"
+  },
+  "cssni3": {
+    "train_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/cssni3_train.xyz",
+    "valid_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/cssni3_valid.xyz",
+    "E0s": "average"
+  },
+  "perovsiap": {
+    "train_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/perovsiap_train.xyz",
+    "valid_file": "/home/luis-ochoa/Documents/Vscode/py/dft/data/mlip_datasets/bench/perovsiap_valid.xyz",
+    "E0s": "average"
+  }
+}

@@ -1,0 +1,5822 @@
+{
+  "n_batches": 20,
+  "n_candidates": 1000,
+  "n_prepared": 1000,
+  "dry_run": false,
+  "batches": [
+    {
+      "batch_id": 0,
+      "batch_csv": "data/mace_finetune/batches/batch_000.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "a70c82b021986f18",
+          "formula": "Cs0.94MA0.059SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/a70c82b021986f18",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "ef8bdab15faa2db3",
+          "formula": "FAPbBr0.25Cl0.5I0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/ef8bdab15faa2db3",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c7818f9146316112",
+          "formula": "MA0.39Rb0.61SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/c7818f9146316112",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "830dbc192e4e9fd9",
+          "formula": "MASnBr0.35I0.653",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/830dbc192e4e9fd9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "afb22267695ea19d",
+          "formula": "Cs0.54MA0.46SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/afb22267695ea19d",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "24f88dd9663a6ba0",
+          "formula": "FA0.5MA0.5PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/24f88dd9663a6ba0",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2c09cab8e268c3e7",
+          "formula": "CsGe0.094Sn0.91I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/2c09cab8e268c3e7",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "4ce24f2543f721ab",
+          "formula": "FA0.41Rb0.59SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/4ce24f2543f721ab",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "8777a166c1c8a4be",
+          "formula": "MASnBr0.2I0.83",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/8777a166c1c8a4be",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7564c462877d2bcb",
+          "formula": "Cs0.59FA0.41SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_000/7564c462877d2bcb",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:12.065744Z"
+    },
+    {
+      "batch_id": 1,
+      "batch_csv": "data/mace_finetune/batches/batch_001.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "4976639170f9c4b2",
+          "formula": "FAPbBr0.25Cl0.25I0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/4976639170f9c4b2",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "d82fd5f810575923",
+          "formula": "Cs0.89Rb0.11SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/d82fd5f810575923",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "55ddce5dea7c1a97",
+          "formula": "FA0.32Rb0.68SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/55ddce5dea7c1a97",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7ef6efb36c15114f",
+          "formula": "Cs0.12FA0.88PbBr3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/7ef6efb36c15114f",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6beda07dc4630a38",
+          "formula": "FA0.21MA0.79SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/6beda07dc4630a38",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "53e05b0910243068",
+          "formula": "MASnCl0.11I0.893",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/53e05b0910243068",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "d8c1e980e3106083",
+          "formula": "FA0.88Rb0.12PbBr3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/d8c1e980e3106083",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "dd5eabfc786787e1",
+          "formula": "MA0.53Rb0.47SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/dd5eabfc786787e1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "5ab75c25753ef170",
+          "formula": "Cs0.27MA0.73SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/5ab75c25753ef170",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "287abab2a078be76",
+          "formula": "Cs0.14MA0.86SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_001/287abab2a078be76",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:12.448261Z"
+    },
+    {
+      "batch_id": 2,
+      "batch_csv": "data/mace_finetune/batches/batch_002.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "81148520f78fa018",
+          "formula": "FA0.75MA0.25PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/81148520f78fa018",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "30b46d8f615ac0c3",
+          "formula": "FAPbBr0.88Cl0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/30b46d8f615ac0c3",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "8e2dc8cf8e3ae9cc",
+          "formula": "FA0.37Rb0.63SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/8e2dc8cf8e3ae9cc",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "120dee1870df99c9",
+          "formula": "MASnBr0.28I0.723",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/120dee1870df99c9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6a8117a3b2324640",
+          "formula": "Cs0.86K0.14SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/6a8117a3b2324640",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "3aabccd02119ee42",
+          "formula": "Cs0.7FA0.3SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/3aabccd02119ee42",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1c8d644865043b52",
+          "formula": "K0.57MA0.43SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/1c8d644865043b52",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6e6a202bd4bd5fc1",
+          "formula": "Cs0.61FA0.39SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/6e6a202bd4bd5fc1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "79a7e7ce185b31af",
+          "formula": "Cs0.4MA0.6SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/79a7e7ce185b31af",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "cea0ea951b3d9a80",
+          "formula": "FA0.62K0.38SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_002/cea0ea951b3d9a80",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:12.829843Z"
+    },
+    {
+      "batch_id": 3,
+      "batch_csv": "data/mace_finetune/batches/batch_003.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "75738f9865e2b37c",
+          "formula": "FAPbBr0.12Cl0.38I0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/75738f9865e2b37c",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "68d5edccf5c891ea",
+          "formula": "FAPbBr0.5Cl0.38I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/68d5edccf5c891ea",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1b69fac23b591cba",
+          "formula": "K0.57MA0.43SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/1b69fac23b591cba",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "e6237f0b49dd6486",
+          "formula": "K0.24MA0.76SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/e6237f0b49dd6486",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "72c554ce3f335122",
+          "formula": "CsSnCl0.15I0.853",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/72c554ce3f335122",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "ad7fe14338271a8e",
+          "formula": "FA0.12Rb0.88SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/ad7fe14338271a8e",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "90c1191b9140d8e9",
+          "formula": "FAPb0.5Sn0.5I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/90c1191b9140d8e9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "90ec0d10ba32b4a9",
+          "formula": "CsGe0.46Sn0.54I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/90ec0d10ba32b4a9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "788dc54eefcfb073",
+          "formula": "FA0.4K0.6SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/788dc54eefcfb073",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7189803a34eae80f",
+          "formula": "Cs0.76MA0.24SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_003/7189803a34eae80f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:13.196069Z"
+    },
+    {
+      "batch_id": 4,
+      "batch_csv": "data/mace_finetune/batches/batch_004.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "e156ca208828d75f",
+          "formula": "FA0.88MA0.12PbBr3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/e156ca208828d75f",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "81b27410973a1782",
+          "formula": "Cs0.79Rb0.21SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/81b27410973a1782",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "de8fe64473d1ad31",
+          "formula": "FA0.22Rb0.78SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/de8fe64473d1ad31",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "70200508506d3a9f",
+          "formula": "FA0.62Rb0.38SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/70200508506d3a9f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "24b21f80d5d1ee0f",
+          "formula": "MASnCl0.18I0.823",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/24b21f80d5d1ee0f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7b189bc261664738",
+          "formula": "MA0.24Rb0.76SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/7b189bc261664738",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1f2d00d99e8ebf17",
+          "formula": "FA0.61MA0.39SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/1f2d00d99e8ebf17",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c837f4088def2d17",
+          "formula": "CsSnCl0.061I0.943",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/c837f4088def2d17",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "465f0f9dcd688839",
+          "formula": "FA0.36K0.64SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/465f0f9dcd688839",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "00f76e8199148cd8",
+          "formula": "K0.22MA0.78SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_004/00f76e8199148cd8",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:13.579789Z"
+    },
+    {
+      "batch_id": 5,
+      "batch_csv": "data/mace_finetune/batches/batch_005.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "225784ecaeafc39c",
+          "formula": "FAPbBr0.75I0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/225784ecaeafc39c",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2862788215cd8ede",
+          "formula": "MASnBr0.062Cl0.16I0.783",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/2862788215cd8ede",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "3b358743bd26ba79",
+          "formula": "FA0.28Rb0.72SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/3b358743bd26ba79",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c981ce9653488a18",
+          "formula": "FA0.66K0.34SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/c981ce9653488a18",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "8d4b50a54c806689",
+          "formula": "Cs0.69MA0.31SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/8d4b50a54c806689",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b9fa6c1b0e124adc",
+          "formula": "Cs0.72FA0.28SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/b9fa6c1b0e124adc",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7da2caf5bf97f20f",
+          "formula": "MA0.65Rb0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/7da2caf5bf97f20f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "37c91385331ed0ba",
+          "formula": "Cs0.29MA0.71SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/37c91385331ed0ba",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "23078ea89c30e782",
+          "formula": "FA0.3Rb0.7SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/23078ea89c30e782",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "462cd23c8acc2d99",
+          "formula": "Cs0.18MA0.82SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_005/462cd23c8acc2d99",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:13.959686Z"
+    },
+    {
+      "batch_id": 6,
+      "batch_csv": "data/mace_finetune/batches/batch_006.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "fbe042bc75d3dc97",
+          "formula": "Cs0.12FA0.88PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/fbe042bc75d3dc97",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b3bab95bc5935909",
+          "formula": "CsSnCl0.25I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/b3bab95bc5935909",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c402282a8e72afaf",
+          "formula": "MASnCl0.24I0.763",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/c402282a8e72afaf",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "a3113c46d2d3e044",
+          "formula": "CsSnCl0.18I0.823",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/a3113c46d2d3e044",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "8235f93795bb6032",
+          "formula": "Cs0.79MA0.21SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/8235f93795bb6032",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "038520d3d582ba92",
+          "formula": "FA0.22K0.78SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/038520d3d582ba92",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c72d73214e67ef67",
+          "formula": "FA0.054MA0.95SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/c72d73214e67ef67",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "dfe2bd7f6530b3fb",
+          "formula": "Cs0.67FA0.33SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/dfe2bd7f6530b3fb",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "72f487e20f96e7f1",
+          "formula": "MA0.65Rb0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/72f487e20f96e7f1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1994748bbfcb2881",
+          "formula": "CsSnBr0.26I0.743",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_006/1994748bbfcb2881",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:14.321494Z"
+    },
+    {
+      "batch_id": 7,
+      "batch_csv": "data/mace_finetune/batches/batch_007.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "14ecedb062f15667",
+          "formula": "FAPbBr0.5I0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/14ecedb062f15667",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "0c64d877aaa7c25a",
+          "formula": "FAPbBr0.12I0.883",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/0c64d877aaa7c25a",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "4d38eb07329e70fe",
+          "formula": "FAPbBr0.25Cl0.62I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/4d38eb07329e70fe",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c4e5dd7c49e032d1",
+          "formula": "CsSnBr0.44I0.563",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/c4e5dd7c49e032d1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7373482262442a7f",
+          "formula": "Cs0.88MA0.12SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/7373482262442a7f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "87143b5ff88c67eb",
+          "formula": "CsGe0.2Sn0.8I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/87143b5ff88c67eb",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "64ae240547d06148",
+          "formula": "FA0.39Rb0.61SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/64ae240547d06148",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b683e2211904c40b",
+          "formula": "MA0.34Rb0.66SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/b683e2211904c40b",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "38d6442d1bc51577",
+          "formula": "MA0.79Rb0.21SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/38d6442d1bc51577",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "bc85a6e161617429",
+          "formula": "Cs0.92K0.08SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_007/bc85a6e161617429",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:14.692409Z"
+    },
+    {
+      "batch_id": 8,
+      "batch_csv": "data/mace_finetune/batches/batch_008.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "1914be35ffa68b77",
+          "formula": "FAPbCl0.5I0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/1914be35ffa68b77",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c5394b24ea21fbfa",
+          "formula": "FA0.88K0.12PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/c5394b24ea21fbfa",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1e6498dec353f065",
+          "formula": "Cs0.64FA0.36SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/1e6498dec353f065",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b4c3df3686b2475a",
+          "formula": "CsPb0.067Sn0.93I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/b4c3df3686b2475a",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "193c3e1eef368d2f",
+          "formula": "Cs0.81FA0.19SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/193c3e1eef368d2f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "837d758fe4e24289",
+          "formula": "FA0.34Rb0.66SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/837d758fe4e24289",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "e45cf3b9f3ba6012",
+          "formula": "MASnCl0.14I0.863",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/e45cf3b9f3ba6012",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "8f421e3db16013aa",
+          "formula": "MA0.37Rb0.63SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/8f421e3db16013aa",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1bf28e9963222d48",
+          "formula": "MA0.88Rb0.12SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/1bf28e9963222d48",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "afbd5e6cf1c5bda5",
+          "formula": "Cs0.87K0.13SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_008/afbd5e6cf1c5bda5",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:15.066451Z"
+    },
+    {
+      "batch_id": 9,
+      "batch_csv": "data/mace_finetune/batches/batch_009.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "719d8ffa5c675fe3",
+          "formula": "FAPbBr0.88I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/719d8ffa5c675fe3",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "40146d989fef1528",
+          "formula": "FAPbBr0.12Cl0.62I0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/40146d989fef1528",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f35b405ac549ff6e",
+          "formula": "CsSnCl0.28I0.723",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/f35b405ac549ff6e",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "830153bbcd11c519",
+          "formula": "MASnBr0.24I0.763",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/830153bbcd11c519",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "98c50cc518a7d61b",
+          "formula": "FA0.23MA0.77SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/98c50cc518a7d61b",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "866dbed7cd7e3568",
+          "formula": "MA0.36Rb0.64SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/866dbed7cd7e3568",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "a61b787f4522e7de",
+          "formula": "FAPbBr0.12Cl0.883",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/a61b787f4522e7de",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b15b6b96136421cf",
+          "formula": "Cs0.56FA0.44SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/b15b6b96136421cf",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "e78a21426f681f52",
+          "formula": "FA0.67Rb0.33SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/e78a21426f681f52",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2e4315aab47e74f5",
+          "formula": "FA0.59K0.41SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_009/2e4315aab47e74f5",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:15.443398Z"
+    },
+    {
+      "batch_id": 10,
+      "batch_csv": "data/mace_finetune/batches/batch_010.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "7821ec151ff8767a",
+          "formula": "FAPbCl0.25I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/7821ec151ff8767a",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f43da2dca7df10b4",
+          "formula": "K0.66MA0.34SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/f43da2dca7df10b4",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "58d594600c54a998",
+          "formula": "Cs0.25MA0.75SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/58d594600c54a998",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f93989a8fa695d2b",
+          "formula": "FA0.73K0.27SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/f93989a8fa695d2b",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "56ed13cee2eb8fde",
+          "formula": "Cs0.72Rb0.28SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/56ed13cee2eb8fde",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "362ad0e62ae54d92",
+          "formula": "FA0.28MA0.72SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/362ad0e62ae54d92",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "85142966d6db6924",
+          "formula": "CsSnBr0.33I0.673",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/85142966d6db6924",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "e29685f7435d9fb2",
+          "formula": "MASnBr0.45I0.553",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/e29685f7435d9fb2",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f42d1bea281d8c79",
+          "formula": "MA0.9Rb0.1SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/f42d1bea281d8c79",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "26349e43cafee1ef",
+          "formula": "Cs0.9K0.1SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_010/26349e43cafee1ef",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:15.815796Z"
+    },
+    {
+      "batch_id": 11,
+      "batch_csv": "data/mace_finetune/batches/batch_011.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "88ddfd194c5264b1",
+          "formula": "FAPbBr0.5Cl0.25I0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/88ddfd194c5264b1",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "cc01eeb4e719d6d2",
+          "formula": "FAPbBr0.75Cl0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/cc01eeb4e719d6d2",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f10a3b4b492e4ae6",
+          "formula": "CsSnBr0.15Cl0.07I0.783",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/f10a3b4b492e4ae6",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "44e5f6b77364fcc9",
+          "formula": "Cs0.95Rb0.052SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/44e5f6b77364fcc9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "146f0951c4bf6c82",
+          "formula": "MA0.22Rb0.78SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/146f0951c4bf6c82",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b24441eba88bf82e",
+          "formula": "Cs0.73Rb0.27SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/b24441eba88bf82e",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "aaff09d3d761c1c6",
+          "formula": "Cs0.65FA0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/aaff09d3d761c1c6",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "731e976b11c78195",
+          "formula": "Cs0.32MA0.68SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/731e976b11c78195",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2faf0f422b7d8345",
+          "formula": "FA0.65Rb0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/2faf0f422b7d8345",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "15129ceef9b550d1",
+          "formula": "MA0.21Rb0.79SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_011/15129ceef9b550d1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:16.184348Z"
+    },
+    {
+      "batch_id": 12,
+      "batch_csv": "data/mace_finetune/batches/batch_012.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "8a695c4ee851ffc1",
+          "formula": "CsGe0.053Sn0.95I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/8a695c4ee851ffc1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1433535d439c0ea8",
+          "formula": "CsSnCl0.13I0.873",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/1433535d439c0ea8",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b7ec1e861441fc06",
+          "formula": "FAPb0.75Sn0.25Br3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/b7ec1e861441fc06",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "5493167c28edb58d",
+          "formula": "CsSnBr0.052I0.953",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/5493167c28edb58d",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "3de100079f186536",
+          "formula": "FAPbBr0.25Cl0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/3de100079f186536",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "23189d685ecc1fd5",
+          "formula": "K0.33MA0.67SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/23189d685ecc1fd5",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "23e60a54e9ff52a1",
+          "formula": "CsSnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/23e60a54e9ff52a1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1312ad987e6cc6b7",
+          "formula": "CsPb0.38Sn0.62I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/1312ad987e6cc6b7",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "d484634c9403d07a",
+          "formula": "CsPb0.24Sn0.76I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/d484634c9403d07a",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "86f9cbba2e04d7c4",
+          "formula": "FASnBr0.5I0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_012/86f9cbba2e04d7c4",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:16.537436Z"
+    },
+    {
+      "batch_id": 13,
+      "batch_csv": "data/mace_finetune/batches/batch_013.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "8880ef09ebbdd025",
+          "formula": "CsSnCl0.2I0.83",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/8880ef09ebbdd025",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7baf836cf7e3ded9",
+          "formula": "FA0.75MA0.25PbBr3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/7baf836cf7e3ded9",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b18ec5fddfc7db17",
+          "formula": "FAGe0.12Pb0.88I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/b18ec5fddfc7db17",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "5c25c8dae00bd423",
+          "formula": "FAPb0.75Sn0.25I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/5c25c8dae00bd423",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "526b69ffd216f023",
+          "formula": "Cs0.65MA0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/526b69ffd216f023",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "0aabe32b0a0a1543",
+          "formula": "K0.46MA0.54SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/0aabe32b0a0a1543",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "9caccc1b16be6603",
+          "formula": "CsPb0.48Sn0.52I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/9caccc1b16be6603",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c1e65a5b4a551e2a",
+          "formula": "CsSnBr0.21I0.793",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/c1e65a5b4a551e2a",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "9a212be0f89964f3",
+          "formula": "K0.12MA0.88SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/9a212be0f89964f3",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "a1bcffcafd235bd5",
+          "formula": "Cs0.12FA0.88SnCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_013/a1bcffcafd235bd5",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:16.909934Z"
+    },
+    {
+      "batch_id": 14,
+      "batch_csv": "data/mace_finetune/batches/batch_014.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "6846dff591e2feda",
+          "formula": "CsSnCl0.21I0.793",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/6846dff591e2feda",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "debf10cba1abf9a0",
+          "formula": "FA0.88MA0.12PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/debf10cba1abf9a0",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "42c37ff1ea690c1d",
+          "formula": "MASnCl0.2I0.83",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/42c37ff1ea690c1d",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "0f68f3cd5376b9f7",
+          "formula": "MA0.27Rb0.73SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/0f68f3cd5376b9f7",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "13aa08a8ce98c429",
+          "formula": "CsSnBr0.41I0.593",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/13aa08a8ce98c429",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "3ef4dd09c1f24186",
+          "formula": "MA0.52Rb0.48SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/3ef4dd09c1f24186",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "bae04f288ba5fa87",
+          "formula": "K0.41MA0.59SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/bae04f288ba5fa87",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "68262cdf221460ce",
+          "formula": "FA0.77MA0.23SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/68262cdf221460ce",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "bdeaafec40739ba2",
+          "formula": "K0.17MA0.83SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/bdeaafec40739ba2",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "08635b2b9c8022d4",
+          "formula": "FA0.88MA0.12SnBr3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_014/08635b2b9c8022d4",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:17.280464Z"
+    },
+    {
+      "batch_id": 15,
+      "batch_csv": "data/mace_finetune/batches/batch_015.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "019bb7047dc9ea25",
+          "formula": "FAPbBr0.12Cl0.12I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/019bb7047dc9ea25",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "0a2b53d4975b4bc3",
+          "formula": "FAPb0.88Sn0.12Br3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/0a2b53d4975b4bc3",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2ee35b00bd4d6fca",
+          "formula": "FAPbBr0.5Cl0.53",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/2ee35b00bd4d6fca",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f79be420cb92d7fc",
+          "formula": "Cs0.92Rb0.084SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/f79be420cb92d7fc",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f8e11e27cc6a3590",
+          "formula": "Cs0.83MA0.17SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/f8e11e27cc6a3590",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "50870de372f837c7",
+          "formula": "FA0.84K0.16SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/50870de372f837c7",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "124c8e57354d116a",
+          "formula": "Cs0.12FA0.88SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/124c8e57354d116a",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "5f87a9781a20421c",
+          "formula": "K0.15MA0.85SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/5f87a9781a20421c",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "3bbd21511a6d1013",
+          "formula": "K0.16MA0.84SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/3bbd21511a6d1013",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6bc63c5420bcad29",
+          "formula": "MA0.77Rb0.23SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_015/6bc63c5420bcad29",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:17.645616Z"
+    },
+    {
+      "batch_id": 16,
+      "batch_csv": "data/mace_finetune/batches/batch_016.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "d2bb59c8b9789ead",
+          "formula": "FA0.88Rb0.12PbCl3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/d2bb59c8b9789ead",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "860bcbefb6f302b1",
+          "formula": "K0.53MA0.47SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/860bcbefb6f302b1",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "f1442a48aad86376",
+          "formula": "MASnBr0.06Cl0.19I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/f1442a48aad86376",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "edf66cf989b23cd5",
+          "formula": "Cs0.65MA0.35SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/edf66cf989b23cd5",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "de0f315b2af32381",
+          "formula": "Cs0.56MA0.44SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/de0f315b2af32381",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2daa177ea52c3bd9",
+          "formula": "FA0.23Rb0.77SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/2daa177ea52c3bd9",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "cc97c6d7e95e921b",
+          "formula": "Cs0.055MA0.95SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/cc97c6d7e95e921b",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "aaaae1f4b16795e6",
+          "formula": "FA0.43Rb0.57SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/aaaae1f4b16795e6",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "261891e57ee97780",
+          "formula": "MA0.73Rb0.27SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/261891e57ee97780",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "90de47ead5ca632d",
+          "formula": "FASnCl0.25I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_016/90de47ead5ca632d",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:18.035430Z"
+    },
+    {
+      "batch_id": 17,
+      "batch_csv": "data/mace_finetune/batches/batch_017.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "8e716a18b1f9f0f9",
+          "formula": "FAPbBr0.75Cl0.12I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/8e716a18b1f9f0f9",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "70ee7600391d535c",
+          "formula": "MA0.18Rb0.82SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/70ee7600391d535c",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "191fec83478c0999",
+          "formula": "FA0.69K0.31SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/191fec83478c0999",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6c0b1a116939d1b3",
+          "formula": "Cs0.85FA0.15SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/6c0b1a116939d1b3",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "6580812331af8dc3",
+          "formula": "CsGe0.16Sn0.84I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/6580812331af8dc3",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "18e423a1f8314885",
+          "formula": "FA0.27Rb0.73SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/18e423a1f8314885",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "7ab61613259b1fd6",
+          "formula": "Cs0.12MA0.88SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/7ab61613259b1fd6",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "be08abe8ca458aaf",
+          "formula": "CsSnBr0.11I0.893",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/be08abe8ca458aaf",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "1575b5c971aa6fea",
+          "formula": "CsSnBr0.19I0.813",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/1575b5c971aa6fea",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b1c09c54c742b13b",
+          "formula": "FA0.88MA0.12PbI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_017/b1c09c54c742b13b",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:18.410946Z"
+    },
+    {
+      "batch_id": 18,
+      "batch_csv": "data/mace_finetune/batches/batch_018.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "82f98b794564ef1e",
+          "formula": "FAPbBr0.25I0.753",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/82f98b794564ef1e",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c733d9b938918672",
+          "formula": "FAPbCl0.75I0.253",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/c733d9b938918672",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2b9b4feab8c98966",
+          "formula": "FAPbBr0.12Cl0.75I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/2b9b4feab8c98966",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "357c4daf373d50e6",
+          "formula": "Cs0.86MA0.14SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/357c4daf373d50e6",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "aa3171239ac28232",
+          "formula": "FAPb0.5Sn0.5Br3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/aa3171239ac28232",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "81597018959bfe1e",
+          "formula": "CsGe0.12Sn0.88I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/81597018959bfe1e",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2648e9d62e9137dd",
+          "formula": "CsSnBr0.16I0.843",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/2648e9d62e9137dd",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "2040145465c28aae",
+          "formula": "K0.44MA0.56SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/2040145465c28aae",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "ca51797458edf176",
+          "formula": "Cs0.58MA0.42SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/ca51797458edf176",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "221b8e1083f98b93",
+          "formula": "FAPb0.25Sn0.75Br3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_018/221b8e1083f98b93",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:18.787926Z"
+    },
+    {
+      "batch_id": 19,
+      "batch_csv": "data/mace_finetune/batches/batch_019.csv",
+      "runs_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019",
+      "n_candidates": 50,
+      "n_planned": 50,
+      "n_prepared": 50,
+      "n_skipped": 0,
+      "n_missing_candidate_json": 0,
+      "dry_run": false,
+      "planned_examples": [
+        {
+          "candidate_id": "d9d2fbe18cbc9761",
+          "formula": "FAPbCl0.12I0.883",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/d9d2fbe18cbc9761",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "24e3a7374e8aba55",
+          "formula": "MA0.6Rb0.4SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/24e3a7374e8aba55",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "42b7b539eb578285",
+          "formula": "FAPb0.88Sn0.12I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/42b7b539eb578285",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "425c8881b56b2809",
+          "formula": "FAPbCl0.88I0.123",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/425c8881b56b2809",
+          "labels": [
+            {
+              "label": "r2scan",
+              "method": "r2SCAN",
+              "u_ev": null,
+              "relative_dir": "r2scan"
+            }
+          ]
+        },
+        {
+          "candidate_id": "cd9cdf12acdc5a5f",
+          "formula": "FA0.13Rb0.87SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/cd9cdf12acdc5a5f",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "44b06c752be4943c",
+          "formula": "CsGe0.14Sn0.86I3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/44b06c752be4943c",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "b413cddea8f65a99",
+          "formula": "MASnBr0.41I0.593",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/b413cddea8f65a99",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "e8150fad5b313e1b",
+          "formula": "FA0.86MA0.14SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/e8150fad5b313e1b",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "88f7a09c91f884c2",
+          "formula": "Cs0.6MA0.4SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/88f7a09c91f884c2",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        },
+        {
+          "candidate_id": "c9ed271da6ab38a0",
+          "formula": "FA0.48K0.52SnI3",
+          "job_dir": "/media/luis-ochoa/Nuevo vol/dft/runs/phase2_force/batch_019/c9ed271da6ab38a0",
+          "labels": [
+            {
+              "label": "U2p00",
+              "method": "r2SCAN+U",
+              "u_ev": 2.0,
+              "relative_dir": "u_scan/U2p00"
+            },
+            {
+              "label": "U2p25",
+              "method": "r2SCAN+U",
+              "u_ev": 2.25,
+              "relative_dir": "u_scan/U2p25"
+            },
+            {
+              "label": "U2p50",
+              "method": "r2SCAN+U",
+              "u_ev": 2.5,
+              "relative_dir": "u_scan/U2p50"
+            },
+            {
+              "label": "U2p75",
+              "method": "r2SCAN+U",
+              "u_ev": 2.75,
+              "relative_dir": "u_scan/U2p75"
+            }
+          ]
+        }
+      ],
+      "prepared_at": "2026-06-08T06:31:19.142433Z"
+    }
+  ]
+}

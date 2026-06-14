@@ -1,0 +1,22 @@
+{
+  "status": "pending",
+  "candidate_id": "06db828a179ff946",
+  "formula": "FAPb0.25Sn0.75I3",
+  "phase2_batch_id": 9,
+  "selection_rank": 210,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T08:08:46.405756Z",
+  "pid": 690324,
+  "mpi_cores": 8,
+  "started_at": "2026-06-13T23:53:36.278518Z",
+  "recovered_from": "controlled-stop",
+  "recovered_at": "2026-06-14T01:18:56.023352+00:00"
+}

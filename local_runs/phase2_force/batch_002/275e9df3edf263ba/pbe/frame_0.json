@@ -1,0 +1,25 @@
+{
+  "config_index": 0,
+  "status": "ok",
+  "energy_eV": -126.57910353000226,
+  "energy_per_atom_eV": -3.1644775882500564,
+  "forces_max_eVA": 0.010380247576635181,
+  "stress": [
+    3.961362336949096e-05,
+    2.0576256857103604e-05,
+    3.961362336948984e-05,
+    -2.34271120412919e-19,
+    0.0,
+    0.0
+  ],
+  "stress_available": true,
+  "stress_error": null,
+  "n_atoms": 40,
+  "kpts": [
+    2,
+    2,
+    2
+  ],
+  "elapsed_s": 688.1,
+  "finished_at": "2026-06-12T10:37:27.857700Z"
+}

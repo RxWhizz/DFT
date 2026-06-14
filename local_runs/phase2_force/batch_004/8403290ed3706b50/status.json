@@ -1,0 +1,39 @@
+{
+  "status": "failed",
+  "candidate_id": "8403290ed3706b50",
+  "formula": "RbGe0.56Sn0.44I3",
+  "phase2_batch_id": 4,
+  "selection_rank": 805,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:56:52.574185Z",
+  "pid": 5848,
+  "mpi_cores": 8,
+  "start_time": "2026-06-12T16:24:37.173147Z",
+  "retries": 1,
+  "self_healed": true,
+  "self_heal_action": "monitor_killed_stalled_no_scf_job",
+  "self_heal_reason": "no_phase2_scf_log_after_420.0min",
+  "finished_at": "2026-06-12T23:24:39.746931Z",
+  "updated_at": "2026-06-12T23:24:39.746931Z",
+  "self_heal_pids": [
+    5848,
+    5849,
+    5859,
+    5863,
+    5864,
+    5865,
+    5866,
+    5867,
+    5868,
+    5869,
+    5870
+  ]
+}

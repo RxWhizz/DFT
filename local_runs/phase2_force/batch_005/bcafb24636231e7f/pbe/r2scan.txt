@@ -1,0 +1,522 @@
+
+  ___ ___ ___ _ _ _  
+ |   |   |_  | | | | 
+ | | | | | . | | | | 
+ |__ |  _|___|_____|  24.6.0
+ |___|_|             
+
+User:   luis-ochoa@luis-pc
+Date:   Fri Jun 12 17:30:55 2026
+Arch:   x86_64
+Pid:    4545
+CWD:    /home/luis-ochoa/Documents/Vscode/py/dft/local_runs/phase2_force/batch_005/bcafb24636231e7f
+Python: 3.11.15
+gpaw:   /home/luis-ochoa/miniforge3/envs/gpaw246/lib/python3.11/site-packages/gpaw
+_gpaw:  /home/luis-ochoa/miniforge3/envs/gpaw246/lib/python3.11/site-packages/
+        _gpaw.cpython-311-x86_64-linux-gnu.so
+ase:    /home/luis-ochoa/miniforge3/envs/gpaw246/lib/python3.11/site-packages/ase (version 3.28.0)
+numpy:  /home/luis-ochoa/miniforge3/envs/gpaw246/lib/python3.11/site-packages/numpy (version 1.26.4)
+scipy:  /home/luis-ochoa/miniforge3/envs/gpaw246/lib/python3.11/site-packages/scipy (version 1.17.1)
+libxc:  6.2.2
+units:  Angstrom and eV
+cores: 8
+OpenMP: True
+OMP_NUM_THREADS: 1
+
+Input parameters:
+  convergence: {density: 0.0001,
+                eigenstates: 1e-06,
+                energy: 1e-05}
+  eigensolver: {name: dav,
+                niter: 3}
+  kpts: {gamma: True,
+         size: [2, 2, 2]}
+  mixer: {backend: pulay,
+          beta: 0.05,
+          method: separate,
+          nmaxold: 8,
+          weight: 50}
+  mode: {ecut: 450.00000000000006,
+         name: pw}
+  occupations: {name: fermi-dirac,
+                width: 0.05}
+  xc: PBE
+
+System changes: positions, numbers, cell, pbc, initial_charges, initial_magmoms 
+
+Initialize ...
+
+species:
+  Cs:
+    name: Caesium
+    id: fa822afd343f47335d508b9ee4f394c3
+    Z: 55.0
+    valence: 9
+    core: 46
+    charge: 0.0
+    file: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/Cs.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.33,
+                           lmax: 2}
+    cutoffs: {filter: 2.06,
+              core: 2.51}
+    projectors:
+      #              energy  rcut
+      - 5s(2.00)   -26.706   1.164
+      - 6s(1.00)    -2.085   1.164
+      - 5p(6.00)   -13.523   1.058
+      -  p          13.688   1.058
+      -  d           0.000   1.058
+  
+    # Using partial waves for Cs as LCAO basis
+
+  Pb:
+    name: Lead
+    id: 66e73b13d76dc837202bcdb13fee58e6
+    Z: 82.0
+    valence: 14
+    core: 68
+    charge: 0.0
+    file: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/Pb.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.38,
+                           lmax: 2}
+    cutoffs: {filter: 2.36,
+              core: 2.43}
+    projectors:
+      #              energy  rcut
+      - 6s(2.00)   -11.969   1.259
+      - 6p(2.00)    -3.506   1.275
+      - 5d(10.00)   -21.211   1.217
+      -  s          15.243   1.259
+      -  p          23.705   1.275
+      -  d           6.001   1.217
+  
+    # Using partial waves for Pb as LCAO basis
+
+  I:
+    name: Iodine
+    id: 91405a398e4dfe788ff04f57531604ec
+    Z: 53.0
+    valence: 7
+    core: 46
+    charge: 0.0
+    file: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/I.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.37,
+                           lmax: 2}
+    cutoffs: {filter: 2.06,
+              core: 2.90}
+    projectors:
+      #              energy  rcut
+      - 5s(2.00)   -17.382   1.164
+      - 5p(5.00)    -7.088   1.164
+      -  s           9.829   1.164
+      -  p          20.123   1.164
+      -  d           0.000   1.164
+  
+    # Using partial waves for I as LCAO basis
+
+  Br:
+    name: Bromine
+    id: 39dc90fcf3bf77f2d83386b416c2c495
+    Z: 35.0
+    valence: 7
+    core: 28
+    charge: 0.0
+    file: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/Br.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.35,
+                           lmax: 2}
+    cutoffs: {filter: 1.98,
+              core: 2.38}
+    projectors:
+      #              energy  rcut
+      - 4s(2.00)   -20.121   1.111
+      - 4p(5.00)    -7.861   1.111
+      -  s           7.091   1.111
+      -  p          19.351   1.111
+      -  d           0.000   1.111
+  
+    # Using partial waves for Br as LCAO basis
+
+  Cl:
+    name: Chlorine
+    id: 726897f06f34e53cf8e33b5885a02604
+    Z: 17.0
+    valence: 7
+    core: 10
+    charge: 0.0
+    file: /home/luis-ochoa/Documents/Vscode/py/dft/.venv/lib/python3.12/site-packages/gpaw_data/setups/Cl.PBE.gz
+    compensation charges: {type: gauss,
+                           rc: 0.25,
+                           lmax: 2}
+    cutoffs: {filter: 1.40,
+              core: 1.49}
+    projectors:
+      #              energy  rcut
+      - 3s(2.00)   -20.689   0.794
+      - 3p(5.00)    -8.594   0.794
+      -  s           6.523   0.794
+      -  p          18.617   0.794
+      -  d           0.000   0.794
+  
+    # Using partial waves for Cl as LCAO basis
+
+Reference energy: -7426956.433110  # eV
+
+Spin-paired calculation
+
+Convergence criteria:
+ Maximum [total energy] change in last 3 cyles: 1e-05 eV / valence electron
+ Maximum integral of absolute [dens]ity change: 0.0001 electrons / valence electron
+ Maximum integral of absolute [eigenst]ate change: 1e-06 eV^2 / valence electron
+ Maximum number of scf [iter]ations: 333
+ (Square brackets indicate name in SCF output, whereas a 'c' in
+ the SCF output indicates the quantity has converged.)
+
+Symmetries present (total): 1
+
+  ( 1  0  0)
+  ( 0  1  0)
+  ( 0  0  1)
+
+8 k-points: 2 x 2 x 2 Monkhorst-Pack grid + [1/4,1/4,1/4]
+8 k-points in the irreducible part of the Brillouin zone
+       k-points in crystal coordinates                weights
+   0:     0.00000000    0.00000000    0.00000000          1/8
+   1:     0.00000000    0.00000000    0.50000000          1/8
+   2:     0.00000000    0.50000000    0.00000000          1/8
+   3:     0.00000000    0.50000000    0.50000000          1/8
+   4:     0.50000000    0.00000000    0.00000000          1/8
+   5:     0.50000000    0.00000000    0.50000000          1/8
+   6:     0.50000000    0.50000000    0.00000000          1/8
+   7:     0.50000000    0.50000000    0.50000000          1/8
+
+Wave functions: Plane wave expansion
+  Cutoff energy: 450.000 eV
+  Number of coefficients (min, max): 35262, 35356
+  Pulay-stress correction: 0.000000 eV/Ang^3 (de/decut=0.000000)
+  Using FFTW library
+  ScaLapack parameters: grid=1x1, blocksize=None
+  Wavefunction extrapolation:
+    Improved wavefunction reuse through dual PAW basis 
+
+Occupation numbers: Fermi-Dirac:
+  width: 0.0500  # eV
+ 
+
+Eigensolver
+   Davidson(niter=3) 
+
+Densities:
+  Coarse grid: 60*60*60 grid
+  Fine grid: 120*120*120 grid
+  Total Charge: 0.000000 
+
+Density mixing:
+  Method: separate
+  Backend: pulay
+  Linear mixing parameter: 0.05
+  old densities: 8
+  Damping of long wavelength oscillations: 50 
+
+Hamiltonian:
+  XC and Coulomb potentials evaluated on a 120*120*120 grid
+  Using the PBE Exchange-Correlation functional
+  External potential:
+    NoExternalPotential
+ 
+
+XC parameters: PBE with 2 nearest neighbor stencil
+
+Memory estimate:
+  Process memory now: 209.48 MiB
+  Calculator: 428.66 MiB
+    Density: 144.63 MiB
+      Arrays: 42.85 MiB
+      Localized functions: 75.42 MiB
+      Mixer: 26.37 MiB
+    Hamiltonian: 30.30 MiB
+      Arrays: 28.02 MiB
+      XC: 0.00 MiB
+      Poisson: 0.00 MiB
+      vbar: 2.29 MiB
+    Wavefunctions: 253.72 MiB
+      Arrays psit_nG: 112.21 MiB
+      Eigensolver: 121.52 MiB
+      Projections: 1.78 MiB
+      Projectors: 9.43 MiB
+      PW-descriptor: 8.78 MiB
+
+Total number of cores used: 8
+Parallelization over k-points: 8
+
+Number of atoms: 40
+Number of atomic orbitals: 208
+Number of bands in calculation: 208
+Number of valence electrons: 352
+Bands to converge: occupied
+
+... initialized
+
+Initializing position-dependent things.
+
+Density initialized from atomic densities
+Creating initial wave functions:
+  208 bands from LCAO basis set
+
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+                          Cs         I  Cs           
+                     Pb    Cl  Cl Pb      Br         
+                                                     
+                   Cl            Cl Cs               
+                                                     
+         Cl          Br Cl     Pb Br                 
+                 Pb                                  
+           Cs  Cl         Cs                         
+                                                     
+                Cl  Pb      Cl Cl Pb      I          
+                   Cl                                
+        Cs            Cs     Cs Cl                   
+         Cl      Pb     Cl                           
+                     Cl        Pb Br                 
+               Br                                    
+                             Br                      
+                I                                    
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+
+Positions:
+   0 Cs    11.584933    0.184013   11.825940    ( 0.0000,  0.0000,  0.0000)
+   1 Pb     2.921057    3.052802    3.194974    ( 0.0000,  0.0000,  0.0000)
+   2 I      2.867377    3.004412   -0.056157    ( 0.0000,  0.0000,  0.0000)
+   3 Br     3.156253   -0.010315    2.894611    ( 0.0000,  0.0000,  0.0000)
+   4 Cl    -0.042323    2.978322    3.051684    ( 0.0000,  0.0000,  0.0000)
+   5 Cs     0.091299    0.069808    5.863391    ( 0.0000,  0.0000,  0.0000)
+   6 Pb     2.979213    2.770138    8.587600    ( 0.0000,  0.0000,  0.0000)
+   7 Cl     2.859287    2.783670    5.816691    ( 0.0000,  0.0000,  0.0000)
+   8 Cl     3.068572   -0.091659    8.706714    ( 0.0000,  0.0000,  0.0000)
+   9 Cl    -0.114185    3.017232    8.886401    ( 0.0000,  0.0000,  0.0000)
+  10 Cs    11.524634    5.837589   11.549355    ( 0.0000,  0.0000,  0.0000)
+  11 Pb     3.062283    8.615534    2.796944    ( 0.0000,  0.0000,  0.0000)
+  12 Cl     3.280912    8.737211   -0.055837    ( 0.0000,  0.0000,  0.0000)
+  13 Cl     3.094328    5.826067    3.163489    ( 0.0000,  0.0000,  0.0000)
+  14 I     11.558334    8.840687    2.905363    ( 0.0000,  0.0000,  0.0000)
+  15 Cs    -0.049022    5.695908    5.960087    ( 0.0000,  0.0000,  0.0000)
+  16 Pb     3.056860    8.815677    8.872364    ( 0.0000,  0.0000,  0.0000)
+  17 Br     3.232269    8.802952    6.000118    ( 0.0000,  0.0000,  0.0000)
+  18 Cl     3.051103    5.919926    8.733221    ( 0.0000,  0.0000,  0.0000)
+  19 Br    11.684329    8.575430    8.963468    ( 0.0000,  0.0000,  0.0000)
+  20 Cs     5.897451   11.687717    0.004502    ( 0.0000,  0.0000,  0.0000)
+  21 Pb     8.598333    2.924141    2.960011    ( 0.0000,  0.0000,  0.0000)
+  22 Cl     8.754164    3.228555   11.863600    ( 0.0000,  0.0000,  0.0000)
+  23 Br     8.842273   -0.003487    2.862037    ( 0.0000,  0.0000,  0.0000)
+  24 Cl     5.811680    3.137472    3.205396    ( 0.0000,  0.0000,  0.0000)
+  25 Cs     5.747024    0.163367    5.901968    ( 0.0000,  0.0000,  0.0000)
+  26 Pb     8.776206    3.074525    8.785365    ( 0.0000,  0.0000,  0.0000)
+  27 Cl     8.908832    3.104761    5.887107    ( 0.0000,  0.0000,  0.0000)
+  28 I      8.755616   11.892796    8.775752    ( 0.0000,  0.0000,  0.0000)
+  29 Cl     5.825783    3.067141    8.731027    ( 0.0000,  0.0000,  0.0000)
+  30 Cs     5.874326    5.861556   11.848952    ( 0.0000,  0.0000,  0.0000)
+  31 Pb     8.626685    8.699524    3.034104    ( 0.0000,  0.0000,  0.0000)
+  32 Br     8.654811    8.647765    0.055339    ( 0.0000,  0.0000,  0.0000)
+  33 Cl     8.512991    5.779945    3.070360    ( 0.0000,  0.0000,  0.0000)
+  34 Cl     6.081676    8.707481    2.809775    ( 0.0000,  0.0000,  0.0000)
+  35 Cs     5.901718    5.816129    5.946755    ( 0.0000,  0.0000,  0.0000)
+  36 Pb     8.669850    8.585650    9.011438    ( 0.0000,  0.0000,  0.0000)
+  37 Br     8.566688    8.641204    6.032169    ( 0.0000,  0.0000,  0.0000)
+  38 Cl     8.687265    5.690663    8.948921    ( 0.0000,  0.0000,  0.0000)
+  39 Cl     5.815703    8.641173    9.060374    ( 0.0000,  0.0000,  0.0000)
+
+Unit cell:
+           periodic     x           y           z      points  spacing
+  1. axis:    yes   11.700416    0.000000    0.000000    60     0.1950
+  2. axis:    yes    0.002965   11.768113    0.000000    60     0.1961
+  3. axis:    yes   -0.000689   -0.001686   11.827355    60     0.1971
+
+  Lengths:  11.700416  11.768114  11.827355
+  Angles:   90.008170  90.003337  89.985565
+
+Effective grid spacing dv^(1/3) = 0.1961
+
+     iter     time        total  log10-change:
+                         energy   eigst   dens
+iter:   1 17:32:46  -139.230313
+iter:   2 17:33:44  -137.934703   -2.09  -1.23
+iter:   3 17:34:43  -133.353124   -2.34  -1.27
+iter:   4 17:35:41  -132.989764   -2.99  -1.52
+iter:   5 17:36:40  -132.964363   -3.12  -1.66
+iter:   6 17:37:42  -132.861300   -3.91  -2.07
+iter:   7 17:38:45  -132.836401   -4.25  -2.25
+iter:   8 17:39:42  -132.847977   -4.97  -2.43
+iter:   9 17:40:49  -132.845292   -4.86  -2.67
+iter:  10 17:41:49  -132.845830c  -5.85  -3.01
+iter:  11 17:42:48  -132.845639c  -6.14c -3.25
+iter:  12 17:43:48  -132.845613c  -6.41c -3.48
+iter:  13 17:44:50  -132.845589c  -6.66c -3.63
+iter:  14 17:45:54  -132.845584c  -7.68c -4.09c
+
+Converged after 14 iterations.
+
+Dipole moment: (66.169479, -42.140123, 28.399143) |e|*Ang
+
+Energy contributions relative to reference atoms: (reference = -7426956.433110)
+
+Kinetic:       +229.419947
+Potential:     -234.212189
+External:        +0.000000
+XC:            -127.067622
+Entropy (-ST):   -0.000000
+Local:           -0.985719
+SIC:             +0.000000
+--------------------------
+Free energy:   -132.845584
+Extrapolated:  -132.845584
+
+Showing only first 2 kpts
+ Kpt  Band  Eigenvalues  Occupancy
+  0   174      1.64872    2.00000
+  0   175      2.18040    2.00000
+  0   176      3.97427    0.00000
+  0   177      4.02495    0.00000
+
+  1   174      1.70860    2.00000
+  1   175      1.75583    2.00000
+  1   176      4.20162    0.00000
+  1   177      4.25144    0.00000
+
+
+Fermi level: 3.06460
+
+Gap: 1.794 eV
+Transition (v -> c):
+  (s=0, k=0, n=175, [0.00, 0.00, 0.00]) -> (s=0, k=0, n=176, [0.00, 0.00, 0.00])
+No difference between direct/indirect transitions
+
+Forces in eV/Ang:
+  0 Cs    0.00203    0.06441    0.04674
+  1 Pb   -0.24096   -0.29393   -0.99601
+  2 I     0.02999   -0.02194   -0.11551
+  3 Br    0.00885   -0.16078    0.04197
+  4 Cl    0.08853    0.01419    0.07640
+  5 Cs   -0.04263    0.01816   -0.04906
+  6 Pb    0.06651    0.42748    0.70970
+  7 Cl   -0.06047   -0.09231    0.52397
+  8 Cl    0.00293    0.40103   -0.04251
+  9 Cl    0.35017    0.00470   -0.09043
+ 10 Cs   -0.00386   -0.10762    0.01471
+ 11 Pb    0.10171    0.38247    0.04466
+ 12 Cl   -0.04471   -0.03442    0.41553
+ 13 Cl   -0.01370    0.22507    0.04425
+ 14 I     1.56861   -0.04074   -0.05146
+ 15 Cs   -0.04883   -0.00483    0.00396
+ 16 Pb   -0.15049   -0.48573    0.13116
+ 17 Br    0.00116    0.04063   -0.53332
+ 18 Cl   -0.05113   -0.22636   -0.07809
+ 19 Br   -0.04741    0.03050   -0.01248
+ 20 Cs   -0.06413   -0.05335    0.01865
+ 21 Pb    0.43113    0.43690   -0.05728
+ 22 Cl   -0.03714   -0.10077    0.00629
+ 23 Br   -0.11319   -0.15400   -0.00407
+ 24 Cl   -0.09194   -0.10742    0.06765
+ 25 Cs    0.01816   -0.07249   -0.02698
+ 26 Pb   -0.03291   -0.03614    0.04870
+ 27 Cl   -0.03585   -0.01745    0.04373
+ 28 I    -0.02171   -1.24772    0.05607
+ 29 Cl   -0.30335   -0.09784   -0.12962
+ 30 Cs    0.01289   -0.00811   -0.03914
+ 31 Pb    0.02894   -0.28077    0.29578
+ 32 Br    0.02464    0.00293    0.09229
+ 33 Cl    0.05380    0.17286   -0.00027
+ 34 Cl   -1.64339    0.04412   -0.10733
+ 35 Cs    0.01714    0.03193    0.02451
+ 36 Pb    0.05595    0.09528   -0.35246
+ 37 Br   -0.00693   -0.00351   -0.07307
+ 38 Cl   -0.00929    1.22604    0.03460
+ 39 Cl    0.19505    0.01889    0.02069
+
+Stress tensor:
+    -0.001654     0.000018    -0.000016
+     0.000018    -0.001312     0.000161
+    -0.000016     0.000161    -0.000923
+Timing:                              incl.     excl.
+-----------------------------------------------------------
+Forces:                             32.851    32.851   3.3% ||
+Hamiltonian:                         6.455     0.022   0.0% |
+ Atomic:                             0.339     0.098   0.0% |
+  XC Correction:                     0.241     0.241   0.0% |
+ Calculate atomic Hamiltonians:      4.844     4.844   0.5% |
+ Communicate:                        0.000     0.000   0.0% |
+ Initialize Hamiltonian:             0.005     0.005   0.0% |
+ Poisson:                            0.038     0.038   0.0% |
+ XC 3D grid:                         1.207     1.207   0.1% |
+LCAO initialization:                42.580     0.462   0.0% |
+ LCAO eigensolver:                   1.228     0.001   0.0% |
+  Calculate projections:             0.010     0.010   0.0% |
+  DenseAtomicCorrection:             0.011     0.011   0.0% |
+  Distribute overlap matrix:         0.001     0.001   0.0% |
+  Orbital Layouts:                   0.034     0.034   0.0% |
+  Potential matrix:                  1.110     1.110   0.1% |
+  Sum over cells:                    0.062     0.062   0.0% |
+ LCAO to grid:                      40.082    40.082   4.0% |-|
+ Set positions (LCAO WFS):           0.808     0.139   0.0% |
+  Basic WFS set positions:           0.002     0.002   0.0% |
+  Basis functions set positions:     0.000     0.000   0.0% |
+  P tci:                             0.492     0.492   0.0% |
+  ST tci:                            0.149     0.149   0.0% |
+  mktci:                             0.027     0.027   0.0% |
+PWDescriptor:                        0.476     0.476   0.0% |
+SCF-cycle:                         836.210    13.966   1.4% ||
+ Davidson:                         658.258   144.675  14.4% |-----|
+  Apply H:                         116.958   111.883  11.2% |---|
+   HMM T:                            5.075     5.075   0.5% |
+  Subspace diag:                    84.342     0.006   0.0% |
+   calc_h_matrix:                   68.103    10.431   1.0% |
+    Apply H:                        57.673    55.155   5.5% |-|
+     HMM T:                          2.518     2.518   0.3% |
+   diagonalize:                      0.287     0.287   0.0% |
+   rotate_psi:                      15.946    15.946   1.6% ||
+  calc. matrices:                  258.571    89.626   8.9% |---|
+   Apply H:                        168.946   161.595  16.1% |-----|
+    HMM T:                           7.350     7.350   0.7% |
+  diagonalize:                       8.275     8.275   0.8% |
+  rotate_psi:                       45.436    45.436   4.5% |-|
+ Density:                           89.302     0.001   0.0% |
+  Atomic density matrices:           0.124     0.124   0.0% |
+  Mix:                              61.349    61.349   6.1% |-|
+  Multipole moments:                 0.014     0.014   0.0% |
+  Pseudo density:                   27.815    27.814   2.8% ||
+   Symmetrize density:               0.001     0.001   0.0% |
+ Hamiltonian:                       71.937     0.220   0.0% |
+  Atomic:                            4.087     0.975   0.1% |
+   XC Correction:                    3.112     3.112   0.3% |
+  Calculate atomic Hamiltonians:    52.637    52.637   5.3% |-|
+  Communicate:                       0.003     0.003   0.0% |
+  Poisson:                           0.438     0.438   0.0% |
+  XC 3D grid:                       14.553    14.553   1.5% ||
+ Orthonormalize:                     2.746     0.001   0.0% |
+  calc_s_matrix:                     0.348     0.348   0.0% |
+  inverse-cholesky:                  0.006     0.006   0.0% |
+  projections:                       1.706     1.706   0.2% |
+  rotate_psi_s:                      0.686     0.686   0.1% |
+Set symmetry:                        0.001     0.001   0.0% |
+Stress:                             69.733     0.000   0.0% |
+ Stress tensor:                     69.733    69.733   7.0% |--|
+Other:                              14.027    14.027   1.4% ||
+-----------------------------------------------------------
+Total:                                      1002.333 100.0%
+
+Memory usage: 1.21 GiB
+Date: Fri Jun 12 17:47:37 2026
