@@ -1,0 +1,17 @@
+{
+  "status": "pending",
+  "candidate_id": "91a9336406971e8b",
+  "formula": "MAPb0.89Sn0.11I3",
+  "phase2_batch_id": 9,
+  "selection_rank": 670,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T08:09:55.306146Z"
+}

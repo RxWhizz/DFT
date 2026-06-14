@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 JobStatusLiteral = Literal[
-    "pending", "running", "converged", "failed", "stalled", "oscillating", "unknown"
+    "pending", "running", "converged", "partial", "failed", "stalled", "oscillating", "stopped", "unknown"
 ]
 
 

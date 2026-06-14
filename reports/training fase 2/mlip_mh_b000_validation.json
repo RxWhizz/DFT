@@ -1,0 +1,49 @@
+{
+  "tag": "mh_b000",
+  "head": "phase2a",
+  "relax_holdout_cssni3": {
+    "n": 30,
+    "a0_MAE_A": 0.1076,
+    "a0_RMSE_A": 0.1098,
+    "volume_MAPE_pct": 5.72
+  },
+  "pure_perovskites": [
+    {
+      "formula": "CsSnI3",
+      "a0_ref_A": 6.24,
+      "a0_mlip_A": 6.188,
+      "err_pct": -0.83
+    },
+    {
+      "formula": "CsPbI3",
+      "a0_ref_A": 6.29,
+      "a0_mlip_A": 6.322,
+      "err_pct": 0.5
+    },
+    {
+      "formula": "CsSnBr3",
+      "a0_ref_A": 5.8,
+      "a0_mlip_A": 5.825,
+      "err_pct": 0.43
+    },
+    {
+      "formula": "CsPbBr3",
+      "a0_ref_A": 5.87,
+      "a0_mlip_A": 5.963,
+      "err_pct": 1.58
+    },
+    {
+      "formula": "CsSnCl3",
+      "a0_ref_A": 5.58,
+      "a0_mlip_A": 5.627,
+      "err_pct": 0.85
+    },
+    {
+      "formula": "CsPbCl3",
+      "a0_ref_A": 5.61,
+      "a0_mlip_A": 5.701,
+      "err_pct": 1.61
+    }
+  ],
+  "pure_a0_MAPE_pct": 0.97
+}

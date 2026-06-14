@@ -1,0 +1,95 @@
+{
+  "candidate_id": "56a2d7db641b783f",
+  "formula": "FAPbBr0.2I0.83",
+  "reduced_formula": "FAPbBr0.2I0.8",
+  "generation_mode": "X_mixed",
+  "A_site_species": [
+    "FA"
+  ],
+  "B_site_species": [
+    "Pb"
+  ],
+  "X_site_species": [
+    "I",
+    "Br"
+  ],
+  "fractions": {
+    "A": {
+      "FA": 1.0
+    },
+    "B": {
+      "Pb": 1.0
+    },
+    "X": {
+      "I": 0.8,
+      "Br": 0.2
+    }
+  },
+  "molecular_A_placeholder": true,
+  "lattice_constant_A": 6.684,
+  "supercell": [
+    2,
+    2,
+    2
+  ],
+  "n_atoms": 40,
+  "tolerance_t": 0.99063,
+  "oct_factor": 0.55297,
+  "random_seed": 42,
+  "build_date": "2026-06-10T08:04:39.018707Z",
+  "phase": "2A",
+  "fidelity": "phase2_force",
+  "phase2_batch_id": 7,
+  "selection_rank": 688,
+  "slot_in_batch": 34,
+  "dft_labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "n_rattle": 4,
+  "rattle_stdev": 0.08,
+  "kpts_supercell": [
+    2,
+    2,
+    2
+  ],
+  "mace_prerelax": {
+    "mace_relaxed": true,
+    "mace_converged": true,
+    "vol_per_atom_before": 59.72,
+    "vol_per_atom_after": 50.25
+  },
+  "dft_policy": "MACE-MP-0 relax -> PBE single-point E+F sobre K rattled (sin U, MPtrj)",
+  "selection_row": {
+    "selection_rank": "688",
+    "phase2_batch_id": "7",
+    "slot_in_batch": "34",
+    "candidate_id": "56a2d7db641b783f",
+    "formula": "FAPbBr0.2I0.83",
+    "generation_mode": "X_mixed",
+    "source_type": "cascade",
+    "source_batch": "batch_004",
+    "source_file": "data/batches/batch_004/selected_for_dft.csv",
+    "selection_score": "0.759961",
+    "score_raw": "1.8117",
+    "total_score": "1.8117",
+    "pre_dft_score": "",
+    "is_organic_A": "True",
+    "contains_sn": "False",
+    "contains_pb": "True",
+    "contains_ge": "False",
+    "b_family": "Pb",
+    "dominant_halide": "I",
+    "n_dft_labels_expected": "1",
+    "dft_plan": "pbe",
+    "tolerance_t": "0.99063",
+    "oct_factor": "0.55297",
+    "vol_est_A3": "844.606",
+    "candidate_json_source": "data/batches/batch_004/candidates.jsonl"
+  },
+  "prepared_at": "2026-06-10T08:04:42.078902Z"
+}

@@ -294,6 +294,208 @@ def _build_converged_text(poller: DFTPoller, limit: int = 50) -> str:
     return header + "\n".join(lines)
 
 
+def _scf_rate_s(points: list[dict]) -> float | None:
+    """Average seconds/iter from the last few SCF iterations."""
+    if len(points) < 2:
+        return None
+
+    def _secs(clock: str) -> int:
+        h, m, s = (int(x) for x in clock.split(":"))
+        return h * 3600 + m * 60 + s
+
+    deltas = []
+    for prev, cur in zip(points[-6:-1], points[-5:]):
+        try:
+            d = _secs(cur["clock"]) - _secs(prev["clock"])
+            if d < 0:
+                d += 86400
+            if 0 < d < 3600:
+                deltas.append(d)
+        except (KeyError, ValueError):
+            pass
+    return (sum(deltas) / len(deltas)) if deltas else None
+
+
+_PHASE2_N_CONFIGS = 4
+_SCF_TYPICAL_ITERS = 15
+
+
+def _batch_eta(runs_dir: Path, n_recent: int = 8) -> tuple[float | None, int, int]:
+    """Throughput-based ETA for the current batch.
+
+    Returns (rate_per_hour, n_pending, n_running).
+    Uses pbe/label.extxyz mtime as convergence timestamp (reliable proxy).
+    """
+    conv_times: list[float] = []
+    n_pending = n_running = 0
+    for st_path in runs_dir.glob("*/status.json"):
+        try:
+            d = json.loads(st_path.read_text())
+        except Exception:
+            continue
+        s = d.get("status")
+        if s == "converged":
+            xyz = st_path.parent / "pbe" / "label.extxyz"
+            if xyz.exists():
+                conv_times.append(xyz.stat().st_mtime)
+        elif s == "pending":
+            n_pending += 1
+        elif s == "running":
+            n_running += 1
+
+    if len(conv_times) < 2:
+        return None, n_pending, n_running
+
+    conv_times.sort()
+    recent = conv_times[-n_recent:]
+    window_h = (recent[-1] - recent[0]) / 3600.0
+    rate = (len(recent) - 1) / window_h if window_h > 0 else None
+    return rate, n_pending, n_running
+
+
+def _build_statusfull_report(poller: DFTPoller, metrics: SysMetrics) -> list[str]:
+    """Per-SCF-iteration detail for running Phase 2A jobs (/statusfull command)."""
+    from buho.phase2_force.self_heal import parse_scf_points
+
+    now = datetime.now().strftime("%H:%M")
+    batch_name = poller.runs_dir.name
+    active = [
+        s for s in poller.snapshots.values()
+        if s.status in ("running", "stalled", "oscillating")
+    ]
+
+    if not active:
+        counts: dict[str, int] = {}
+        for s in poller.snapshots.values():
+            counts[s.status] = counts.get(s.status, 0) + 1
+        summary = "  ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+        rate, n_pend, _ = _batch_eta(poller.runs_dir)
+        if rate and n_pend > 0:
+            eta_h = n_pend / rate
+            eta_str = f"ETA ~{eta_h*60:.0f}min" if eta_h < 1 else f"ETA ~{eta_h:.1f}h"
+            rate_line = f"📈 {rate:.1f} jobs/h · {eta_str} ({n_pend} pendientes)"
+        else:
+            rate_line = f"📈 {n_pend} pendientes (runner pausado)"
+        return [
+            f"🔬 <b>Status full</b> — {now} | <code>{batch_name}</code>\n"
+            f"Sin jobs activos  ({summary})\n"
+            f"{rate_line}\n"
+            f"{fmt_sys(metrics)}"
+        ]
+
+    ram_free = metrics.ram_total_gb - metrics.ram_used_gb
+    rate, n_pend, n_run = _batch_eta(poller.runs_dir)
+    n_conv = sum(1 for s in poller.snapshots.values() if s.status == "converged")
+    n_total = len(poller.snapshots)
+    if rate and (n_pend + n_run) > 0:
+        eta_h = (n_pend + n_run) / rate
+        if eta_h < 1:
+            eta_str = f"ETA ~{eta_h*60:.0f}min"
+        else:
+            eta_str = f"ETA ~{eta_h:.1f}h"
+        rate_str = f"{rate:.1f} jobs/h · {eta_str}"
+    else:
+        rate_str = "calculando tasa…"
+    header = (
+        f"🔬 <b>Status full</b> — {now} | <code>{batch_name}</code> | "
+        f"{len(active)} activos | {n_conv}/{n_total} conv\n"
+        f"📈 {rate_str} | RAM {ram_free:.0f} GB libre\n"
+        f"{fmt_sys(metrics)}"
+    )
+
+    MAX_MSG = 4000
+    messages: list[str] = []
+    current_parts: list[str] = [header]
+    current_len = len(header)
+
+    for s in sorted(active, key=lambda x: x.job_id):
+        job_dir = poller.runs_dir / s.job_id
+        pbe_dir = job_dir / "pbe"
+
+        n_done = 0
+        frame_energies: list[str] = []
+        for k in range(_PHASE2_N_CONFIGS):
+            fj = pbe_dir / f"frame_{k}.json"
+            if fj.exists():
+                try:
+                    fdata = json.loads(fj.read_text())
+                    if fdata.get("status") == "ok":
+                        e = fdata.get("energy_ev")
+                        e_str = f"E={e:.4f}" if e is not None else "ok"
+                        frame_energies.append(f"cfg{k}:{e_str}")
+                        n_done += 1
+                except Exception:
+                    pass
+
+        current_config = n_done
+        config_label = f"config {current_config + 1}/{_PHASE2_N_CONFIGS}"
+
+        log_path = pbe_dir / "r2scan.txt"
+        points: list[dict] = []
+        if log_path.exists():
+            try:
+                points = parse_scf_points(log_path)
+            except Exception:
+                pass
+
+        formula = s.formula or s.job_id[:8]
+        job_id_short = s.job_id[:8]
+        elapsed = f"{s.elapsed_min:.1f} min" if s.elapsed_min else "?"
+
+        job_lines = [
+            f"\n🚀 <b>{fmt_formula(formula)}</b> (<code>{job_id_short}</code>) — "
+            f"{config_label} · {elapsed}"
+        ]
+
+        if frame_energies:
+            job_lines.append("  frames: " + "  ".join(frame_energies))
+
+        if points:
+            skip = len(points) - 12
+            if skip > 0:
+                job_lines.append(f"  … ({skip} iters previas)")
+            for pt in points[-12:]:
+                it = pt.get("iter", "?")
+                clock = pt.get("clock", "?")
+                e = pt.get("energy")
+                e_str = f"E={e:.4f}" if e is not None else ""
+                dens = pt.get("dens", "")
+                job_lines.append(f"  iter {it:>3}  {clock}  {e_str}  dens={dens}")
+
+            rate = _scf_rate_s(points)
+            if rate is not None:
+                last_iter = points[-1].get("iter") or 0
+                remaining = max(0, _SCF_TYPICAL_ITERS - last_iter)
+                eta_s = int(rate * remaining)
+                eta_str = f"{eta_s // 60}min {eta_s % 60}s" if eta_s >= 60 else f"{eta_s}s"
+                job_lines.append(f"  ritmo {rate:.0f} s/iter · ETA config ~{eta_str}")
+        else:
+            job_lines.append("  (sin iters SCF aún — inicializando)")
+
+        block = "\n".join(job_lines)
+        if current_len + len(block) > MAX_MSG:
+            messages.append("\n".join(current_parts))
+            current_parts = [block]
+            current_len = len(block)
+        else:
+            current_parts.append(block)
+            current_len += len(block)
+
+    if current_parts:
+        messages.append("\n".join(current_parts))
+
+    return messages
+
+
+@router.get("/api/statusfull")
+async def statusfull_report(request: Request) -> dict:
+    """Devuelve el reporte statusfull (detalle SCF por job activo) como lista de mensajes."""
+    poller  = get_poller(request)
+    metrics = collect_metrics()
+    msgs    = _build_statusfull_report(poller, metrics)
+    return {"messages": msgs, "count": len(msgs), "timestamp": datetime.now().isoformat()}
+
+
 @router.post("/api/notify/converged")
 async def notify_converged(request: Request, limit: int = 50) -> dict:
     """Envía a Telegram los primeros N convergidos que quepan en 4096 chars."""

@@ -87,17 +87,15 @@ def u_stem(u_ev: float) -> str:
 
 
 def label_plan_for_formula(formula: str) -> list[dict[str, Any]]:
-    if "Sn" in formula:
-        return [
-            {
-                "label": u_stem(u_ev),
-                "method": "r2SCAN+U",
-                "u_ev": u_ev,
-                "relative_dir": f"u_scan/{u_stem(u_ev)}",
-            }
-            for u_ev in U_SCAN
-        ]
-    return [{"label": "r2scan", "method": "r2SCAN", "u_ev": None, "relative_dir": "r2scan"}]
+    """UN solo label PBE para TODOS (Sn incluido).
+
+    Materials Project / MPtrj (base de MACE-MP-0) aplica Hubbard U solo a óxidos de metales
+    de transición (Co/Cr/Fe/Mn/Mo/Ni/V/W), NO a Sn/bloque-p. Aplicar U a Sn —y peor,
+    escanearlo— es inconsistente con el foundation y genera etiquetas inconsistentes (misma
+    estructura, distinta U = distinta PES) → dañino para fine-tunear un MLIP. La oscilación
+    SCF de Sn se maneja con smearing ancho + mixer estándar, no con U.
+    """
+    return [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]
 
 
 def classify_formula(formula: str, x_fractions: dict[str, float] | None = None) -> dict[str, Any]:

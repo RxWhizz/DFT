@@ -1357,3 +1357,131 @@ cálculos.
 `phase2_force_collect` queda listo para ensamblar `phase2_seed.extxyz` y `splits.json` cuando
 existan `label.extxyz` reales. No se creó dataset vacío para no marcar falsamente como listo
 el entrenamiento MACE.
+
+## 2026-06-08 — Self-healing U-scan Fase 2A: aceptar U previa ante oscilación
+
+Se añade una regla operacional para Fase 2A: si un label Sn `u_scan/U*` entra en
+oscilación SCF, el self-healer puede matar el candidato lógico, conservar la U inmediata
+anterior si ya convergió y marcar el candidato como `partial` en vez de fallo químico.
+
+Evidencia que justifica la regla:
+
+- `2026-05-24`: en CsSnI3, `U=3.5 eV` osciló/sobrecorrigió; el barrido fino
+  `U=2.0, 2.25, 2.5, 2.75 eV` convergió en `16-19` iteraciones.
+- `2026-06-04`: en MASnCl3, `U=3.5 eV` fue matado tras `228` iteraciones con rango de
+  energía aproximado `1.04 eV` y densidad estancada cerca de `log10(delta dens)=-2.55`;
+  el mismo caso con `U=2.5 eV` convergió en `19` iteraciones.
+- En Fase 2A, los Sn mixtos pueden mostrar oscilación fuerte temprana en `U2p00`; si no
+  existe U previa convergida, el candidato se marca `failed_oscillating_no_previous_u` y
+  no se inventa etiqueta PBE/no-U para MACE.
+
+Umbrales activos:
+
+- Oscilación fuerte: `>=10` iteraciones, ventana `6`, `std(E)>=5 eV` o rango `E>=15 eV`.
+- Limit-cycle lento: `>=80` iteraciones, ventana `40`, rango `E>=0.75 eV`, densidad por
+  encima de `-3.0` y sin mejora clara.
+
+Artefacto nuevo por candidato: `u_scan_decision.json`, con U rechazada, U aceptada si
+existe, ventanas de energía/densidad y PIDs terminados por el self-healer.
+
+## 2026-06-10 — Fase 2A rediseñada: deadlock + método de datos para fine-tuning MACE
+
+Auditoría de código + literatura tras observar deadlock (jobs "running" sin converger por
+horas: `pending=43 running=4 converged=0`) y stale/failed masivos.
+
+### Raíz REAL (más allá del deadlock): estructuras sobre-expandidas
+La semilla cúbica usa `lattice_est = 2√2·(r_B+r_X)` → **CsSnI3 a 9.56 Å** (real ~6.1) →
+**174 Å³/átomo, ~50% sobre-expandido** → perovskita casi metálica → **SCF oscila**
+(−95→−88→−71, nunca converge) y los forces son no-físicos (basura para MACE). En Fase 1
+(ranking de energía) no importaba; en Fase 2 (forces) es fatal.
+
+### Método (literatura, decisiones del usuario)
+- **Sin Hubbard U** → 1 label PBE para todos. MP/MPtrj/MACE-MP-0 aplica U solo a óxidos de
+  TM (Co/Cr/Fe/Mn/Mo/Ni/V/W), NO a Sn/bloque-p. El U-scan era inconsistente con el foundation
+  y generaba etiquetas inconsistentes (misma estructura, distinta U). 4× más barato en Sn.
+- **Single-point E+F sobre K=4 rattled** (no FIRE) → diversidad de forces (estándar MLIP).
+  Escritura canónica vía `SinglePointCalculator` → extxyz con energy+forces+stress.
+- **MACE-MP-0 prerelax en `prepare`** → contrae 174→66 Å³/átomo (físico). El DFT da el
+  Δ(DFT−MACE) que necesita el fine-tuning. *Validado: SCF de Sn ahora converge limpio.*
+- **[2,2,2] k-points** (test `scripts/phase2_kpoint_convergence.py`: Γ-only da 0.2 eV/átomo de
+  error en Sn vs [3,3,3]; [2,2,2] converge a 0.015). Γ-only RECHAZADO.
+
+### Infra (deadlock)
+- **Watchdog de RAM** en `runner.py` (no lanza si <5 GB libres / >52 usados / >4 swap).
+- **`parallel` auto** de GPAW → arregla el bug `cores=11 no divisible por 4 k-points IBZ`.
+- **no-SCF stall** a 30 min; eliminado el self-heal de U-oscillation (ya no hay U).
+- **Storage LOCAL** (`runs/phase2_force`, monitor.yaml) → sobrevive reboots sin depender del
+  montaje del externo. El template nuevo no escribe GPW pesado (solo extxyz+logs).
+- Mixer Sn vuelto a `Mixer(0.05,8,50)` (el 0.002 era para la oscilación, ahora innecesario
+  con estructura relajada).
+
+### Verificación
+`scripts/phase2_kpoint_convergence.py` (gating k-points). Smoke 1 job Sn end-to-end:
+MACE relax 174→66 Å³/át, SCF converge (~−106.5 eV, sin oscilar), extxyz con energy+forces+
+stress por frame. `pytest tests/test_phase2_force*.py` → 9 pasan (tests U-scan actualizados).
+
+### Despliegue
+Servicio systemd `--user dft-pipeline.service` (resume_pipeline.sh + monitor) detenido para
+desplegar; regeneración de batches 0-9 (500 candidatos, escala elegida) con
+`scripts/phase2_regen_0to9.sh`; reactivación del servicio tras regenerar. ETA DFT ~3-4 días
+(watchdog → ~3 jobs concurrentes a ~32 min/job).
+
+## 2026-06-10 — Storage local real, dedup, batch orgánico y curriculum MACE 2 capas
+
+### Symlink runs/→externo (el "se canceló" del reboot)
+`runs/` y `calculations/` son symlinks al disco externo (Jun 6). Tras el reboot de las
+14:34 el externo no montó → symlink colgante → los 500 jobs regenerados parecían borrados
+(estaban intactos en el externo). Fix: jobs copiados a `local_runs/phase2_force/`
+(directorio LOCAL real, 24 MB), `configs/monitor.yaml` apuntado ahí, servicio reiniciado.
+
+### Dedup por estructura cuantizada (−40% cómputo)
+El placeholder orgánico (MA/FA→Cs) colapsa composiciones distintas a la misma estructura:
+solo 295/500 cif únicos. 203 duplicados marcados `skipped_duplicate` (con `duplicate_of`);
+aportaban cero información (mismo rattle seed = frames idénticos). ETA 3d → ~1.7d.
+Verificado: poller/runner tratan `skipped_duplicate` como terminal (no bloquea encadenado).
+
+### batch_010 — MA/FA explícitos
+`scripts/phase2_prepare_organic_batch.py`: 50 candidatos orgánicos (dedup por composición
+cuantizada 8A/8B/24X, round-robin por familia B), superceldas 2×2×2 con moléculas REALES
+(MA=CH3NH3, FA=CH(NH2)2, orientación aleatoria reproducible), MACE prerelax (float32,
+fmax 0.07), mismo input.py del pipeline. Validado: FA reconstruye C-N a 1.32 Å (valor
+físico del enlace parcialmente doble). ~96 átomos/job → runner reforzado con
+`ram_reserve_gb=10` por job <4 min (la RAM de GPAW tarda 1-4 min en materializar) y
+stagger default 45s.
+
+### RAM 5×8 con el método nuevo (pregunta del usuario)
+Medido en vivo con forces+stress: pico 45 GB/62, swap 0, 5.6-10.1 GB/job. El OOM viejo
+era por las celdas sobre-expandidas (~4× más coeficientes PW); ya no aplica.
+
+### Deadlock MPI en cálculos GPAW secuenciales (los "failed" de batch_000)
+Los jobs fallaban TODOS al pasar de config 0 a config 1: GPAW 24.6 + OpenMPI se
+deadlockea al correr un segundo cálculo en el mismo proceso MPI — tanto creando un
+calculador nuevo por config como compartiendo uno (collectives desfasados entre ranks;
+CPU ~80-100% sin output, log truncado a 0 bytes; el self-heal de no-SCF los mataba a los
+30 min — era el mensajero, no la causa). Probado empíricamente con ambas variantes.
+
+**Fix definitivo: aislamiento de procesos** (el patrón de Fase 1, que nunca colgó):
+`input.py --config-index k` computa UNA config y sale; `job.sh` corre un `mpiexec` POR
+config en secuencia + `input.py --finalize` (sin mpiexec) agrega `frame_*.json` →
+`metrics.json`/status. Idempotente (resume por frame_k.json). `runner.launch_job` usa
+`job.sh` si existe. Validado: frame_0 OK → proceso config 1 fresco iterando (iter 14)
+donde antes había 0 bytes. Regenerados los 550 input.py+job.sh (batches 0-10).
+
+### Curriculum MACE de 2 capas (decisión del usuario)
+- **capa 1**: subconjunto ABX3-haluro de **MPtrj** (E+F+stress, mismo nivel que MACE-MP-0;
+  haluros sin U en MP ⇒ consistente con nuestra capa 2). Descarga 12.2 GB de figshare a
+  `Nuevo vol/dft/datasets/`; `scripts/extract_mptrj_abx3.py` filtra sistemas
+  {Cs,Rb,K,Na,Li}×{Pb,Sn,Ge}×{F,Cl,Br,I} incluyendo binarios (referencias de
+  descomposición) → `mptrj_abx3_halides.extxyz`.
+- **capa 2**: nuestros single-points rattled. `scripts/phase2_mace_train.py` recolecta
+  frames converged/partial, split train/valid por candidate_id (hash estable), añade
+  **replay de capa 1** (default 2000 frames — anti-olvido, hace de capa 1 sin etapa
+  separada), fine-tuning naive (multihead OFF, E0s foundation) desde el último checkpoint
+  propio o foundation small; evalúa RMSE E/F y anexa a
+  `models/mace_phase2/learning_curve.csv`.
+- **Entre batches**: `scripts/phase2_mace_cycle.py` (watcher nohup, poll 10 min) entrena
+  automáticamente al completarse cada batch (terminal = converged/partial/failed/
+  skipped_duplicate), hilos limitados (6) para convivir con el DFT del batch siguiente.
+- Smoke validado end-to-end (2 epochs, RMSE_F 0.017 eV/Å vs DFT en 3 frames).
+- Nota: entry-points del venv (`mace_run_train`, `pip`) tienen shebang roto (venv movido
+  desde `dft-cspbi3-gpaw-main`); usar `python -m mace.cli.run_train` / `python -m pip`.

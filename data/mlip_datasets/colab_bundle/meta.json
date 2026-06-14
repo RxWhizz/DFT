@@ -1,0 +1,28 @@
+{
+  "tag": "mh_b000",
+  "mace_torch": "0.3.15",
+  "device": "cuda",
+  "dtype": "float32",
+  "hyperparams": {
+    "epochs": 50,
+    "lr": 0.0001,
+    "batch": 16,
+    "valid_batch": 32,
+    "patience": 15,
+    "eval_interval": 1
+  },
+  "heads": {
+    "phase2a": {
+      "train": 712,
+      "valid": 100
+    },
+    "cssni3": {
+      "train": 3222,
+      "valid": 778
+    },
+    "perovsiap": {
+      "train": 3203,
+      "valid": 797
+    }
+  }
+}

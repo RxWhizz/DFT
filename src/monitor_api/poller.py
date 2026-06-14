@@ -17,6 +17,11 @@ from typing import Any
 
 from .models import JobStatus, JobStatusLiteral, StatsResponse, WsEvent
 from .notifier import send_telegram
+from buho.phase2_force.self_heal import (
+    evaluate_u_oscillation_self_heal,
+    status_update_for_u_decision,
+    write_u_scan_decision,
+)
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +88,9 @@ def _write_status_update(job_dir: Path, update: dict[str, Any]) -> None:
     p = job_dir / "status.json"
     data = _read_status(job_dir)
     data.update(update)
-    p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp = p.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(p)
 
 
 def _parse_epoch(value: str | None) -> float | None:
@@ -817,6 +824,67 @@ class DFTPoller:
                     )
                 })
 
+    async def _check_phase2_u_oscillation_self_heal(self) -> None:
+        """Mata jobs Fase 2A con oscilacion U-scan y acepta la U previa si existe."""
+        if self._runner_kind() != "phase2_force":
+            return
+        if not self.cfg.get("phase2_u_oscillation_self_heal", True):
+            return
+        if not self.runs_dir.exists():
+            return
+        token = self.telegram.get("bot_token", "")
+        chat_id = self.telegram.get("chat_id", "")
+
+        for job_dir in sorted(self.runs_dir.iterdir()):
+            if not job_dir.is_dir():
+                continue
+            st = _read_status(job_dir)
+            if st.get("status") != "running":
+                continue
+            pid = st.get("pid")
+            if isinstance(pid, int) and not _is_pid_alive(pid):
+                continue
+
+            decision = evaluate_u_oscillation_self_heal(
+                job_dir,
+                st,
+                self.cfg,
+                started_epoch=_parse_epoch(st.get("started_at") or st.get("start_time")),
+            )
+            if not decision:
+                continue
+
+            _write_status_update(job_dir, status_update_for_u_decision(decision, []))
+            killed = _kill_job_processes(job_dir, pid if isinstance(pid, int) else None)
+            write_u_scan_decision(job_dir, decision, killed)
+            _write_status_update(job_dir, status_update_for_u_decision(decision, killed))
+            log.warning(
+                "Self-healer U-scan mato job: %s action=%s accepted_u=%s rejected_u=%s reason=%s",
+                job_dir.name,
+                decision["self_heal_action"],
+                decision.get("accepted_u_ev"),
+                decision.get("rejected_u_ev"),
+                decision["reason"],
+            )
+            if token and chat_id:
+                accepted = decision.get("accepted_u_ev")
+                accepted_text = (
+                    f"U aceptada: <code>{accepted}</code> eV\n"
+                    if accepted is not None
+                    else "U aceptada: <code>ninguna</code>\n"
+                )
+                await send_telegram(token, chat_id, "PING", "phase2-u-self-heal", {
+                    "_raw": (
+                        "🩺 <b>Self-healer U-scan Fase 2A</b>\n"
+                        f"Job: <code>{job_dir.name}</code>\n"
+                        f"Formula: <code>{st.get('formula', job_dir.name)}</code>\n"
+                        f"U rechazada: <code>{decision.get('rejected_u_ev')}</code> eV\n"
+                        f"{accepted_text}"
+                        f"Motivo: <code>{decision['reason']}</code>\n"
+                        f"Accion: <code>{decision['self_heal_action']}</code>"
+                    )
+                })
+
     async def _check_surrogate(self) -> None:
         """Notifica cuando el surrogate se reentrenó (metrics.json más nuevo)."""
         _ROOT = Path(__file__).resolve().parents[2]
@@ -943,6 +1011,10 @@ class DFTPoller:
                 await self._check_phase2_no_scf_self_heal()
             except Exception as exc:
                 log.error("Error en _check_phase2_no_scf_self_heal: %s", exc)
+            try:
+                await self._check_phase2_u_oscillation_self_heal()
+            except Exception as exc:
+                log.error("Error en _check_phase2_u_oscillation_self_heal: %s", exc)
             try:
                 await self._check_batch_done()
             except Exception as exc:

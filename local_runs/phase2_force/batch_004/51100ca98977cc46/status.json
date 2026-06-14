@@ -1,0 +1,46 @@
+{
+  "status": "failed",
+  "candidate_id": "51100ca98977cc46",
+  "formula": "MAGe0.23Pb0.77I3",
+  "phase2_batch_id": 4,
+  "selection_rank": 545,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:56:15.856145Z",
+  "pid": 4353,
+  "mpi_cores": 8,
+  "start_time": "2026-06-12T16:19:50.579432Z",
+  "self_healed": true,
+  "self_heal_action": "monitor_killed_stalled_no_scf_job",
+  "self_heal_reason": "no_phase2_scf_log_after_420.0min",
+  "finished_at": "2026-06-12T23:19:52.757082Z",
+  "updated_at": "2026-06-12T23:19:52.757082Z",
+  "self_heal_pids": [
+    4353,
+    4354,
+    4364,
+    4368,
+    4369,
+    4370,
+    4371,
+    4372,
+    4373,
+    4374,
+    4375,
+    4376,
+    4377,
+    4378,
+    4379,
+    4380,
+    4381,
+    4382,
+    4383
+  ]
+}

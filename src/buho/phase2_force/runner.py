@@ -14,6 +14,11 @@ from pathlib import Path
 
 from buho.phase2_force import ROOT
 from buho.phase2_force.common import RUNS_DIR, display_path
+from buho.phase2_force.self_heal import (
+    evaluate_u_oscillation_self_heal,
+    status_update_for_u_decision,
+    write_u_scan_decision,
+)
 
 
 CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
@@ -37,7 +42,10 @@ def read_status(job_dir: Path) -> dict:
 def write_status(job_dir: Path, update: dict) -> None:
     status = read_status(job_dir)
     status.update(update)
-    (job_dir / "status.json").write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    status_path = job_dir / "status.json"
+    tmp_path = status_path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp_path.replace(status_path)
 
 
 def acquire_lock(lock_path: Path):
@@ -293,6 +301,34 @@ def self_heal_slot(batch_dir: Path, slot: Slot, reason: str) -> bool:
     return True
 
 
+def self_heal_u_oscillation_slot(batch_dir: Path, slot: Slot) -> bool:
+    st = read_status(slot.job_dir)
+    decision = evaluate_u_oscillation_self_heal(
+        slot.job_dir,
+        st,
+        started_epoch=parse_epoch(st.get("started_at") or st.get("start_time")),
+    )
+    if not decision:
+        return False
+    pid = st.get("pid")
+    write_status(slot.job_dir, status_update_for_u_decision(decision, []))
+    killed = kill_job_processes(batch_dir, slot.job_dir, pid if isinstance(pid, int) else slot.proc.pid)
+    write_u_scan_decision(slot.job_dir, decision, killed)
+    write_status(slot.job_dir, status_update_for_u_decision(decision, killed))
+    try:
+        slot.proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+    log(
+        batch_dir,
+        "SELF-HEAL U-SCAN DONE "
+        f"{slot.job_dir.name} action={decision['self_heal_action']} "
+        f"accepted_u={decision.get('accepted_u_ev')} rejected_u={decision.get('rejected_u_ev')} "
+        f"reason={decision['reason']}",
+    )
+    return True
+
+
 def cleanup_stale_running(batch_dir: Path) -> int:
     n = 0
     for job_dir in sorted(d for d in batch_dir.iterdir() if d.is_dir()):
@@ -329,8 +365,29 @@ class Slot:
         return (datetime.now() - self.started).total_seconds() / 60
 
 
+def meminfo_gb() -> tuple[float, float, float]:
+    """(RAM_usada_GB, RAM_disponible_GB, swap_usada_GB) desde /proc/meminfo."""
+    info: dict[str, float] = {}
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            key, _, val = line.partition(":")
+            parts = val.strip().split()
+            if parts:
+                info[key.strip()] = float(parts[0]) / (1024.0 * 1024.0)  # kB -> GiB
+    except Exception:
+        return 0.0, 999.0, 0.0
+    total = info.get("MemTotal", 0.0)
+    avail = info.get("MemAvailable", 0.0)
+    swap_used = info.get("SwapTotal", 0.0) - info.get("SwapFree", 0.0)
+    return total - avail, avail, swap_used
+
+
 def launch_job(batch_dir: Path, job_dir: Path, cores: int) -> Slot:
-    inner = f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; exec mpiexec -n {cores} python input.py"
+    if (job_dir / "job.sh").exists():
+        # Template nuevo: job.sh corre un mpiexec POR config (aislamiento MPI).
+        inner = f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; export NCORES={cores}; exec bash job.sh"
+    else:
+        inner = f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; exec mpiexec -n {cores} python input.py"
     cmd = [CONDA_BIN, "run", "-n", GPAW_ENV, "bash", "-c", inner]
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = "1"
@@ -372,10 +429,12 @@ def check_slot(batch_dir: Path, slot: Slot) -> bool:
     return True
 
 
-def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, stagger: int = 8,
+def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, stagger: int = 45,
               dry_run: bool = False, resume: bool = False, override_active: bool = False,
               runs_dir: Path = RUNS_DIR, start_real: bool = False,
-              limit: int | None = None, no_scf_stall_minutes: float = 60.0) -> dict:
+              limit: int | None = None, no_scf_stall_minutes: float = 30.0,
+              ram_limit_gb: float = 52.0, min_avail_gb: float = 5.0,
+              swap_limit_gb: float = 4.0, ram_reserve_gb: float = 10.0) -> dict:
     batch_dir = runs_dir / f"batch_{batch_id:03d}"
     if not batch_dir.exists():
         raise FileNotFoundError(f"No existe {batch_dir}; prepara el lote primero.")
@@ -434,13 +493,30 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
         active_slots = [slot for slot in active_slots if not check_slot(batch_dir, slot)]
         healed_slots: list[Slot] = []
         for slot in active_slots:
+            # Self-heal de no-SCF stall (job que nunca empieza SCF). La oscilación U-scan
+            # se eliminó (ya no hay U); en PBE single-point una config que no converge
+            # llega a maxiter y falla ese frame (el job continúa), sin deadlock.
             reason = stalled_no_scf_reason(slot, no_scf_stall_minutes)
             if reason and self_heal_slot(batch_dir, slot, reason):
                 healed_slots.append(slot)
+                continue
         if healed_slots:
             active_slots = [slot for slot in active_slots if slot not in healed_slots]
         free = slots - len(active_slots)
         while free > 0 and idx < len(pending) and not stop[0]:
+            # Watchdog de RAM: no lanzar si la memoria esta apretada (evita el
+            # thrashing/OOM que causaba el deadlock). Espera al proximo poll.
+            # Los jobs recien lanzados (<4 min) aun no materializan su RAM (GPAW
+            # inicializa en 1-4 min), asi que se reserva ram_reserve_gb por cada uno
+            # ademas del minimo disponible.
+            used, avail, swap = meminfo_gb()
+            n_recent = sum(1 for s in active_slots if s.elapsed_min < 4.0)
+            avail_needed = min_avail_gb + ram_reserve_gb * n_recent
+            if avail < avail_needed or used > ram_limit_gb or swap > swap_limit_gb:
+                log(batch_dir, f"RAM-GUARD espera: usada={used:.1f}GB disp={avail:.1f}GB "
+                               f"swap={swap:.1f}GB necesita_disp={avail_needed:.1f}GB "
+                               f"(recientes={n_recent}) running={len(active_slots)}")
+                break
             job = pending[idx]
             idx += 1
             if read_status(job).get("status") not in {"pending", "failed"}:
@@ -479,7 +555,8 @@ def main() -> None:
     parser.add_argument("--slots", type=int, default=5)
     parser.add_argument("--cores", type=int, default=8)
     parser.add_argument("--poll", type=int, default=30)
-    parser.add_argument("--stagger", type=int, default=8)
+    parser.add_argument("--stagger", type=int, default=45,
+                        help="Segundos entre lanzamientos; da tiempo a que la RAM del job previo se materialice.")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--start-real", action="store_true",
                         help="Confirmacion explicita para lanzar DFT real; sin esto solo se permite --dry-run.")
@@ -488,13 +565,23 @@ def main() -> None:
     parser.add_argument("--runs-dir", default=str(RUNS_DIR))
     parser.add_argument("--limit", type=int, default=None,
                         help="Maximo de jobs logicos a lanzar en esta invocacion.")
-    parser.add_argument("--no-scf-stall-minutes", type=float, default=60.0,
+    parser.add_argument("--no-scf-stall-minutes", type=float, default=30.0,
                         help="Self-heal: mata jobs Fase 2A sin iteraciones SCF en el log activo tras este tiempo; 0 desactiva.")
+    parser.add_argument("--ram-limit-gb", type=float, default=52.0,
+                        help="Watchdog: no lanzar si RAM usada supera esto (GiB).")
+    parser.add_argument("--min-avail-gb", type=float, default=5.0,
+                        help="Watchdog: no lanzar si RAM disponible cae bajo esto (GiB).")
+    parser.add_argument("--swap-limit-gb", type=float, default=4.0,
+                        help="Watchdog: no lanzar si swap usada supera esto (GiB).")
+    parser.add_argument("--ram-reserve-gb", type=float, default=10.0,
+                        help="Watchdog: GiB reservados por job lanzado hace <4 min (RAM aun no materializada).")
     args = parser.parse_args()
     result = run_batch(args.batch_id, args.slots, args.cores, args.poll, args.stagger,
                        args.dry_run, args.resume, args.override_active, Path(args.runs_dir),
                        start_real=args.start_real, limit=args.limit,
-                       no_scf_stall_minutes=args.no_scf_stall_minutes)
+                       no_scf_stall_minutes=args.no_scf_stall_minutes,
+                       ram_limit_gb=args.ram_limit_gb, min_avail_gb=args.min_avail_gb,
+                       swap_limit_gb=args.swap_limit_gb, ram_reserve_gb=args.ram_reserve_gb)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

@@ -1,0 +1,17 @@
+{
+  "status": "pending",
+  "candidate_id": "42ff3b1b86e705e3",
+  "formula": "FAGe0.25Sn0.75I3",
+  "phase2_batch_id": 9,
+  "selection_rank": 430,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T08:09:21.436251Z"
+}

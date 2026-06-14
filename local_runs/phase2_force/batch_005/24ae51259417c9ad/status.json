@@ -1,0 +1,24 @@
+{
+  "status": "converged",
+  "candidate_id": "24ae51259417c9ad",
+  "formula": "KGe0.59Sn0.41I3",
+  "phase2_batch_id": 5,
+  "selection_rank": 826,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:59:36.406605Z",
+  "pid": 5120,
+  "mpi_cores": 8,
+  "start_time": "2026-06-12T18:01:22.858499Z",
+  "started_at": "2026-06-13T01:01:28.826061Z",
+  "n_frames": 4,
+  "n_frames_requested": 4,
+  "finished_at": "2026-06-13T02:03:50.383398Z"
+}

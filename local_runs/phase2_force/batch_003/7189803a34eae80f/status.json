@@ -1,0 +1,18 @@
+{
+  "status": "skipped_duplicate",
+  "candidate_id": "7189803a34eae80f",
+  "formula": "Cs0.76MA0.24SnI3",
+  "phase2_batch_id": 3,
+  "selection_rank": 184,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:52:47.672105Z",
+  "duplicate_of": "batch_000/1d3e2656dde051e9"
+}

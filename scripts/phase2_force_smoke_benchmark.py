@@ -109,7 +109,7 @@ def check_direct_tests() -> dict[str, Any]:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.test_label_plan_for_sn_uses_u_scan()
-    module.test_label_plan_for_non_sn_uses_single_r2scan()
+    module.test_label_plan_for_non_sn_uses_single_pbe()
     module.test_assign_batches_round_robin_balances_ranks()
     with tempfile.TemporaryDirectory(prefix="phase2_collect_smoke_") as tmp:
         module.test_collect_labels_writes_extxyz_splits_and_metrics(Path(tmp))
@@ -117,7 +117,7 @@ def check_direct_tests() -> dict[str, Any]:
         "n_tests": 4,
         "tests": [
             "label_plan_for_sn_uses_u_scan",
-            "label_plan_for_non_sn_uses_single_r2scan",
+            "label_plan_for_non_sn_uses_single_pbe",
             "assign_batches_round_robin_balances_ranks",
             "collect_labels_writes_extxyz_splits_and_metrics",
         ],
@@ -189,18 +189,18 @@ def check_method_plan() -> dict[str, Any]:
     required = ["U2p00", "U2p25", "U2p50", "U2p75"]
     if sn_labels != required:
         raise SmokeError(f"Plan Sn inesperado: {sn_labels}")
-    if no_sn != [{"label": "r2scan", "method": "r2SCAN", "u_ev": None, "relative_dir": "r2scan"}]:
+    if no_sn != [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]:
         raise SmokeError(f"Plan no-Sn inesperado: {no_sn}")
     batch0 = read_csv(OUT_DIR / "batches" / "batch_000.csv")
     has_sn = any("U2p00" in row.get("dft_plan", "") for row in batch0)
-    has_r2 = any(row.get("dft_plan") == "r2scan" for row in batch0)
-    if not (has_sn and has_r2):
-        raise SmokeError("batch_000 no cubre simultaneamente Sn+U y r2SCAN no-Sn")
+    has_pbe = any(row.get("dft_plan") == "pbe" for row in batch0)
+    if not (has_sn and has_pbe):
+        raise SmokeError("batch_000 no cubre simultaneamente Sn+U y PBE no-Sn")
     return {
         "sn_plan": sn_labels,
         "non_sn_plan": [item["label"] for item in no_sn],
         "batch0_sn_jobs": sum(1 for row in batch0 if "U2p00" in row.get("dft_plan", "")),
-        "batch0_non_sn_jobs": sum(1 for row in batch0 if row.get("dft_plan") == "r2scan"),
+        "batch0_non_sn_jobs": sum(1 for row in batch0 if row.get("dft_plan") == "pbe"),
     }
 
 
@@ -225,7 +225,7 @@ def check_prepare_smoke(limit: int = DEFAULT_SMOKE_JOBS) -> dict[str, Any]:
         for needle in ("FIRE(", "steps=2", "label.extxyz", "forces_max_eVA"):
             if needle not in text:
                 raise SmokeError(f"input.py no contiene {needle}")
-    required = {"r2scan", "U2p00", "U2p25", "U2p50", "U2p75"}
+    required = {"pbe", "U2p00", "U2p25", "U2p50", "U2p75"}
     if not required.issubset(labels_seen):
         raise SmokeError(f"Smoke no cubrio todos los metodos: {sorted(labels_seen)}")
     dry = run_batch(0, slots=5, cores=8, poll=1, dry_run=True, runs_dir=runs_dir)
@@ -387,8 +387,8 @@ Reason: {gate['reason']}
 
 ## Method Coverage
 
-- Non-Sn path: `r2scan`.
-- Sn path: `U2p00`, `U2p25`, `U2p50`, `U2p75` sequential inside one logical job.
+- Non-Sn path: `pbe`.
+- Sn path: `U2p00`, `U2p25`, `U2p50`, `U2p75` sequential inside one logical job (`PBE+U`).
 - Logical jobs in smoke benchmark: `{report['benchmark']['prepare_smoke'].get('n_benchmark_jobs', 'n/a')}`.
 - Smoke runs dir: `{report['benchmark']['prepare_smoke'].get('smoke_runs_dir', 'n/a')}`.
 

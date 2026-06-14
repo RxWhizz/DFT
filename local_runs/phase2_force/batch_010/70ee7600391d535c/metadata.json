@@ -1,0 +1,52 @@
+{
+  "candidate_id": "70ee7600391d535c",
+  "formula": "MA0.18Rb0.82SnI3",
+  "phase": "2A",
+  "fidelity": "phase2_force",
+  "phase2_batch_id": 10,
+  "selection_rank": 38,
+  "slot_in_batch": 18,
+  "dft_labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "n_rattle": 4,
+  "rattle_stdev": 0.08,
+  "kpts_supercell": [
+    2,
+    2,
+    2
+  ],
+  "organic_real": true,
+  "n_atoms": 47,
+  "build": {
+    "n_molecules": {
+      "MA": 1
+    },
+    "a0_init_A": 7.0304,
+    "a_assign": {
+      "Rb": 7,
+      "MA": 1
+    },
+    "b_assign": {
+      "Sn": 8
+    },
+    "x_assign": {
+      "I": 24
+    }
+  },
+  "mace_prerelax": {
+    "mace_relaxed": true,
+    "mace_converged": true,
+    "mace_fmax_final": 0.0442,
+    "mace_energy_per_atom": -3.171,
+    "vol_per_atom_before": 59.15,
+    "vol_per_atom_after": 42.09
+  },
+  "dft_policy": "MA/FA explicitos + MACE relax -> PBE single-point E+F (sin U)",
+  "prepared_at": "2026-06-11T06:45:36.733605Z"
+}

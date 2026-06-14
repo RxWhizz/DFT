@@ -1,0 +1,24 @@
+{
+  "status": "failed",
+  "candidate_id": "b72c46b5b7e72bf2",
+  "formula": "CsPb0.81Sn0.19I3",
+  "phase2_batch_id": 4,
+  "selection_rank": 885,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:57:04.659530Z",
+  "pid": 10013,
+  "mpi_cores": 8,
+  "start_time": "2026-06-12T16:27:55.539449Z",
+  "retries": 2,
+  "returncode": 1,
+  "elapsed_min": 0.1,
+  "finished_at": "2026-06-12T16:28:03.541381Z"
+}

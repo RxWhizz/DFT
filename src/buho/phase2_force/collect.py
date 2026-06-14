@@ -24,6 +24,18 @@ def _iter_metric_files(runs_dir: Path) -> list[Path]:
     return sorted(runs_dir.glob("batch_*/**/metrics.json"))
 
 
+def _iter_u_scan_decisions(runs_dir: Path) -> list[dict[str, Any]]:
+    decisions: list[dict[str, Any]] = []
+    for path in sorted(runs_dir.glob("batch_*/**/u_scan_decision.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        data["_decision_path"] = _rel(path)
+        decisions.append(data)
+    return decisions
+
+
 def _read_metric(path: Path) -> dict[str, Any] | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -41,7 +53,21 @@ def _read_metric(path: Path) -> dict[str, Any] | None:
 
 def collect_labels(runs_dir: Path = RUNS_DIR, out_dir: Path = OUT_DIR,
                    report_dir: Path = REPORT_DIR) -> dict[str, Any]:
-    labels = [metric for path in _iter_metric_files(runs_dir) if (metric := _read_metric(path))]
+    decisions = _iter_u_scan_decisions(runs_dir)
+    decision_by_candidate = {
+        item["candidate_id"]: item
+        for item in decisions
+        if item.get("candidate_id")
+    }
+    raw_labels = [metric for path in _iter_metric_files(runs_dir) if (metric := _read_metric(path))]
+    labels: list[dict[str, Any]] = []
+    for metric in raw_labels:
+        decision = decision_by_candidate.get(metric.get("candidate_id"))
+        if decision and decision.get("accepted_label") is not None:
+            if metric.get("label") != decision.get("accepted_label"):
+                continue
+            metric["_u_scan_decision"] = decision.get("_decision_path")
+        labels.append(metric)
     out_dir.mkdir(parents=True, exist_ok=True)
     extxyz_path = out_dir / "phase2_seed.extxyz"
 
@@ -76,6 +102,7 @@ def collect_labels(runs_dir: Path = RUNS_DIR, out_dir: Path = OUT_DIR,
     with_stress = sum(1 for metric in labels if metric.get("stress_available"))
     with_forces = sum(1 for metric in labels if metric.get("forces_shape"))
     unique_candidates = sorted({metric["candidate_id"] for metric in labels})
+    accepted_decisions = [item for item in decisions if item.get("accepted_label") is not None]
 
     dft_summary = {
         "status": "labels_available" if labels else "no_labels_yet",
@@ -86,6 +113,19 @@ def collect_labels(runs_dir: Path = RUNS_DIR, out_dir: Path = OUT_DIR,
         "n_with_stress": with_stress,
         "by_method": dict(by_method),
         "by_u_ev": dict(by_u),
+        "n_u_oscillation_self_healed": len(decisions),
+        "u_oscillation_self_healed": [
+            {
+                "candidate_id": item.get("candidate_id"),
+                "formula": item.get("formula"),
+                "accepted_u_ev": item.get("accepted_u_ev"),
+                "rejected_u_ev": item.get("rejected_u_ev"),
+                "reason": item.get("reason"),
+                "decision_path": item.get("_decision_path"),
+            }
+            for item in decisions
+        ],
+        "n_u_oscillation_accepted_previous": len(accepted_decisions),
         "extxyz": _rel(extxyz_path),
         "splits": _rel(out_dir / "splits.json"),
         "labels": labels,

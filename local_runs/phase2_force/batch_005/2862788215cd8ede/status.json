@@ -1,0 +1,43 @@
+{
+  "status": "converged",
+  "candidate_id": "2862788215cd8ede",
+  "formula": "MASnBr0.062Cl0.16I0.783",
+  "phase2_batch_id": 5,
+  "selection_rank": 26,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:57:36.507607Z",
+  "pid": 71591,
+  "mpi_cores": 8,
+  "start_time": "2026-06-12T22:01:10.715742Z",
+  "self_healed": true,
+  "self_heal_action": "monitor_killed_stalled_no_scf_job",
+  "self_heal_reason": "no_phase2_scf_log_after_420.1min",
+  "finished_at": "2026-06-13T06:16:04.854082Z",
+  "updated_at": "2026-06-13T01:50:01.178606Z",
+  "started_at": "2026-06-13T05:01:14.542634Z",
+  "self_heal_pids": [
+    5651,
+    5652,
+    5662,
+    5664,
+    5668,
+    5669,
+    5670,
+    5671,
+    5672,
+    5673,
+    5674,
+    5675
+  ],
+  "retries": 1,
+  "n_frames": 4,
+  "n_frames_requested": 4
+}

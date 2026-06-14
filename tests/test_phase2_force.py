@@ -7,15 +7,17 @@ from buho.phase2_force.common import classify_formula, label_plan_for_formula, s
 from buho.phase2_force.selection import assign_batches
 
 
-def test_label_plan_for_sn_uses_u_scan():
+def test_label_plan_for_sn_uses_single_pbe_no_u():
+    # Sin Hubbard U: MPtrj/MACE-MP-0 no aplica U a Sn/bloque-p; un solo label PBE consistente
+    # (antes era un U-scan inconsistente y 4× más caro). Ver bitácora 2026-06-09.
     labels = label_plan_for_formula("CsSnI3")
-    assert [item["label"] for item in labels] == ["U2p00", "U2p25", "U2p50", "U2p75"]
-    assert all(item["method"] == "r2SCAN+U" for item in labels)
+    assert labels == [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]
+    assert all(item["method"] == "PBE" and item["u_ev"] is None for item in labels)
 
 
-def test_label_plan_for_non_sn_uses_single_r2scan():
+def test_label_plan_for_non_sn_uses_single_pbe():
     labels = label_plan_for_formula("CsPbI3")
-    assert labels == [{"label": "r2scan", "method": "r2SCAN", "u_ev": None, "relative_dir": "r2scan"}]
+    assert labels == [{"label": "pbe", "method": "PBE", "u_ev": None, "relative_dir": "pbe"}]
     cls = classify_formula("CsGeCl3", {"Cl": 1.0})
     assert cls["b_family"] == "Ge"
     assert cls["dominant_halide"] == "Cl"
@@ -35,7 +37,7 @@ def test_assign_batches_round_robin_balances_ranks():
 
 def test_collect_labels_writes_extxyz_splits_and_metrics(tmp_path):
     runs = tmp_path / "runs" / "phase2_force"
-    label_dir = runs / "batch_000" / "abc123" / "r2scan"
+    label_dir = runs / "batch_000" / "abc123" / "pbe"
     label_dir.mkdir(parents=True)
     (label_dir / "label.extxyz").write_text(
         '1\nProperties=species:S:1:pos:R:3 energy=-1.0 candidate_id="abc123"\nCs 0 0 0\n'
@@ -44,7 +46,7 @@ def test_collect_labels_writes_extxyz_splits_and_metrics(tmp_path):
         "status": "converged",
         "candidate_id": "abc123",
         "formula": "CsPbI3",
-        "method": "r2SCAN",
+        "method": "PBE",
         "u_ev": None,
         "forces_shape": [1, 3],
         "stress_available": False,
@@ -63,4 +65,3 @@ def test_collect_labels_writes_extxyz_splits_and_metrics(tmp_path):
     metrics = json.loads((report / "mace_phase2_metrics.json").read_text())
     assert metrics["real_mace_metrics_available"] is False
     assert metrics["phase2_dft_labels"]["n_labels"] == 1
-

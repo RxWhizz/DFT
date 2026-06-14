@@ -1,0 +1,17 @@
+{
+  "phase2a": {
+    "train_file": "data/phase2a_train.xyz",
+    "valid_file": "data/phase2a_valid.xyz",
+    "E0s": "average"
+  },
+  "cssni3": {
+    "train_file": "data/cssni3_train.xyz",
+    "valid_file": "data/cssni3_valid.xyz",
+    "E0s": "average"
+  },
+  "perovsiap": {
+    "train_file": "data/perovsiap_train.xyz",
+    "valid_file": "data/perovsiap_valid.xyz",
+    "E0s": "average"
+  }
+}

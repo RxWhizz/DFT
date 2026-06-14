@@ -1,0 +1,144 @@
+{
+  "batch_id": 6,
+  "batch_csv": "data/mace_finetune/batches/batch_006.csv",
+  "runs_dir": "runs/phase2_force/batch_006",
+  "n_candidates": 50,
+  "n_planned": 50,
+  "n_prepared": 50,
+  "n_skipped": 0,
+  "n_missing_candidate_json": 0,
+  "dry_run": false,
+  "planned_examples": [
+    {
+      "candidate_id": "fbe042bc75d3dc97",
+      "formula": "Cs0.12FA0.88PbCl3",
+      "job_dir": "runs/phase2_force/batch_006/fbe042bc75d3dc97",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "b3bab95bc5935909",
+      "formula": "CsSnCl0.25I0.753",
+      "job_dir": "runs/phase2_force/batch_006/b3bab95bc5935909",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "c402282a8e72afaf",
+      "formula": "MASnCl0.24I0.763",
+      "job_dir": "runs/phase2_force/batch_006/c402282a8e72afaf",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "a3113c46d2d3e044",
+      "formula": "CsSnCl0.18I0.823",
+      "job_dir": "runs/phase2_force/batch_006/a3113c46d2d3e044",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "8235f93795bb6032",
+      "formula": "Cs0.79MA0.21SnI3",
+      "job_dir": "runs/phase2_force/batch_006/8235f93795bb6032",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "038520d3d582ba92",
+      "formula": "FA0.22K0.78SnI3",
+      "job_dir": "runs/phase2_force/batch_006/038520d3d582ba92",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "c72d73214e67ef67",
+      "formula": "FA0.054MA0.95SnI3",
+      "job_dir": "runs/phase2_force/batch_006/c72d73214e67ef67",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "dfe2bd7f6530b3fb",
+      "formula": "Cs0.67FA0.33SnI3",
+      "job_dir": "runs/phase2_force/batch_006/dfe2bd7f6530b3fb",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "72f487e20f96e7f1",
+      "formula": "MA0.65Rb0.35SnI3",
+      "job_dir": "runs/phase2_force/batch_006/72f487e20f96e7f1",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    },
+    {
+      "candidate_id": "1994748bbfcb2881",
+      "formula": "CsSnBr0.26I0.743",
+      "job_dir": "runs/phase2_force/batch_006/1994748bbfcb2881",
+      "labels": [
+        {
+          "label": "pbe",
+          "method": "PBE",
+          "u_ev": null,
+          "relative_dir": "pbe"
+        }
+      ]
+    }
+  ],
+  "prepared_at": "2026-06-10T08:02:36.832069Z"
+}

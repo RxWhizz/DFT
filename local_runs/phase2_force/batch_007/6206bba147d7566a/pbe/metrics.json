@@ -1,0 +1,113 @@
+{
+  "status": "converged",
+  "candidate_id": "6206bba147d7566a",
+  "formula": "FA0.12Rb0.88GeCl3",
+  "method": "PBE",
+  "n_frames": 4,
+  "n_frames_requested": 4,
+  "rattle_stdev": 0.08,
+  "xc": "PBE",
+  "frames": [
+    {
+      "config_index": 0,
+      "status": "ok",
+      "energy_eV": -138.30919867411328,
+      "energy_per_atom_eV": -3.457729966852832,
+      "forces_max_eVA": 0.03414318610886887,
+      "stress": [
+        -0.0011522886921284579,
+        -0.0011522886921284563,
+        -0.0011522886921421557,
+        -2.488037541107023e-18,
+        0.0,
+        0.0
+      ],
+      "stress_available": true,
+      "stress_error": null,
+      "n_atoms": 40,
+      "kpts": [
+        2,
+        2,
+        2
+      ],
+      "elapsed_s": 396.3,
+      "finished_at": "2026-06-13T15:08:24.031027Z"
+    },
+    {
+      "config_index": 1,
+      "status": "ok",
+      "energy_eV": -137.77258975699476,
+      "energy_per_atom_eV": -3.444314743924869,
+      "forces_max_eVA": 1.0302833092106258,
+      "stress": [
+        -0.004293440798720368,
+        -0.0034523385419245427,
+        -0.004809285616932694,
+        -0.0002485346315484901,
+        0.00015376668436916068,
+        3.031552383422108e-05
+      ],
+      "stress_available": true,
+      "stress_error": null,
+      "n_atoms": 40,
+      "kpts": [
+        2,
+        2,
+        2
+      ],
+      "elapsed_s": 582.7,
+      "finished_at": "2026-06-13T15:18:09.250584Z"
+    },
+    {
+      "config_index": 2,
+      "status": "ok",
+      "energy_eV": -137.67847637879825,
+      "energy_per_atom_eV": -3.4419619094699563,
+      "forces_max_eVA": 0.8707383569785013,
+      "stress": [
+        -0.0033253259813240416,
+        -0.0035111728934691068,
+        -0.003195480347523713,
+        0.00011036956569893352,
+        -9.159815511249904e-05,
+        0.00012118041677018465
+      ],
+      "stress_available": true,
+      "stress_error": null,
+      "n_atoms": 40,
+      "kpts": [
+        2,
+        2,
+        2
+      ],
+      "elapsed_s": 618.4,
+      "finished_at": "2026-06-13T15:28:29.679710Z"
+    },
+    {
+      "config_index": 3,
+      "status": "ok",
+      "energy_eV": -137.41301943168395,
+      "energy_per_atom_eV": -3.4353254857920987,
+      "forces_max_eVA": 1.3023567203150823,
+      "stress": [
+        -0.0037927453768472155,
+        -0.003936798760991248,
+        -0.00278948579049108,
+        0.00011442245914964804,
+        0.00021457341575734337,
+        0.00024439158905229625
+      ],
+      "stress_available": true,
+      "stress_error": null,
+      "n_atoms": 40,
+      "kpts": [
+        2,
+        2,
+        2
+      ],
+      "elapsed_s": 620.6,
+      "finished_at": "2026-06-13T15:38:52.245958Z"
+    }
+  ],
+  "finished_at": "2026-06-13T15:38:54.136822Z"
+}

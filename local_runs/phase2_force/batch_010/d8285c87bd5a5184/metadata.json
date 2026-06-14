@@ -1,0 +1,52 @@
+{
+  "candidate_id": "d8285c87bd5a5184",
+  "formula": "Cs0.75MA0.25GeCl3",
+  "phase": "2A",
+  "fidelity": "phase2_force",
+  "phase2_batch_id": 10,
+  "selection_rank": 423,
+  "slot_in_batch": 23,
+  "dft_labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "n_rattle": 4,
+  "rattle_stdev": 0.08,
+  "kpts_supercell": [
+    2,
+    2,
+    2
+  ],
+  "organic_real": true,
+  "n_atoms": 54,
+  "build": {
+    "n_molecules": {
+      "MA": 2
+    },
+    "a0_init_A": 5.2832,
+    "a_assign": {
+      "Cs": 6,
+      "MA": 2
+    },
+    "b_assign": {
+      "Ge": 8
+    },
+    "x_assign": {
+      "Cl": 24
+    }
+  },
+  "mace_prerelax": {
+    "mace_relaxed": true,
+    "mace_converged": false,
+    "mace_fmax_final": 0.052,
+    "mace_energy_per_atom": -3.9945,
+    "vol_per_atom_before": 21.85,
+    "vol_per_atom_after": 24.53
+  },
+  "dft_policy": "MA/FA explicitos + MACE relax -> PBE single-point E+F (sin U)",
+  "prepared_at": "2026-06-11T06:49:58.837080Z"
+}

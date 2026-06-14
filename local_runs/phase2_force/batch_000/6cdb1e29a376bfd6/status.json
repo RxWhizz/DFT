@@ -1,0 +1,22 @@
+{
+  "status": "failed",
+  "candidate_id": "6cdb1e29a376bfd6",
+  "formula": "MAPb0.39Sn0.61I3",
+  "phase2_batch_id": 0,
+  "selection_rank": 341,
+  "n_labels_expected": 1,
+  "labels_expected": [
+    {
+      "label": "pbe",
+      "method": "PBE",
+      "u_ev": null,
+      "relative_dir": "pbe"
+    }
+  ],
+  "created": "2026-06-10T07:45:24.450856Z",
+  "pid": 185088,
+  "mpi_cores": 8,
+  "started_at": "2026-06-11T10:50:18.697889Z",
+  "error": "mpi-deadlock-stale: killed manually after no SCF progress",
+  "finished_at": "2026-06-11T21:19:56.919718+00:00"
+}
