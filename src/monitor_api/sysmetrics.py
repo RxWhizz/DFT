@@ -27,7 +27,13 @@ def collect() -> SysMetrics:
     ram_used  = round(vm.used  / 1e9, 1)
     ram_total = round(vm.total / 1e9, 1)
 
-    temps = psutil.sensors_temperatures()
+    # En Windows psutil ni siquiera define esta función: sin la guarda,
+    # /api/system daba 500 y tumbaba la tira de hardware de la vista Live.
+    leer_sensores = getattr(psutil, "sensors_temperatures", None)
+    try:
+        temps = leer_sensores() if leer_sensores else {}
+    except (AttributeError, OSError, RuntimeError):
+        temps = {}
 
     # CPU packages y núcleos
     pkg_temps: list[float] = []

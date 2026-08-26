@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Monitor DFT (servidor web)
+GenericName=Monitor de simulaciones GPAW/BUHO
+Comment=Sirve el monitor en el navegador; permite acceso desde la red
+Exec=__EXEC__
+Icon=utilities-system-monitor
+Terminal=true
+Categories=Science;Physics;Chemistry;Monitor;
+Keywords=DFT;GPAW;BUHO;perovskita;monitor;
+StartupNotify=true

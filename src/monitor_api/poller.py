@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import re
-import signal
 import statistics
 import subprocess
 import sys
@@ -15,13 +14,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .models import JobStatus, JobStatusLiteral, StatsResponse, WsEvent
-from .notifier import send_telegram
+import psutil
+
 from buho.phase2_force.self_heal import (
     evaluate_u_oscillation_self_heal,
     status_update_for_u_decision,
     write_u_scan_decision,
 )
+
+from . import paths, platform_caps
+from .models import JobStatus, JobStatusLiteral, StatsResponse, WsEvent
+from .notifier import send_telegram
 
 log = logging.getLogger(__name__)
 
@@ -41,22 +44,14 @@ _ERROR_RE = re.compile(r"Traceback|MemoryError|Segfault|Killed", re.I)
 # ── Helpers reutilizados ──────────────────────────────────────────────────────
 
 def _is_pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except (ProcessLookupError, PermissionError):
-        return False
+    return psutil.pid_exists(pid)
 
 
 def _proc_rss_mb(pid: int) -> int | None:
     try:
-        status = Path(f"/proc/{pid}/status").read_text().splitlines()
-        for line in status:
-            if line.startswith("VmRSS"):
-                return int(line.split()[1]) // 1024
-    except Exception:
-        pass
-    return None
+        return psutil.Process(pid).memory_info().rss // (1024 * 1024)
+    except (psutil.Error, ValueError):
+        return None
 
 
 def _fmt_elapsed(iso_start: str) -> float | None:
@@ -151,75 +146,95 @@ def _phase2_scf_progress(job_dir: Path, st: dict[str, Any]) -> dict[str, Any]:
     return {"newest": newest, "total_iters": total_iters}
 
 
+# Segundos entre el intento educado y el forzado.
+_ESPERA_TERMINACION = 3
+
+
+def _salida_desligada(batch_dir: Path):
+    """Descriptores propios para el runner, en vez de heredar los del monitor.
+
+    `start_new_session` desliga el *grupo de procesos*, pero no los descriptores:
+    el runner seguía heredando el stdout/stderr del motor, que en la app de
+    escritorio son tuberías que lee Flutter. Al cerrar la app la tubería se
+    rompía y el runner moría de SIGPIPE en su siguiente `print` —el log de
+    batch_765153 termina en un LAUNCH sin su DONE, con 42 jobs sin hacer—.
+    Escribiendo a un archivo, el runner sobrevive a la app que lo lanzó.
+    """
+    try:
+        batch_dir.mkdir(parents=True, exist_ok=True)
+        return open(batch_dir / "runner_console.log", "a", encoding="utf-8")
+    except OSError:
+        return subprocess.DEVNULL
+
+
+def _grupo_propio() -> dict[str, Any]:
+    """Argumentos de Popen para desligar el hijo del monitor.
+
+    En POSIX es `start_new_session`; en Windows, un flag de creación. Sin esto,
+    parar el monitor se llevaría por delante a los runners.
+    """
+    if sys.platform == "win32":
+        return {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)}
+    return {"start_new_session": True}
+
+
 def _job_processes(job_dir: Path, root_pid: int | None = None) -> set[int]:
-    root = str(job_dir.resolve())
+    """PIDs que trabajan en este job: los que tienen ahí su cwd, más el árbol
+    de descendientes del proceso raíz.
+
+    Vía psutil en vez de leyendo /proc a mano: funciona igual en Windows y deja
+    de depender del formato de `PPid:`.
+    """
+    raiz = str(job_dir.resolve())
     pids: set[int] = set()
-    for proc in Path("/proc").iterdir():
-        if not proc.name.isdigit():
-            continue
-        pid = int(proc.name)
+
+    for proc in psutil.process_iter(["pid"]):
         try:
-            cwd = os.readlink(proc / "cwd")
-        except Exception:
-            continue
-        if cwd == root or cwd.startswith(root + os.sep):
-            pids.add(pid)
+            cwd = proc.cwd()
+        except (psutil.Error, OSError):
+            continue  # el proceso murió, o no es nuestro
+        if cwd and (cwd == raiz or cwd.startswith(raiz + os.sep)):
+            pids.add(proc.pid)
 
     if isinstance(root_pid, int):
         pids.add(root_pid)
-        changed = True
-        while changed:
-            changed = False
-            for proc in Path("/proc").iterdir():
-                if not proc.name.isdigit():
-                    continue
-                pid = int(proc.name)
-                if pid in pids:
-                    continue
-                try:
-                    status = (proc / "status").read_text(encoding="utf-8", errors="replace")
-                except Exception:
-                    continue
-                ppid = None
-                for line in status.splitlines():
-                    if line.startswith("PPid:"):
-                        try:
-                            ppid = int(line.split()[1])
-                        except Exception:
-                            ppid = None
-                        break
-                if ppid in pids:
-                    pids.add(pid)
-                    changed = True
+        try:
+            pids.update(h.pid for h in psutil.Process(root_pid).children(recursive=True))
+        except psutil.Error:
+            pass
+
     return pids
 
 
 def _kill_job_processes(job_dir: Path, root_pid: int | None = None) -> list[int]:
+    """SIGTERM y, a los que sobrevivan, SIGKILL. Devuelve los PID afectados.
+
+    `Process.terminate()`/`kill()` son multiplataforma; sustituyen a killpg
+    sobre el grupo de procesos. Se aplican a todo el árbol de descendientes, que
+    es lo que antes conseguía el grupo con los procesos MPI.
+    """
     pids = _job_processes(job_dir, root_pid)
-    pgids: set[int] = set()
+
+    procesos: list[psutil.Process] = []
     for pid in sorted(pids):
         try:
-            pgids.add(os.getpgid(pid))
-        except ProcessLookupError:
+            procesos.append(psutil.Process(pid))
+        except psutil.NoSuchProcess:
             pass
-    for pgid in sorted(pgids):
+
+    for proc in procesos:
         try:
-            os.killpg(pgid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
+            proc.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
-    for pid in sorted(pids):
+
+    _, vivos = psutil.wait_procs(procesos, timeout=_ESPERA_TERMINACION)
+    for proc in vivos:
         try:
-            os.kill(pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
+            proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
-    time.sleep(3)
-    for pid in sorted(pids):
-        if not Path(f"/proc/{pid}").exists():
-            continue
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
+
     return sorted(pids)
 
 
@@ -420,6 +435,21 @@ def ping_job(job_dir: Path) -> dict:
 
 # ── Background poller ─────────────────────────────────────────────────────────
 
+# Reintento del orquestador de active learning tras un fallo: espera
+# exponencial desde 5 min hasta 1 h, y se rinde tras 5 intentos seguidos.
+ORCHESTRATOR_BACKOFF_S = 300.0
+ORCHESTRATOR_BACKOFF_MAX_S = 3600.0
+ORCHESTRATOR_MAX_FALLOS = 5
+
+
+def orchestrator_log() -> Path:
+    """Archivo donde se acumula el stderr del orquestador."""
+    return paths.config_dir() / "orchestrator.log"
+
+
+_BATCH_RE = re.compile(r"^batch_\d+$")
+
+
 class DFTPoller:
     def __init__(self, runs_dir: Path, cfg: dict, telegram_cfg: dict):
         self.runs_dir    = runs_dir
@@ -428,6 +458,7 @@ class DFTPoller:
         self._prev_states: dict[str, str] = {}
         self._event_queue: asyncio.Queue[WsEvent] = asyncio.Queue(maxsize=256)
         self._snapshots: dict[str, StatsResponse] = {}
+        self.last_poll_at: float | None = None
 
     @property
     def event_queue(self) -> asyncio.Queue[WsEvent]:
@@ -440,6 +471,100 @@ class DFTPoller:
     def _runner_kind(self) -> str:
         return str(self.cfg.get("runner_kind", "relax"))
 
+    def _auto_advance(self) -> bool:
+        """Si el monitor puede avanzar el pipeline por su cuenta.
+
+        Al detectar un lote terminado, el poller lanza el runner del siguiente
+        o dispara el orquestador de active learning (reentrenar + generar lote).
+        Eso es lo que sostiene la operación desatendida, pero significa que
+        *abrir* el monitor apuntando a un lote acabado muta el pipeline sin
+        pedir nada. Con `monitor.auto_advance: false` solo observa.
+        """
+        return bool(self.cfg.get("auto_advance", True))
+
+    def _orchestrator_vivo(self) -> bool:
+        """Si el orquestador lanzado sigue corriendo.
+
+        La bandera sola no basta: se ponía a `True` al lanzar y solo se limpiaba
+        cuando aparecía un batch preparado. Si el orquestador moría —por ejemplo
+        con el volumen de `runs/` desmontado— la bandera quedaba fija y el
+        monitor se creía ocupado para siempre: ni reintentaba ni avisaba. Ahora
+        el fallo se cosecha y se reporta.
+        """
+        if not getattr(self, "_orchestrator_running", False):
+            return False
+
+        proc = getattr(self, "_orchestrator_proc", None)
+        if proc is None:
+            return True   # lanzado por una versión anterior; no lo damos por muerto
+
+        codigo = proc.poll()
+        if codigo is None:
+            return True
+
+        self._orchestrator_running = False
+        self._orchestrator_proc = None
+
+        fh = getattr(self, "_orchestrator_log_fh", None)
+        if fh is not None:
+            try:
+                fh.close()
+            except Exception:
+                pass
+            self._orchestrator_log_fh = None
+
+        if codigo == 0:
+            self._orchestrator_fallos = 0
+            self._orchestrator_error = None
+            return False
+
+        detalle = ""
+        try:
+            lineas = [ln for ln in orchestrator_log().read_text(
+                encoding="utf-8", errors="replace").splitlines() if ln.strip()]
+            detalle = lineas[-1] if lineas else ""
+        except Exception:
+            pass
+
+        self._orchestrator_fallos = getattr(self, "_orchestrator_fallos", 0) + 1
+        self._orchestrator_ultimo_fallo = time.time()
+        self._orchestrator_error = detalle or f"código {codigo}"
+        log.error(
+            "El orquestador terminó con código %s (fallo %d)%s",
+            codigo, self._orchestrator_fallos, f" — {detalle}" if detalle else "",
+        )
+        return False
+
+    def _orchestrator_en_espera(self) -> bool:
+        """Si toca esperar antes de reintentar tras un fallo.
+
+        Cosechar el fallo sin más convierte el bloqueo permanente en un bucle de
+        crashes: cada ciclo relanzaría el mismo orquestador contra la misma
+        causa. El backoff exponencial deja que una condición transitoria —montar
+        el volumen, liberar disco— se resuelva sola sin inundar el log, y se
+        rinde tras varios intentos en vez de insistir eternamente.
+        """
+        fallos = getattr(self, "_orchestrator_fallos", 0)
+        if fallos == 0:
+            return False
+        if fallos >= ORCHESTRATOR_MAX_FALLOS:
+            if not getattr(self, "_orchestrator_rendido", False):
+                self._orchestrator_rendido = True
+                log.error(
+                    "Orquestador desactivado tras %d fallos seguidos: %s. "
+                    "Corrige la causa y reinicia el monitor.",
+                    fallos, getattr(self, "_orchestrator_error", "?"),
+                )
+            return True
+
+        espera = min(ORCHESTRATOR_BACKOFF_S * 2 ** (fallos - 1), ORCHESTRATOR_BACKOFF_MAX_S)
+        transcurrido = time.time() - getattr(self, "_orchestrator_ultimo_fallo", 0.0)
+        return transcurrido < espera
+
+    def _auto_revive_runner(self) -> bool:
+        """Si el monitor puede relanzar runners caídos con jobs pendientes."""
+        return bool(self.cfg.get("auto_revive_runner", self._auto_advance()))
+
     @staticmethod
     def _batch_id_from_dir(batch_dir: Path) -> int:
         digits = "".join(filter(str.isdigit, batch_dir.name))
@@ -447,10 +572,20 @@ class DFTPoller:
 
     def _launch_runner(self, batch_dir: Path) -> None:
         """Lanza el runner configurado para el batch actual."""
-        root = Path(__file__).resolve().parents[2]
+        root = paths.data_root()
+        interprete = platform_caps.runner_python(self.cfg)
+        if interprete is None:
+            # Congelado, sys.executable es el propio binario: lanzarlo
+            # arrancaría otro monitor en bucle en vez del runner.
+            log.error(
+                "No hay intérprete de Python para lanzar el runner. "
+                "Define monitor.python_executable en la configuración."
+            )
+            return
         slots = self.cfg.get("runner_slots", 2)
         cores = self.cfg.get("runner_cores", 8)
         kind = self._runner_kind()
+        salida = _salida_desligada(batch_dir)
         if kind == "phase2_force":
             runner = root / "scripts" / "phase2_force_runner.py"
             batch_id = self._batch_id_from_dir(batch_dir)
@@ -462,7 +597,7 @@ class DFTPoller:
             env["PHASE2_FORCE_RUNS_DIR"] = str(runs_dir)
             subprocess.Popen(
                 [
-                    sys.executable,
+                    interprete,
                     str(runner),
                     "--batch-id",
                     str(batch_id),
@@ -477,14 +612,16 @@ class DFTPoller:
                 ],
                 cwd=str(root),
                 env=env,
-                start_new_session=True,
+                stdout=salida,
+                stderr=subprocess.STDOUT,
+                **_grupo_propio(),
             )
             return
 
         runner = root / "scripts" / "buho_relax_runner.py"
         subprocess.Popen(
             [
-                sys.executable,
+                interprete,
                 str(runner),
                 "--relax-dir",
                 str(batch_dir),
@@ -494,7 +631,9 @@ class DFTPoller:
                 str(cores),
             ],
             cwd=str(root),
-            start_new_session=True,
+            stdout=salida,
+            stderr=subprocess.STDOUT,
+            **_grupo_propio(),
         )
 
     def _runner_running_for(self, batch_dir: Path) -> bool:
@@ -540,6 +679,10 @@ class DFTPoller:
         )
 
     async def poll_once(self) -> None:
+        # Se marca siempre, aunque runs_dir no exista: permite a /api/health
+        # distinguir "el poller vive pero el volumen está caído" de "el poller
+        # está muerto".
+        self.last_poll_at = time.time()
         if not self.runs_dir.exists():
             return
 
@@ -551,7 +694,11 @@ class DFTPoller:
                 self._snapshots[snap.job_id] = snap
                 await self._check_transition(snap)
             except Exception as exc:
-                log.debug("Error procesando %s: %s", job_dir.name, exc)
+                # WARNING y no DEBUG: un job que falla al parsearse desaparece
+                # del monitor entero (API, resumen y Telegram) y en DEBUG nadie
+                # se enteraba. Así fue como 203 jobs `skipped_duplicate` se
+                # volvieron invisibles.
+                log.warning("Job %s ignorado, no se pudo parsear: %s", job_dir.name, exc)
 
     async def _check_transition(self, snap: StatsResponse) -> None:
         prev = self._prev_states.get(snap.job_id)
@@ -619,10 +766,9 @@ class DFTPoller:
 
     def _find_next_batch(self) -> Path | None:
         """Busca en batches_dir el primer batch con jobs pendientes."""
-        _ROOT = Path(__file__).resolve().parents[2]
-        batches_dir = Path(self.cfg.get("batches_dir", "runs/batches"))
-        if not batches_dir.is_absolute():
-            batches_dir = (_ROOT / batches_dir).resolve()
+        batches_dir = paths.resolve_data(
+            self.cfg.get("batches_dir", "runs/batches")
+        ).resolve()
         if not batches_dir.exists():
             return None
         # Ordenar batch_NNN numéricamente
@@ -662,7 +808,9 @@ class DFTPoller:
         token   = self.telegram.get("bot_token", "")
         chat_id = self.telegram.get("chat_id", "")
 
-        next_batch = self._find_next_batch()
+        next_batch = self._find_next_batch() if self._auto_advance() else None
+        if not self._auto_advance():
+            log.info("Lote terminado; auto_advance desactivado — no se avanza nada.")
 
         if next_batch:
             slots = self.cfg.get("runner_slots", 2)
@@ -690,8 +838,7 @@ class DFTPoller:
             # learning: finaliza el batch actual (acumula + reentrena + evalúa +
             # grafica) y genera+prepara el siguiente (sin lanzar). El monitor lo
             # lanzará en un poll posterior al detectar el batch preparado.
-            _ROOT = Path(__file__).resolve().parents[2]
-            al_state_f = _ROOT / "data" / "batches" / "orchestrator_state.json"
+            al_state_f = paths.resolve_data("data/batches/orchestrator_state.json")
             try:
                 al_state = json.loads(al_state_f.read_text()) if al_state_f.exists() else {}
             except Exception:
@@ -703,9 +850,53 @@ class DFTPoller:
                     self._al_done_notified = True
                     await send_telegram(token, chat_id, "PING", "al-done",
                         {"_raw": f"🏁 <b>Active learning terminado</b>\n{al_state.get('reason','')}"})
-            elif not getattr(self, "_orchestrator_running", False):
-                orch = _ROOT / "scripts" / "active_learning_orchestrator.py"
-                subprocess.Popen([sys.executable, str(orch), "advance"], cwd=str(_ROOT))
+            elif not self._auto_advance():
+                log.info("auto_advance desactivado — no se dispara el orquestador.")
+            elif self._orchestrator_vivo():
+                # Ya está trabajando; seguir re-chequeando sin re-spawn.
+                self._batch_done_notified = False
+            elif self._orchestrator_en_espera():
+                self._batch_done_notified = False
+            else:
+                raiz_datos = paths.data_root()
+                orch = raiz_datos / "scripts" / "active_learning_orchestrator.py"
+                if not orch.is_file():
+                    log.error("No se dispara el orquestador: falta %s", orch)
+                    return
+                interprete = platform_caps.runner_python(self.cfg)
+                if interprete is None:
+                    log.error("Sin intérprete de Python: no se dispara el orquestador.")
+                    return
+                # stderr va a un archivo, no a `subprocess.PIPE`: una tubería
+                # sin drenar se llena a los 64 KB y bloquea al orquestador para
+                # siempre. Además deja registro consultable del fallo.
+                log_orch = orchestrator_log()
+                log_orch.parent.mkdir(parents=True, exist_ok=True)
+                self._orchestrator_log_fh = open(log_orch, "a", encoding="utf-8")
+                self._orchestrator_log_fh.write(
+                    f"\n===== {datetime.now().isoformat(timespec='seconds')} advance =====\n"
+                )
+                self._orchestrator_log_fh.flush()
+                try:
+                    self._orchestrator_proc = subprocess.Popen(
+                        [interprete, str(orch), "advance"], cwd=str(raiz_datos),
+                        # stdout también al archivo: heredarlo del motor ataba
+                        # el orquestador a la vida de la app, que lo lee por
+                        # tubería. Al cerrarla moría de SIGPIPE.
+                        stdout=self._orchestrator_log_fh,
+                        stderr=subprocess.STDOUT, text=True,
+                        **_grupo_propio(),
+                    )
+                except OSError as exc:
+                    # Sin esto el descriptor recién abierto se fuga en cada
+                    # ciclo del poller mientras la causa persista.
+                    self._orchestrator_log_fh.close()
+                    self._orchestrator_log_fh = None
+                    self._orchestrator_fallos = getattr(self, "_orchestrator_fallos", 0) + 1
+                    self._orchestrator_ultimo_fallo = time.time()
+                    self._orchestrator_error = str(exc)
+                    log.error("No se pudo lanzar el orquestador: %s", exc)
+                    return
                 self._orchestrator_running = True
                 self._batch_done_notified = False   # re-chequear hasta que aparezca el batch
                 log.info("Orquestador disparado (retrain + preparar siguiente batch)")
@@ -713,12 +904,12 @@ class DFTPoller:
                     await send_telegram(token, chat_id, "PING", "al-prep",
                         {"_raw": f"✅ <b>Batch completo</b> — {n_conv} conv / {n_fail} fallidos\n"
                                  f"🧠 Reentrenando surrogate + preparando siguiente batch…"})
-            else:
-                # orquestador trabajando; seguir re-chequeando sin re-spawn
-                self._batch_done_notified = False
 
     async def _check_runner_alive(self) -> None:
         """Detecta runner muerto (pending>0, running==0) y lo relanza automáticamente."""
+        if not self._auto_revive_runner():
+            self._runner_dead_since = 0.0
+            return
         if not self._snapshots:
             return
         pending = sum(1 for s in self._snapshots.values() if s.status == "pending")
@@ -887,12 +1078,9 @@ class DFTPoller:
 
     async def _check_surrogate(self) -> None:
         """Notifica cuando el surrogate se reentrenó (metrics.json más nuevo)."""
-        _ROOT = Path(__file__).resolve().parents[2]
         rel = self.cfg.get("surrogate_metrics_path",
                            "models/surrogate_energy.pkl.metrics.json")
-        metrics_path = Path(rel)
-        if not metrics_path.is_absolute():
-            metrics_path = (_ROOT / rel).resolve()
+        metrics_path = paths.resolve_data(rel).resolve()
         if not metrics_path.exists():
             return
         mtime = metrics_path.stat().st_mtime
@@ -947,30 +1135,93 @@ class DFTPoller:
         except Exception as exc:
             log.error("Error en check_temperatures: %s", exc)
 
+    def _raiz_de_lotes(self) -> Path:
+        """Directorio que contiene los `batch_NNN`.
+
+        Se prefiere lo configurado, pero **solo si existe**: el default
+        histórico era `runs/batches`, que en esta instalación no existe —los
+        lotes viven en `local_runs/phase2_force/`— y bastaba para que la
+        búsqueda del lote activo devolviera None siempre.
+        """
+        for clave in ("phase2_runs_dir", "batches_dir"):
+            configurada = self.cfg.get(clave) or ""
+            if configurada:
+                raiz = paths.resolve_data(configurada)
+                if raiz.is_dir():
+                    return raiz.resolve()
+
+        # Si `runs_dir` ya es un batch_NNN, sus hermanos son los demás lotes.
+        if _BATCH_RE.match(self.runs_dir.name):
+            return self.runs_dir.parent.resolve()
+        return self.runs_dir.resolve()
+
+    @staticmethod
+    def _tiene_activos(batch_dir: Path) -> bool:
+        """Si al lote le quedan jobs por hacer."""
+        try:
+            for job in batch_dir.iterdir():
+                if not job.is_dir():
+                    continue
+                st = job / "status.json"
+                if not st.is_file():
+                    continue
+                try:
+                    estado = json.loads(st.read_text(encoding="utf-8")).get("status")
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if estado in ("pending", "running", "stalled", "oscillating"):
+                    return True
+        except OSError:
+            return False
+        return False
+
     def _find_active_batch(self) -> Path | None:
-        """Al arrancar: encuentra el batch más reciente con centinela + jobs activos."""
-        _ROOT = Path(__file__).resolve().parents[2]
-        batches_dir = Path(self.cfg.get("batches_dir", "runs/batches"))
-        if not batches_dir.is_absolute():
-            batches_dir = (_ROOT / batches_dir).resolve()
-        if not batches_dir.exists():
+        """El lote más reciente con trabajo pendiente.
+
+        Ya no se exige el centinela `.runner_launched`: ningún lote preparado
+        desde el cribado lo escribe, así que era un filtro que descartaba
+        justamente los lotes que interesaba encontrar. Lo que define un lote
+        activo es tener jobs sin terminar.
+        """
+        raiz = self._raiz_de_lotes()
+        if not raiz.is_dir():
             return None
-        candidates = sorted(
-            (d for d in batches_dir.iterdir()
-             if d.is_dir() and (d / ".runner_launched").exists()),
-            key=lambda d: int("".join(filter(str.isdigit, d.name)) or "0"),
+
+        lotes = sorted(
+            (d for d in raiz.iterdir() if d.is_dir() and _BATCH_RE.match(d.name)),
+            key=lambda d: d.stat().st_mtime,
             reverse=True,
         )
-        for batch_dir in candidates:
-            has_active = any(
-                json.loads((j / "status.json").read_text()).get("status")
-                in ("pending", "running")
-                for j in batch_dir.iterdir()
-                if j.is_dir() and (j / "status.json").exists()
-            )
-            if has_active:
+        for batch_dir in lotes:
+            if self._tiene_activos(batch_dir):
                 return batch_dir
         return None
+
+    def _seguir_lote_activo(self) -> None:
+        """Mueve `runs_dir` al lote que de verdad tiene trabajo.
+
+        Esto corría **una sola vez, al arrancar el poller**. En cuanto se
+        lanzaba un lote nuevo, el monitor seguía mirando el anterior: la franja
+        de actividad decía «en reposo» con veinte procesos GPAW calculando, los
+        candidatos eran siempre los del mismo lote, el visor enseñaba
+        estructuras de hace días y el panel de logs no encontraba nada. Ahora se
+        reevalúa en cada ciclo, que cuesta un `iterdir` y para en el primer job
+        pendiente que encuentra.
+        """
+        if self._tiene_activos(self.runs_dir):
+            return          # el lote vigilado sigue vivo: no hay nada que mover
+
+        activo = self._find_active_batch()
+        if activo is None or activo.resolve() == self.runs_dir.resolve():
+            return
+
+        # Antes iba dentro de un `except Exception: pass`, así que un fallo aquí
+        # desaparecía sin rastro y el síntoma era «el monitor no ve mi lote».
+        log.info("Siguiendo el lote activo: %s -> %s",
+                 self.runs_dir.name, activo.name)
+        self.runs_dir = activo
+        self._batch_done_notified = False
+        self._snapshots.clear()
 
     async def run_forever(self, interval: int) -> None:
         log.info("Poller iniciado — directorio=%s  intervalo=%ss", self.runs_dir, interval)
@@ -978,25 +1229,12 @@ class DFTPoller:
         self._batch_done_notified = False
         self._last_surrogate_mtime = 0.0
 
-        # Al arrancar: si runs_dir no tiene jobs activos, resumir el batch correcto
-        def _has_active(d: Path) -> bool:
-            return any(
-                json.loads((j / "status.json").read_text()).get("status")
-                in ("pending", "running")
-                for j in d.iterdir()
-                if j.is_dir() and (j / "status.json").exists()
-            )
-        try:
-            if not _has_active(self.runs_dir):
-                active = self._find_active_batch()
-                if active:
-                    log.info("Resumiendo batch activo: %s", active.name)
-                    self.runs_dir = active
-                    self._batch_done_notified = False
-        except Exception:
-            pass
+        self._seguir_lote_activo()
 
         while True:
+            # Antes de cada sondeo, no solo al arrancar: un lote lanzado después
+            # nunca se detectaba.
+            self._seguir_lote_activo()
             try:
                 await self.poll_once()
             except Exception as exc:

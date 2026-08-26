@@ -38,3 +38,50 @@ reports/mpi_benchmark.json
 
 configs/monitor.local.yaml
 configs/monitor.yaml
+
+# Frontend del monitor web
+frontend/node_modules/
+frontend/dist/
+src/monitor_api/static/
+
+# Auditoría del monitor
+logs/
+src/monitor_api/openapi.json
+
+# Artefactos de empaquetado
+build/
+dist/
+*.spec.bak
+.build-ram-state
+
+# Enlaces al volumen externo.
+#
+# Una regla con barra final NO casa con un symlink: `build/` ignora el
+# directorio build pero deja pasar un enlace llamado `build`. Aquí todos estos
+# son enlaces a /media/..., así que necesitan la forma anclada y sin barra.
+# Sin esto, un `git add -A` comitea seis enlaces rotos para cualquier otro
+# checkout.
+/.venv
+/build
+/dist
+/data
+/logs
+/reports
+/runs
+/local_runs
+/calculations
+
+# Entornos y cachés de prueba
+.pytest_cache/
+.tmp_pytest/
+
+# App de escritorio (Flutter)
+apps/dft_monitor_flutter/build/
+apps/dft_monitor_flutter/.dart_tool/
+apps/dft_monitor_flutter/.flutter-plugins*
+apps/dft_monitor_flutter/test/_alpha.cif
+
+# Copias de seguridad de configuración
+configs/*.bak-*
+configs/*.save
+openapitools.json

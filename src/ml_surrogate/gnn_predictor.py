@@ -60,22 +60,54 @@ class GNNResult:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# matgl 3.0.1 patch — broadcast bug with old MEGNet checkpoints
+# matgl patch — broadcast bug with old MEGNet checkpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _patch_megnet() -> None:
-    try:
-        import matgl.layers._graph_convolution_pyg as gcm
-        _orig = gcm._broadcast_to_nodes
+# The module holding _broadcast_to_nodes was renamed between matgl releases:
+# 3.x kept it in _graph_convolution_pyg, 4.x in _graph_convolution. Targeting
+# only the old name made the patch a silent no-op on 4.x, and every prediction
+# then died inside the cascade's bare `except: pass` with an unexplained
+# "expand(...) number of sizes provided" RuntimeError.
+_MEGNET_CONV_MODULES = (
+    "matgl.layers._graph_convolution",
+    "matgl.layers._graph_convolution_pyg",
+)
 
-        def _fixed(sf, nb, nn):
+
+def _patch_megnet() -> None:
+    import importlib
+
+    encontrado = False
+    for name in _MEGNET_CONV_MODULES:
+        try:
+            gcm = importlib.import_module(name)
+        except ImportError:
+            continue
+        orig = getattr(gcm, "_broadcast_to_nodes", None)
+        if orig is None:
+            continue
+
+        encontrado = True
+        # Idempotente: GNNPredictor puede construirse varias veces por proceso
+        # y volver a envolver la función sería un envoltorio sobre otro.
+        if getattr(orig, "_megnet_patched", False):
+            continue
+
+        def _fixed(sf, nb, nn, _orig=orig):
             while sf.dim() > 2:
                 sf = sf.squeeze(0)
             return _orig(sf, nb, nn)
 
+        _fixed._megnet_patched = True
         gcm._broadcast_to_nodes = _fixed
-    except Exception:
-        pass
+
+    # Solo se avisa si no hay NADA que parchear: que ya lo esté es lo normal.
+    if not encontrado:
+        log.warning(
+            "No se pudo parchear _broadcast_to_nodes en matgl (%s). "
+            "Las predicciones MEGNet pueden fallar con un error de broadcast.",
+            ", ".join(_MEGNET_CONV_MODULES),
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from typing import Literal, Optional
+
 from pydantic import BaseModel
 
-
 JobStatusLiteral = Literal[
-    "pending", "running", "converged", "partial", "failed", "stalled", "oscillating", "stopped", "unknown"
+    "pending", "running", "converged", "partial", "failed", "stalled", "oscillating", "stopped",
+    # Terminal escrito por el pipeline de Fase 2A y reconocido por
+    # scripts/phase2_mace_cycle.py (TERMINAL). Faltaba aquí, así que
+    # snapshot_job() lanzaba ValidationError y el poller descartaba en silencio
+    # esos jobs: no aparecían ni en la API ni en los reportes de Telegram.
+    "skipped_duplicate",
+    "unknown",
 ]
 
 
@@ -51,6 +57,7 @@ class SummaryResponse(BaseModel):
     n_failed: int
     n_stalled: int
     n_oscillating: int
+    n_skipped_duplicate: int = 0
     total: int
     convergence_rate: Optional[float] = None  # converged / (converged + failed)
 

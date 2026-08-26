@@ -29,6 +29,9 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+
+from buho import gpaw_setup
 RELAX_DIR = ROOT / "runs" / "relax_basic"
 LOG_FILE = RELAX_DIR / "runner.log"
 
@@ -202,7 +205,7 @@ class Slot:
 # el master del venv. Los jobs corren bajo este env con sus datasets PAW.
 CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
 GPAW_ENV = "gpaw246"
-GPAW_SETUP_PATH = str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages" / "gpaw_data" / "setups")
+GPAW_SETUP_PATH = gpaw_setup.resolve(ROOT)
 
 
 def launch_job(job_dir: Path, n_cores: int, mpirun: str = "mpirun") -> Slot:

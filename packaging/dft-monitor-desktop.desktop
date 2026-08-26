@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Monitor DFT
+GenericName=Monitor de simulaciones GPAW/BUHO
+Comment=Aplicación de escritorio autónoma; no necesita Python ni el repositorio
+# DFT_DATA_ROOT marca dónde vive el proyecto. Sin él, un motor congelado
+# busca runs/ hacia arriba desde el CWD y acabaría apuntando a su propio
+# directorio de instalación: la app abriría sin un solo job. El ajuste de
+# Diagnósticos lo sobreescribe, porque --data-root gana sobre la variable.
+Exec=env DFT_MONITOR_ENGINE=__ENGINE__ DFT_DATA_ROOT=__DATAROOT__ __EXEC__
+Path=__APPDIR__
+Icon=dft-monitor
+Terminal=false
+Categories=Science;Physics;Chemistry;Monitor;
+Keywords=DFT;GPAW;BUHO;perovskita;monitor;cribado;
+StartupNotify=true
+# Sin esto el gestor de ventanas no asocia la ventana con este lanzador y la
+# barra de tareas muestra el icono genérico de Flutter en vez del nuestro.
+StartupWMClass=org.dft.monitor

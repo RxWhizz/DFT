@@ -216,7 +216,9 @@ class HeuristicGenerator:
 
         seen = self._load_registry(registry_path) if registry_path else set()
         fresh = [c for c in cands if c.candidate_id not in seen]
-        fresh = fresh[:size]
+        if len(fresh) > size:
+            order = self._rng.permutation(len(fresh))
+            fresh = [fresh[i] for i in order[:size]]
 
         if registry_path and fresh:
             self._append_registry(registry_path, [c.candidate_id for c in fresh])

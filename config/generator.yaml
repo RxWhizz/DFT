@@ -92,6 +92,18 @@ screening:
   tier2_mlff: true             # MACE relax + MEGNet/M3GNet Eform (estabilidad)
   mlff_relax: false            # true = relajar con MACE antes de Eform (más caro); false = single-point
   eform_max_eV_atom: 0.20      # descartar si Eform > este umbral (proxy de inestable)
+
+  # ── Torre de cribado ────────────────────────────────────────────────────────
+  # Cada tier descarta y el siguiente solo evalúa lo que sobrevivió: ahí está el
+  # ahorro, porque el Tier 2 cuesta ~0.5 s por candidato frente a ~2 ms del
+  # Tier 1. Con los gates a false los tiers solo puntúan (comportamiento previo).
+  tier1_gate: true             # el surrogate descarta fuera de la ventana PV
+  tier2_gate: true             # el MLFF descarta por encima de eform_max
+
+  # Holgura de la malla, en sigmas del propio modelo. El surrogate tiene
+  # MAE ≈ 0.31 eV y la ventana PV mide 0.7 eV: cribar por la estimación puntual
+  # tiraría materiales cuyo Eg real sí cae dentro. Con 0 la malla es dura.
+  sigma_k: 1.0
   mace_model: "small"          # tamaño del modelo MACE-MP-0
   n_dft_per_batch: 0           # 0 = TODOS los que pasen estabilidad (Eform<=umbral); >0 = top-N
   registry_path: data/processed/candidate_registry.txt  # dedup persistente entre batches

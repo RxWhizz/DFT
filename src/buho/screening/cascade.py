@@ -46,6 +46,10 @@ _PV_SIGMA = 0.35
 _STAB_SCALE = 0.5
 
 
+_PV_MIN_DEFAULT = 1.1
+_PV_MAX_DEFAULT = 1.8
+
+
 def _band_score(eg: float) -> float:
     """Gaussiana centrada en el óptimo fotovoltaico (1.45 eV)."""
     if eg is None or math.isnan(eg):
@@ -81,6 +85,23 @@ class ScreeningCascade:
         self._eform_max = float(self._scr.get("eform_max_eV_atom", 0.20))
         self._use_surrogate = bool(self._scr.get("tier1_surrogate", True))
         self._use_mlff = bool(self._scr.get("tier2_mlff", True))
+
+        # ── Torre de cribado ─────────────────────────────────────────────────
+        # Cada tier estrecha de verdad: el siguiente solo evalúa lo que
+        # sobrevivió. Ahí está el ahorro — el Tier 2 cuesta ~0.5 s por candidato
+        # frente a los ~2 ms del Tier 1.
+        self._tier1_gate = bool(self._scr.get("tier1_gate", True))
+        self._tier2_gate = bool(self._scr.get("tier2_gate", True))
+
+        # Holgura de la malla, en desviaciones estándar del propio modelo. El
+        # surrogate tiene MAE ≈ 0.31 eV y la ventana PV mide 0.7 eV de ancho:
+        # cribar por la estimación puntual tiraría materiales cuyo Eg real sí
+        # cae dentro. Con sigma_k=0 la malla es dura; el default deja pasar lo
+        # que el modelo no sabe descartar con confianza.
+        self._sigma_k = float(self._scr.get("sigma_k", 1.0))
+
+        pv = self._acq.get("pv_window", [_PV_MIN_DEFAULT, _PV_MAX_DEFAULT])
+        self._pv_min, self._pv_max = float(pv[0]), float(pv[1])
 
         self._surrogate = None  # lazy
         self._gnn = None        # lazy
@@ -143,7 +164,15 @@ class ScreeningCascade:
         Columnas: candidate_id, formula, generation_mode, is_organic_A,
         tolerance_t, oct_factor, vol_est_A3, Eg_surrogate_eV, Eg_sigma_eV,
         band_score, in_pv_window, Eg_gnn_eV, Eform_eV_atom, Eform_std_eV_atom,
-        is_stable, stab_score, ucb_bonus, total_score, passed_eform, tier_reached.
+        is_stable, stab_score, ucb_bonus, total_score, passed_eform, tier_reached,
+        dropped_at_tier, drop_reason.
+
+        Es una torre de cribado: cada tier descarta y el siguiente solo evalúa
+        lo que sobrevivió. Las filas descartadas SIGUEN en el DataFrame, con
+        `dropped_at_tier` y `drop_reason` — se necesita la traza para auditar
+        por qué se fue cada material, y `batch_loop` la vuelca a
+        cascade_scores.csv. Quien quiera solo los supervivientes usa
+        `select_for_dft()`.
         """
         use_mlff = self._use_mlff if run_mlff is None else run_mlff
 
@@ -166,6 +195,7 @@ class ScreeningCascade:
                 "Eform_std_eV_atom": None, "is_stable": None,
                 "stab_score": 0.5, "ucb_bonus": 0.0, "total_score": 0.0,
                 "passed_eform": True, "tier_reached": 0,
+                "dropped_at_tier": None, "drop_reason": None,
             })
 
         if not passed:
@@ -185,27 +215,53 @@ class ScreeningCascade:
                 stds = [float("nan")] * len(passed)
             for row, mu, sd in zip(rows, means, stds):
                 eg = float(mu)
+                sigma = float(sd) if not math.isnan(float(sd)) else 0.0
                 row["Eg_surrogate_eV"] = round(eg, 4)
                 row["Eg_sigma_eV"] = round(float(sd), 4)
                 row["band_score"] = round(_band_score(eg), 4)
-                row["in_pv_window"] = bool(1.1 <= eg <= 1.8)
-                row["ucb_bonus"] = round(self._beta * float(sd), 4)
+                row["in_pv_window"] = bool(self._pv_min <= eg <= self._pv_max)
+                row["ucb_bonus"] = round(self._beta * sigma, 4)
                 row["tier_reached"] = 1
+
+                if not self._tier1_gate:
+                    continue
+                # Se descarta solo si la ventana no es alcanzable ni contando el
+                # margen de error del modelo. Un Eg de 0.95 ± 0.18 sigue siendo
+                # un candidato plausible a 1.1 eV.
+                margen = self._sigma_k * sigma
+                if math.isnan(eg) or eg + margen < self._pv_min or eg - margen > self._pv_max:
+                    row["dropped_at_tier"] = 1
+                    row["drop_reason"] = (
+                        f"Eg {eg:.2f}±{sigma:.2f} eV fuera de la ventana "
+                        f"[{self._pv_min}, {self._pv_max}] con {self._sigma_k}σ de holgura"
+                        if not math.isnan(eg) else "el surrogate no predijo Eg"
+                    )
 
         # ── Tier 2: MLFF energía de formación / estabilidad ──────────────────
         if use_mlff:
             gnn = self._load_gnn()
             if gnn is not None:
                 from pymatgen.io.ase import AseAtomsAdaptor
-                structs = []
-                for c in passed:
+
+                # Solo los que siguen vivos: construir estructura y evaluar el
+                # MLFF cuesta ~0.5 s por candidato, y es exactamente lo que la
+                # torre existe para no gastar en material ya descartado.
+                vivos = [i for i, row in enumerate(rows) if row["dropped_at_tier"] is None]
+
+                structs = {}
+                for i in vivos:
                     try:
-                        atoms, meta = self._builder.build(c, out_dir=None, export=False)
-                        src = "pseudoatom" if meta.get("molecular_A_placeholder") else "cubic"
-                        structs.append((AseAtomsAdaptor.get_structure(atoms), src))
-                    except Exception:
-                        structs.append((None, "failed"))
-                for row, (st, src) in zip(rows, structs):
+                        atoms, meta = self._builder.build(passed[i], out_dir=None, export=False)
+                        origen = "pseudoatom" if meta.get("molecular_A_placeholder") else "cubic"
+                        structs[i] = (AseAtomsAdaptor.get_structure(atoms), origen)
+                    except Exception as exc:
+                        structs[i] = (None, "failed")
+                        rows[i]["dropped_at_tier"] = 2
+                        rows[i]["drop_reason"] = f"no se pudo construir la estructura: {exc}"
+
+                for i in vivos:
+                    st, src = structs[i]
+                    row = rows[i]
                     if st is None:
                         continue
                     try:
@@ -225,14 +281,50 @@ class ScreeningCascade:
                             row["is_stable"] = bool(eform < -0.1)
                             row["stab_score"] = round(_stab_score(eform), 4)
                             row["passed_eform"] = bool(eform <= self._eform_max)
+
+                            if self._tier2_gate and not row["passed_eform"]:
+                                # Misma holgura que arriba: no se tira un
+                                # material por un Eform que el propio ensemble
+                                # no sabe fijar mejor que su discrepancia.
+                                std = row["Eform_std_eV_atom"] or 0.0
+                                if eform - self._sigma_k * std > self._eform_max:
+                                    row["dropped_at_tier"] = 2
+                                    row["drop_reason"] = (
+                                        f"E_form {eform:.3f}±{std:.3f} eV/át por encima "
+                                        f"del umbral {self._eform_max}"
+                                    )
+                                else:
+                                    row["passed_eform"] = True
                         row["tier_reached"] = 2
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        # Antes era un `pass` mudo: un fallo del MLFF dejaba la
+                        # fila sin estabilidad y sin decir por qué.
+                        warnings.warn(f"Cascade Tier2 falló en {row['formula']}: {exc}")
 
         # ── Score de adquisición ─────────────────────────────────────────────
         for row in rows:
             row["total_score"] = round(
                 row["band_score"] + row["stab_score"] + row["ucb_bonus"], 4)
+
+        # Los descartados por física entran al final con su motivo: sin ellos
+        # cascade_scores.csv no permitiría auditar por qué se fue un material.
+        for c, motivo in fr.rejected:
+            rows.append({
+                "candidate_id": c.candidate_id,
+                "formula": c.formula,
+                "generation_mode": c.generation_mode,
+                "is_organic_A": c.is_organic_A,
+                "tolerance_t": c.tolerance_t,
+                "oct_factor": c.oct_factor,
+                "vol_est_A3": c.vol_est_A3,
+                "Eg_surrogate_eV": None, "Eg_sigma_eV": None,
+                "band_score": 0.0, "in_pv_window": None,
+                "Eg_gnn_eV": None, "Eform_eV_atom": None,
+                "Eform_std_eV_atom": None, "is_stable": None,
+                "stab_score": 0.5, "ucb_bonus": 0.0, "total_score": 0.0,
+                "passed_eform": False, "tier_reached": 0,
+                "dropped_at_tier": 0, "drop_reason": motivo,
+            })
 
         df = pd.DataFrame(rows).sort_values("total_score", ascending=False).reset_index(drop=True)
         return df
@@ -246,7 +338,11 @@ class ScreeningCascade:
         """
         if n is None:
             n = int(self._scr.get("n_dft_per_batch", 0))
-        keep = df[df["passed_eform"]].copy().reset_index(drop=True)
+
+        keep = df
+        if "dropped_at_tier" in keep:
+            keep = keep[keep["dropped_at_tier"].isna()]
+        keep = keep[keep["passed_eform"]].copy().reset_index(drop=True)
         if n and n > 0:
             keep = keep.head(n)
         return keep.reset_index(drop=True)

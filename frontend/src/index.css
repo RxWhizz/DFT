@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04';
+  }
+
+  /* Cifras alineadas en columnas: imprescindible en tablas de resultados. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    @apply font-mono;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded bg-ink-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-ink-800 bg-ink-900;
+  }
+
+  .card-pad {
+    @apply card p-4;
+  }
+
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-wider text-ink-400;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-ink-700
+           bg-ink-850 px-3 py-1.5 text-sm font-medium text-ink-100 transition
+           hover:border-ink-600 hover:bg-ink-800
+           focus:outline-none focus:ring-2 focus:ring-st-running/60
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn border-st-running/50 bg-st-running/15 text-blue-200
+           hover:border-st-running hover:bg-st-running/25;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-1.5 text-sm
+           text-ink-100 placeholder:text-ink-400
+           focus:border-st-running focus:outline-none focus:ring-1 focus:ring-st-running;
+  }
+}
+
+@layer components {
+  /* Tipografía del Markdown de los reportes. Se hace a mano en vez de con
+     @tailwindcss/typography para no añadir una dependencia por una sola vista. */
+  .prose-dft {
+    @apply text-sm leading-relaxed text-ink-300;
+  }
+  .prose-dft h1 { @apply mb-3 mt-6 text-xl font-semibold text-ink-100 first:mt-0; }
+  .prose-dft h2 { @apply mb-2 mt-6 text-base font-semibold text-ink-100; }
+  .prose-dft h3 { @apply mb-2 mt-4 text-sm font-semibold text-ink-100; }
+  .prose-dft p { @apply my-2.5; }
+  .prose-dft ul { @apply my-2.5 list-disc space-y-1 pl-5; }
+  .prose-dft ol { @apply my-2.5 list-decimal space-y-1 pl-5; }
+  .prose-dft a { @apply text-blue-300 underline underline-offset-2 hover:text-blue-200; }
+  .prose-dft code { @apply rounded bg-ink-850 px-1 py-0.5 font-mono text-[0.85em] text-ink-100; }
+  .prose-dft pre { @apply my-3 overflow-x-auto rounded border border-ink-800 bg-ink-950 p-3; }
+  .prose-dft pre code { @apply bg-transparent p-0 text-[11px]; }
+  .prose-dft blockquote { @apply my-3 border-l-2 border-ink-700 pl-3 text-ink-400; }
+  .prose-dft hr { @apply my-6 border-ink-800; }
+  .prose-dft table { @apply my-3 w-full text-xs; }
+  .prose-dft th { @apply border-b border-ink-700 px-2 py-1.5 text-left font-medium text-ink-100; }
+  .prose-dft td { @apply border-b border-ink-800/60 px-2 py-1.5; font-variant-numeric: tabular-nums; }
+  .prose-dft img { @apply my-3 max-w-full rounded border border-ink-800; }
+  .prose-dft strong { @apply font-semibold text-ink-100; }
+}

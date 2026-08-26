@@ -12,6 +12,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .. import gpaw_setup
+
 from buho.phase2_force import ROOT
 from buho.phase2_force.common import RUNS_DIR, display_path
 from buho.phase2_force.self_heal import (
@@ -23,7 +25,7 @@ from buho.phase2_force.self_heal import (
 
 CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
 GPAW_ENV = "gpaw246"
-GPAW_SETUP_PATH = str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages" / "gpaw_data" / "setups")
+GPAW_SETUP_PATH = gpaw_setup.resolve(ROOT)
 ACTIVE_PATTERN = ("buho_relax_runner", "phase2_force_runner", "mpiexec", "mpirun", "input.py", "conda run")
 SCF_ITER_RE = re.compile(r"iter:\s*(\d+)\s+\d{1,2}:\d{2}:\d{2}")
 

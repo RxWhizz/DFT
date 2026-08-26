@@ -1,0 +1,122 @@
+# Configuración del monitor DFT — src/monitor_api
+#
+# Copia este archivo a `configs/monitor.yaml` (ignorado por git, porque lleva
+# secretos) y ajusta los valores:
+#
+#     cp configs/monitor.example.yaml configs/monitor.yaml
+#
+# Se admite además `configs/monitor.local.yaml`, que se fusiona por encima de
+# `monitor.yaml` a un nivel de profundidad (ver `load_config()` en main.py).
+#
+# Todos los valores mostrados son los DEFAULTS que aplica el código si la clave
+# se omite. Sin `monitor.yaml`, la app arranca con la configuración vacía y cae
+# a estos mismos defaults.
+
+monitor:
+  # Directorio de jobs a vigilar. Relativo a la raíz del repo o absoluto.
+  # OJO: `runs/` es un symlink a un volumen externo; si no está montado, el
+  # monitor arranca igual pero GET /api/health devolverá runs_mounted=false.
+  runs_dir: runs/relax_basic
+
+  # Raíz de los batches históricos, para el conteo total de convergidos.
+  batches_dir: runs/batches
+
+  # Raíz de los runs de Fase 2A. Si se omite, se usa el padre del batch actual.
+  # phase2_runs_dir: runs/phase2_force
+
+  # Al detectar un lote terminado, el monitor lanza el runner del siguiente o
+  # dispara el orquestador de active learning (reentrenar + generar lote). Eso
+  # sostiene la operación desatendida, pero significa que abrir el monitor
+  # apuntando a un lote acabado MUTA el pipeline sin preguntar.
+  # Ponlo a false para que solo observe.
+  auto_advance: true
+
+  # Cada cuántos segundos re-escanea el poller los status.json y los logs.
+  poll_interval_sec: 30
+
+  # Cada cuántos segundos se muestrea el hardware para el historial que
+  # alimenta las sparklines de la GUI (ventana en memoria de 1 hora).
+  metrics_interval_sec: 10
+
+  # Minutos sin que cambie el log antes de marcar un job como `stalled`.
+  stall_minutes: 10
+
+  # Detección de oscilación SCF: se mira la desviación estándar de la energía
+  # sobre las últimas `oscillation_window` iteraciones.
+  oscillation_window: 10
+  oscillation_energy_std_ev: 0.05
+
+  # Alerta por Telegram cuando cualquier núcleo supera esta temperatura (°C).
+  temp_alert_celsius: 85
+
+  # Runner que se lanza al detectar un batch pendiente.
+  #   relax        → scripts/buho_relax_runner.py
+  #   phase2_force → scripts/phase2_force_runner.py
+  runner_kind: relax
+  runner_slots: 2      # jobs concurrentes
+  runner_cores: 8      # núcleos MPI por job
+
+  # Fase 2A: minutos sin iteraciones SCF antes de disparar el self-heal.
+  phase2_no_scf_stall_minutes: 60
+  # Auto-corrección cuando el barrido de U oscila.
+  phase2_u_oscillation_self_heal: true
+
+  # Métricas del surrogate a vigilar para avisar de un reentrenamiento.
+  surrogate_metrics_path: models/surrogate_energy.pkl.metrics.json
+
+  # ── Agente local LLM ───────────────────────────────────────────────────────
+  # Habla con Ollama real en localhost. El modelo vive en la raíz de datos
+  # (models/ollama), no dentro del binario PyInstaller.
+  agent:
+    enabled: true
+    provider: ollama
+    base_url: http://127.0.0.1:11434
+    model: dft-agent:14b-q4
+    # Arrancar Ollama por su cuenta (`make ollama-serve` en revive_repo).
+    # Desactivado por defecto: exige un repositorio externo con Docker y una
+    # imagen concreta, y este ejemplo viaja dentro del binario que descarga
+    # cualquiera. Actívalo apuntando revive_repo a tu copia de revive.
+    manage_service: false
+    revive_repo: 
+    models_dir: models/ollama
+    allow_writes: false
+    max_tool_rounds: 4
+    request_timeout_sec: 180
+    num_predict_tool: 192
+    num_predict_final: 384
+    temperature: 0.2
+    think: false
+
+  # ── Autenticación de la GUI y la API ───────────────────────────────────────
+  # Se activa SOLA en cuanto hay token. Sin token queda desactivada y
+  # scripts/start_monitor.py se niega a escuchar en 0.0.0.0.
+  auth:
+    # Token compartido. Puede venir también de la variable de entorno
+    # DFT_MONITOR_TOKEN, que tiene prioridad sobre este valor.
+    # Genera uno con:  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+    token: ""
+
+    # Fuerza el estado en vez de deducirlo del token. Ponerlo a true sin token
+    # es un error de arranque explícito (dejaría el monitor inservible).
+    # enabled: true
+
+    # Clave de firma de la cookie de sesión. Si se omite se genera una nueva en
+    # cada arranque, lo que invalida las sesiones abiertas al reiniciar.
+    # También se puede pasar por DFT_MONITOR_SESSION_SECRET.
+    session_secret: ""
+
+    # Validez de la sesión (7 días por defecto).
+    session_max_age_sec: 604800
+
+    # Poner a true solo detrás de un proxy TLS: marca la cookie como Secure.
+    https_only: false
+    same_site: strict
+
+    # Log JSONL de acciones sensibles (login, y en su momento kill/retry/start).
+    audit_path: logs/monitor_audit.jsonl
+
+telegram:
+  # Token de @BotFather. DEJAR VACÍO desactiva el bot (no es un error).
+  bot_token: ""
+  # ID del chat autorizado. Los mensajes de cualquier otro chat se ignoran.
+  chat_id: ""

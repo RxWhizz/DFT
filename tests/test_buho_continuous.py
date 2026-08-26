@@ -88,6 +88,20 @@ def test_batch_size_cap():
     assert len(batch) <= 50
 
 
+def test_batch_truncation_no_sesga_al_primer_modo():
+    """Cortar un batch pequeño no debe dejar fuera B/X por el orden de generación."""
+    g = _continuous_gen(n_samples=8)
+    batch = g.generate_batch(0, batch_size=300)
+    modes = {c.generation_mode for c in batch}
+    a_species = {sp for c in batch for sp in c.A_site_species}
+    b_species = {sp for c in batch for sp in c.B_site_species}
+
+    assert {"pure", "A_mixed", "B_mixed", "X_mixed"} <= modes
+    assert {"Cs", "MA", "FA", "Rb", "K"} <= a_species
+    assert {"Pb", "Sn", "Ge"} <= b_species
+    assert any(c.is_organic_A for c in batch)
+
+
 def test_discrete_mode_unchanged():
     """El modo discreto sigue dando exactamente 45 puros (5×3×3)."""
     cfg = yaml.safe_load(CONFIG.read_text())

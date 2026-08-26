@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Lanzador de la interfaz gráfica del monitor DFT.
+#
+# Funciona desde cualquier directorio y sin argumentos. La primera vez crea el
+# entorno virtual e instala lo necesario; las siguientes arranca directo.
+#
+#   dft-monitor                 # local, abre el navegador
+#   dft-monitor --host 0.0.0.0  # accesible en la LAN (exige token)
+#   dft-monitor --help
+set -euo pipefail
+
+# Raíz del repo a partir de la ubicación real de este script, resolviendo
+# symlinks: así funciona igual enlazado en ~/.local/bin.
+FUENTE="${BASH_SOURCE[0]}"
+while [ -L "$FUENTE" ]; do
+  DIR="$(cd -P "$(dirname "$FUENTE")" && pwd)"
+  FUENTE="$(readlink "$FUENTE")"
+  [[ $FUENTE != /* ]] && FUENTE="$DIR/$FUENTE"
+done
+ROOT="$(cd -P "$(dirname "$FUENTE")/.." && pwd)"
+
+VENV="$ROOT/.venv"
+PY="$VENV/bin/python"
+
+rojo()    { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+amarillo(){ printf '\033[33m%s\033[0m\n' "$*"; }
+
+usa_shell_escritorio() {
+  local espera_valor=0
+  for arg in "$@"; do
+    if [ "$espera_valor" = 1 ]; then
+      [[ "$arg" == "app" || "$arg" == "webview" ]] && return 0
+      espera_valor=0
+      continue
+    fi
+    case "$arg" in
+      --shell=app|--shell=webview) return 0 ;;
+      --shell) espera_valor=1 ;;
+    esac
+  done
+  return 1
+}
+
+# ── Intérprete base ──────────────────────────────────────────────────────────
+buscar_python() {
+  for cmd in python3.12 python3.11 python3; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      # El proyecto exige >= 3.11.
+      if "$cmd" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)'; then
+        echo "$cmd"; return 0
+      fi
+    fi
+  done
+  return 1
+}
+
+# ── Entorno virtual ──────────────────────────────────────────────────────────
+if [ ! -x "$PY" ]; then
+  BASE="$(buscar_python)" || {
+    rojo "No se encontró Python 3.11 o superior."
+    rojo "  sudo apt install python3 python3-venv"
+    exit 1
+  }
+  amarillo "Creando entorno virtual en .venv (solo la primera vez)…"
+  "$BASE" -m venv "$VENV" || {
+    rojo "No se pudo crear el entorno virtual."
+    rojo "  sudo apt install python3-venv"
+    exit 1
+  }
+  "$PY" -m pip install --quiet --upgrade pip
+fi
+
+# ── Dependencias ─────────────────────────────────────────────────────────────
+# Se comprueba lo mínimo para arrancar; si falta algo se instala el conjunto.
+if ! "$PY" -c 'import fastapi, uvicorn, psutil, yaml, itsdangerous' 2>/dev/null; then
+  amarillo "Instalando dependencias del monitor (solo la primera vez)…"
+  "$PY" -m pip install --quiet \
+    "fastapi>=0.110" "uvicorn[standard]>=0.27" "httpx>=0.27" \
+    "psutil>=5.9" "pyyaml>=6.0" "itsdangerous>=2.1" || {
+      rojo "Falló la instalación de dependencias."
+      exit 1
+    }
+fi
+
+if usa_shell_escritorio "$@" && \
+   ! "$PY" -c 'import webview, qtpy; from PyQt6 import QtWebEngineCore' 2>/dev/null; then
+  amarillo "Instalando shell local de escritorio (pywebview + Qt)…"
+  "$PY" -m pip install --quiet \
+    "pywebview>=5.0" "qtpy>=2.4" "PyQt6>=6.7" "PyQt6-WebEngine>=6.7" || {
+      rojo "Falló la instalación del shell de escritorio."
+      exit 1
+    }
+fi
+
+# El surrogate es opcional: sin él la vista ML avisa, el resto funciona igual.
+# scikit-learn va acotado a 1.8.x porque los models/*.pkl se serializaron con
+# esa versión y 1.9 no los despickliza.
+if ! "$PY" -c 'import sklearn, numpy, pandas, ase' 2>/dev/null; then
+  amarillo "Instalando dependencias del surrogate ML (opcional, tarda un poco)…"
+  "$PY" -m pip install --quiet \
+    "numpy>=1.26" "pandas>=2.0" "scipy>=1.12" "scikit-learn>=1.8,<1.9" "ase>=3.23" \
+    || amarillo "  No se pudo instalar el surrogate — la vista ML quedará desactivada."
+fi
+
+export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m monitor_api.launcher "$@"

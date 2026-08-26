@@ -163,7 +163,7 @@ def save_figure(fig: plt.Figure, out_dir: Path, stem: str, outputs: list[str]) -
     for ext in ("png", "pdf"):
         path = out_dir / f"{stem}.{ext}"
         fig.savefig(path, dpi=OUTPUT_DPI, bbox_inches="tight")
-        outputs.append(str(path.relative_to(ROOT)))
+        outputs.append(rel_a_root(path))
     plt.close(fig)
 
 
@@ -1128,16 +1128,34 @@ def plot_tensor_arrays(paths: PhasePaths, outputs: list[str], messages: list[str
             note(messages, f"Omitido {path}: shape no soportado {array.shape}.")
 
 
+def rel_a_root(path: Path) -> str:
+    """Ruta relativa al repositorio, o absoluta si cae fuera.
+
+    `calculations/` e `imagenes/` pueden ser symlinks a otro volumen: entonces
+    `relative_to(ROOT)` lanza ValueError y el generador moría al escribir el
+    manifiesto, sin dejar ni una figura. El manifiesto es descriptivo, así que
+    una ruta absoluta ahí es preferible a no generar nada.
+    """
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        pass
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
 def write_manifest(paths: PhasePaths, outputs: list[str], messages: list[str]) -> None:
     manifest = {
-        "calculation_dir": str(paths.calc_dir.relative_to(ROOT)),
-        "output_dir": str(paths.out_dir.relative_to(ROOT)),
+        "calculation_dir": rel_a_root(paths.calc_dir),
+        "output_dir": rel_a_root(paths.out_dir),
         "generated_files": outputs,
         "messages": messages,
     }
     manifest_path = paths.out_dir / "visualization_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    outputs.append(str(manifest_path.relative_to(ROOT)))
+    outputs.append(rel_a_root(manifest_path))
 
 
 def parse_args() -> argparse.Namespace:

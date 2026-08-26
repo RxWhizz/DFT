@@ -1,33 +1,32 @@
-"""Endpoints REST y WebSocket del monitor DFT."""
+"""Endpoints REST del monitor DFT. El WebSocket vive en `ws.py`."""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from . import __version__, paths, platform_caps
 from .models import (
     JobStatus,
     PingResponse,
     StatsResponse,
     SummaryResponse,
-    WsEvent,
 )
-from .poller import DFTPoller, ping_job, _read_status
-from .sysmetrics import SysMetrics, collect as collect_metrics, format_telegram as fmt_sys
+from .poller import DFTPoller, ping_job
+from .sysmetrics import SysMetrics
+from .sysmetrics import collect as collect_metrics
+from .sysmetrics import format_telegram as fmt_sys
 from .utils import fmt_formula
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# WebSocket suscriptores activos
-_ws_clients: list[asyncio.Queue[str]] = []
 
 
 def get_poller(request: Request) -> DFTPoller:
@@ -36,21 +35,161 @@ def get_poller(request: Request) -> DFTPoller:
 
 # ── REST endpoints ────────────────────────────────────────────────────────────
 
-@router.get("/api/jobs", response_model=list[JobStatus])
-async def list_jobs(request: Request) -> list[JobStatus]:
+class PathsInfo(BaseModel):
+    frozen: bool
+    bundle_root: str
+    data_root: str
+    config_dir: str
+
+
+class PlatformInfo(BaseModel):
+    os: str
+    frozen: bool
+    hardware_temps: bool
+    runner_launch: bool
+    runner_python: str | None = None
+    auto_advance: bool = True
+
+
+class HealthResponse(BaseModel):
+    ok: bool
+    version: str
+    paths: PathsInfo
+    platform: PlatformInfo
+    runs_dir: str
+    runs_mounted: bool
+    nearest_existing_path: str
+    n_jobs_tracked: int
+    last_poll_at: float | None
+    last_poll_age_sec: float | None
+    poll_interval_sec: int
+    ws_clients: int
+
+
+@router.get("/api/health", response_model=HealthResponse)
+async def health(request: Request) -> HealthResponse:
+    """Salud del monitor: montaje de `runs_dir`, frescura del poller, clientes WS.
+
+    `runs_mounted` existe porque `runs/` y `calculations/` son symlinks a un
+    volumen externo. Sin esta señal, "el disco está desmontado" y "no hay jobs"
+    se ven exactamente igual desde el cliente.
+    """
     poller = get_poller(request)
-    return [
-        JobStatus(
-            job_id=s.job_id,
-            formula=s.formula,
-            status=s.status,
-            pid=s.pid,
-            start_time=s.start_time,
-            elapsed_min=s.elapsed_min,
-            mpi_cores=s.mpi_cores,
-        )
+    runs_dir = poller.runs_dir
+
+    # Ancestro más cercano que sí existe: señala dónde se rompe la cadena.
+    nearest = runs_dir
+    while not nearest.exists() and nearest != nearest.parent:
+        nearest = nearest.parent
+
+    last_poll = getattr(poller, "last_poll_at", None)
+    age = (time.time() - last_poll) if last_poll else None
+    interval = int(poller.cfg.get("poll_interval_sec", 30))
+    hub = getattr(request.app.state, "hub", None)
+
+    mounted = runs_dir.is_dir()
+    fresh = age is not None and age < 3 * interval
+
+    return HealthResponse(
+        ok=mounted and fresh,
+        version=__version__,
+        # Dónde busca cada cosa: sin esto, "no veo mis jobs" no es diagnosticable
+        # en un binario, donde la raíz de datos ya no es el repositorio.
+        paths=PathsInfo(**paths.describe()),
+        # Capacidades comprobadas, no supuestas por sistema operativo: el
+        # frontend esconde lo que no está disponible en vez de ofrecer acciones
+        # que van a fallar.
+        platform=PlatformInfo(**platform_caps.describe(poller.cfg)),
+        runs_dir=str(runs_dir),
+        runs_mounted=mounted,
+        nearest_existing_path=str(nearest),
+        n_jobs_tracked=len(poller.snapshots),
+        last_poll_at=last_poll,
+        last_poll_age_sec=round(age, 1) if age is not None else None,
+        poll_interval_sec=interval,
+        ws_clients=hub.n_clients if hub else 0,
+    )
+
+
+def _to_job_status(s: StatsResponse) -> JobStatus:
+    return JobStatus(
+        job_id=s.job_id,
+        formula=s.formula,
+        status=s.status,
+        pid=s.pid,
+        start_time=s.start_time,
+        elapsed_min=s.elapsed_min,
+        mpi_cores=s.mpi_cores,
+    )
+
+
+class JobPage(BaseModel):
+    items: list[JobStatus]
+    total: int
+    limit: int
+    offset: int
+
+
+_SORT_KEYS = {
+    "formula":     lambda s: (s.formula or "").lower(),
+    "job_id":      lambda s: s.job_id,
+    "status":      lambda s: s.status,
+    "elapsed_min": lambda s: s.elapsed_min or 0.0,
+}
+
+
+@router.get("/api/jobs", response_model=JobPage)
+async def list_jobs(
+    request: Request,
+    status: str | None = Query(None, description="Estado a filtrar; admite lista separada por comas."),
+    q: str | None = Query(None, description="Subcadena buscada en la fórmula o el job_id."),
+    sort: str = Query("formula", pattern="^(formula|job_id|status|elapsed_min)$"),
+    desc: bool = False,
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> JobPage:
+    """Jobs paginados, con filtro y orden.
+
+    Devolver los ~2500 snapshots enteros en cada carga eran varios MB de JSON.
+    """
+    poller = get_poller(request)
+    snaps = list(poller.snapshots.values())
+
+    if status:
+        wanted = {part.strip() for part in status.split(",") if part.strip()}
+        snaps = [s for s in snaps if s.status in wanted]
+
+    if q:
+        needle = q.lower()
+        snaps = [
+            s for s in snaps
+            if needle in (s.formula or "").lower() or needle in s.job_id.lower()
+        ]
+
+    snaps.sort(key=_SORT_KEYS[sort], reverse=desc)
+
+    return JobPage(
+        items=[_to_job_status(s) for s in snaps[offset:offset + limit]],
+        total=len(snaps),
+        limit=limit,
+        offset=offset,
+    )
+
+
+# `/api/jobs/converged` DEBE declararse antes que `/api/jobs/{job_id}`: Starlette
+# resuelve por orden de registro, así que al revés la ruta paramétrica la captura
+# con job_id="converged" y devuelve 404 siempre.
+@router.get("/api/jobs/converged", response_model=list[JobStatus])
+async def list_converged(request: Request, limit: int = 50) -> list[JobStatus]:
+    """Lista los primeros N jobs convergidos ordenados por fórmula."""
+    poller = get_poller(request)
+    jobs = [
+        _to_job_status(s)
         for s in poller.snapshots.values()
+        if s.status == "converged"
     ]
+    jobs.sort(key=lambda j: j.formula)
+    return jobs[:limit]
 
 
 @router.get("/api/jobs/{job_id}", response_model=StatsResponse)
@@ -87,6 +226,51 @@ async def get_stats(job_id: str, request: Request) -> StatsResponse:
     return snap
 
 
+# ── Artefactos de un job ─────────────────────────────────────────────────────
+
+def _job_dir_or_404(request: Request, job_id: str) -> Path:
+    """Resuelve el directorio del job validando el id contra path traversal."""
+    from .services.jobs import UnsafeJobIdError, resolve_job_dir
+
+    poller = get_poller(request)
+    try:
+        job_dir = resolve_job_dir(poller.runs_dir, job_id)
+    except UnsafeJobIdError:
+        raise HTTPException(status_code=400, detail="job_id inválido") from None
+    if job_dir is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' no encontrado")
+    return job_dir
+
+
+@router.get("/api/jobs/{job_id}/log")
+async def job_log(
+    request: Request,
+    job_id: str,
+    label: str | None = Query(None, description="Sub-cálculo; por defecto el primero disponible."),
+    tail: int = Query(200, ge=1, le=2000, description="Últimas N líneas."),
+) -> dict:
+    """Cola del log del job. `available` lista las etiquetas seleccionables."""
+    from .services.jobs import read_log_tail
+
+    return read_log_tail(_job_dir_or_404(request, job_id), label, tail)
+
+
+@router.get("/api/jobs/{job_id}/traces")
+async def job_traces_endpoint(request: Request, job_id: str) -> dict:
+    """Series SCF por etiqueta y resumen de los frames etiquetados con DFT."""
+    from .services.jobs import job_traces
+
+    return job_traces(_job_dir_or_404(request, job_id))
+
+
+@router.get("/api/jobs/{job_id}/metadata")
+async def job_metadata_endpoint(request: Request, job_id: str) -> dict:
+    """metadata.json y status.json del job, más el inventario de artefactos."""
+    from .services.jobs import job_metadata
+
+    return job_metadata(_job_dir_or_404(request, job_id))
+
+
 @router.get("/api/summary", response_model=SummaryResponse)
 async def summary(request: Request) -> SummaryResponse:
     poller = get_poller(request)
@@ -106,6 +290,7 @@ async def summary(request: Request) -> SummaryResponse:
         n_failed=n_fail,
         n_stalled=counts.get("stalled", 0),
         n_oscillating=counts.get("oscillating", 0),
+        n_skipped_duplicate=counts.get("skipped_duplicate", 0),
         total=len(snaps),
         convergence_rate=rate,
     )
@@ -130,14 +315,36 @@ async def system_metrics() -> SysMetricsResponse:
     return SysMetricsResponse(**m.__dict__)
 
 
+class MetricsHistoryResponse(BaseModel):
+    samples: list[dict]
+    interval_sec: int
+
+
+@router.get("/api/system/history", response_model=MetricsHistoryResponse)
+async def system_history(
+    request: Request,
+    minutes: int = Query(10, ge=1, le=60, description="Ventana en minutos."),
+) -> MetricsHistoryResponse:
+    """Serie reciente de CPU, RAM y temperatura, para las sparklines.
+
+    `/api/system` solo da el instante actual.
+    """
+    history = getattr(request.app.state, "metrics_history", None)
+    if history is None:
+        return MetricsHistoryResponse(samples=[], interval_sec=0)
+    from .metrics_history import DEFAULT_INTERVAL_SEC
+    return MetricsHistoryResponse(
+        samples=history.samples(since_sec=minutes * 60),
+        interval_sec=DEFAULT_INTERVAL_SEC,
+    )
+
+
 def _count_total_converged(poller: DFTPoller) -> int:
     """Cuenta convergidos en todos los batches históricos + relax_basic."""
     total = 0
-    runs_root = Path(__file__).resolve().parents[2]  # …/dft
 
     def cfg_path(key: str, default: str) -> Path:
-        p = Path(poller.cfg.get(key, default))
-        return p if p.is_absolute() else runs_root / p
+        return paths.resolve_data(poller.cfg.get(key, default))
 
     for search_dir in [
         cfg_path("runs_dir", "runs/relax_basic"),
@@ -205,6 +412,7 @@ def _build_status_report(poller: DFTPoller, metrics: SysMetrics) -> str:
         "stalled":     "⏸️",
         "oscillating": "⚠️",
         "pending":     "⏳",
+        "skipped_duplicate": "♻️",
         "unknown":     "❓",
     }
 
@@ -254,27 +462,6 @@ def _build_status_report(poller: DFTPoller, metrics: SysMetrics) -> str:
     return "\n".join(lines)
 
 
-@router.get("/api/jobs/converged", response_model=list[JobStatus])
-async def list_converged(request: Request, limit: int = 50) -> list[JobStatus]:
-    """Lista los primeros N jobs convergidos ordenados por fórmula."""
-    poller = get_poller(request)
-    jobs = [
-        JobStatus(
-            job_id=s.job_id,
-            formula=s.formula,
-            status=s.status,
-            pid=s.pid,
-            start_time=s.start_time,
-            elapsed_min=s.elapsed_min,
-            mpi_cores=s.mpi_cores,
-        )
-        for s in poller.snapshots.values()
-        if s.status == "converged"
-    ]
-    jobs.sort(key=lambda j: j.formula)
-    return jobs[:limit]
-
-
 def _build_converged_text(poller: DFTPoller, limit: int = 50) -> str:
     """Construye el texto HTML del listado de convergidos (reutilizable por el bot)."""
     converged = sorted(
@@ -295,25 +482,10 @@ def _build_converged_text(poller: DFTPoller, limit: int = 50) -> str:
 
 
 def _scf_rate_s(points: list[dict]) -> float | None:
-    """Average seconds/iter from the last few SCF iterations."""
-    if len(points) < 2:
-        return None
+    """Segundos por iteración. Implementación única en services.jobs."""
+    from .services.jobs import _scf_rate_s as _impl
 
-    def _secs(clock: str) -> int:
-        h, m, s = (int(x) for x in clock.split(":"))
-        return h * 3600 + m * 60 + s
-
-    deltas = []
-    for prev, cur in zip(points[-6:-1], points[-5:]):
-        try:
-            d = _secs(cur["clock"]) - _secs(prev["clock"])
-            if d < 0:
-                d += 86400
-            if 0 < d < 3600:
-                deltas.append(d)
-        except (KeyError, ValueError):
-            pass
-    return (sum(deltas) / len(deltas)) if deltas else None
+    return _impl(points)
 
 
 _PHASE2_N_CONFIGS = 4
@@ -536,6 +708,468 @@ async def notify_status(request: Request) -> dict:
     return {"ok": ok}
 
 
+# ── Batches y control ────────────────────────────────────────────────────────
+
+@router.get("/api/batches")
+async def list_batches_endpoint(request: Request) -> dict:
+    """Batches con su recuento por estado, throughput y ETA."""
+    from .services.control import list_batches
+
+    return list_batches(get_poller(request))
+
+
+def _auditar(request: Request, accion: str, **campos) -> None:
+    from .security import audit
+
+    cliente = request.client.host if request.client else None
+    audit(request.app.state, accion, client=cliente, **campos)
+
+
+@router.post("/api/jobs/{job_id}/kill")
+async def kill_job_endpoint(request: Request, job_id: str) -> dict:
+    """Detiene los procesos de un job. Acción destructiva: queda auditada."""
+    from .services.control import ControlError, kill_job
+
+    job_dir = _job_dir_or_404(request, job_id)
+    try:
+        resultado = await kill_job(job_dir)
+    except ControlError as exc:
+        _auditar(request, "kill_rechazado", job_id=job_id, motivo=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _auditar(request, "kill", job_id=job_id, pids=resultado["killed_pids"])
+    return resultado
+
+
+@router.post("/api/jobs/{job_id}/retry")
+async def retry_job_endpoint(request: Request, job_id: str) -> dict:
+    """Devuelve un job fallido a la cola para que el runner lo recoja."""
+    from .services.control import ControlError, retry_job
+
+    job_dir = _job_dir_or_404(request, job_id)
+    try:
+        resultado = retry_job(job_dir)
+    except ControlError as exc:
+        _auditar(request, "retry_rechazado", job_id=job_id, motivo=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _auditar(request, "retry", job_id=job_id, intento=resultado["requeue_count"])
+    return resultado
+
+
+@router.post("/api/batches/{batch_id}/start")
+async def start_batch_endpoint(request: Request, batch_id: int) -> dict:
+    """Lanza el runner de un batch. Arranca un proceso: queda auditado."""
+    from .services.control import ControlError, start_batch
+
+    poller = get_poller(request)
+    if not platform_caps.runner_launch_available(poller.cfg):
+        detalle = (
+            "Lanzar runners no está disponible aquí: falta un intérprete de "
+            "Python o los scripts/ del pipeline en la raíz de datos."
+        )
+        _auditar(request, "start_no_disponible", batch_id=batch_id, motivo=detalle)
+        raise HTTPException(status_code=501, detail=detalle)
+
+    try:
+        resultado = start_batch(poller, batch_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"No existe {exc}") from exc
+    except ControlError as exc:
+        _auditar(request, "start_rechazado", batch_id=batch_id, motivo=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _auditar(request, "start_batch", batch_id=batch_id, runner=resultado["runner_kind"])
+    return resultado
+
+
+# ── Estructuras, reportes y figuras ──────────────────────────────────────────
+
+@router.get("/api/structures")
+async def list_structures_endpoint(request: Request) -> dict:
+    """Estructuras disponibles: fases de referencia, top-8 y las de cada job."""
+    from .services.files import list_structures
+
+    return {"items": list_structures(get_poller(request).runs_dir)}
+
+
+@router.get("/api/structures/content")
+async def structure_content(
+    request: Request,
+    id: str = Query(..., description="Identificador de /api/structures (repo:… o job:…)."),
+) -> dict:
+    """Estructura en CIF. Los structures/*.json de ASE se convierten al vuelo."""
+    from .services.files import UnsafePathError, read_structure
+
+    try:
+        cif, name, metadata = read_structure(get_poller(request).runs_dir, id)
+    except UnsafePathError:
+        raise HTTPException(status_code=400, detail="Identificador inválido") from None
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Estructura '{id}' no encontrada") from None
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"No se pudo convertir: {exc}") from exc
+
+    return {"id": id, "name": name, "format": "cif", "content": cif, "metadata": metadata}
+
+
+@router.get("/api/reports")
+async def list_reports_endpoint() -> dict:
+    """Reportes Markdown y galerías declaradas en los visualization_manifest.json."""
+    from .services.files import list_reports
+
+    return list_reports()
+
+
+@router.get("/api/reports/document")
+async def report_document(
+    path: str = Query(..., description="Ruta relativa al repo, dentro de reports/ o imagenes/."),
+) -> dict:
+    from .services.files import UnsafePathError, read_report
+
+    try:
+        content, name = read_report(path)
+    except UnsafePathError:
+        raise HTTPException(status_code=400, detail="Ruta no permitida") from None
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"No existe '{path}'") from None
+    return {"path": path, "name": name, "content": content}
+
+
+@router.get("/api/reports/figure")
+async def report_figure(
+    path: str = Query(..., description="Ruta relativa al repo de una figura."),
+):
+    """Sirve una figura. Muchas están en .gitignore y pueden no existir."""
+    from starlette.responses import FileResponse
+
+    from .services.files import UnsafePathError, resolve_figure
+
+    try:
+        file_path, mime = resolve_figure(path)
+    except UnsafePathError:
+        raise HTTPException(status_code=400, detail="Ruta no permitida") from None
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"'{path}' no está en disco. Regenera con scripts/generate_visualizations.py",
+        ) from None
+    return FileResponse(file_path, media_type=mime)
+
+
+# ── Cribado HTS ──────────────────────────────────────────────────────────────
+
+@router.get("/api/screening/config")
+async def screening_config() -> dict:
+    """Cotas de la cascada y disponibilidad real de cada tier."""
+    from .services.screening import config_path, gates, load_generator_config, tier_availability
+
+    try:
+        cfg = load_generator_config()
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "reason": f"No se encuentra {config_path()}",
+            "tiers": tier_availability(),
+            "gates": None,
+        }
+    return {"available": True, "reason": None, "tiers": tier_availability(cfg), "gates": gates(cfg)}
+
+
+class ScreeningRunRequest(BaseModel):
+    batch_id: int | None = None
+    n_candidates: int = 200
+    n_batches: int = 1
+    random_seed: int | None = None
+    use_mlff: bool | None = None
+
+
+class ScreeningStartDftRequest(BaseModel):
+    start_runner: bool = True
+
+
+@router.post("/api/screening/run")
+async def screening_run(request: Request, body: ScreeningRunRequest) -> dict:
+    """Arranca la cascada en segundo plano y devuelve el identificador.
+
+    Tarda minutos: se consulta el progreso en /api/screening/runs/{run_id}.
+    """
+    from .services.screening import start_run
+
+    if not 1 <= body.n_candidates <= 5000:
+        raise HTTPException(status_code=422, detail="candidatos por lote debe estar entre 1 y 5000")
+    if not 1 <= body.n_batches <= 50:
+        raise HTTPException(status_code=422, detail="lotes debe estar entre 1 y 50")
+    if body.n_candidates * body.n_batches > 5000:
+        raise HTTPException(status_code=422, detail="candidatos por lote × lotes no debe pasar de 5000")
+    if body.random_seed is not None and not 0 <= body.random_seed <= 999_999_999:
+        raise HTTPException(status_code=422, detail="semilla debe estar entre 0 y 999999999")
+    if body.batch_id is not None and body.batch_id < 0:
+        raise HTTPException(status_code=422, detail="batch_id debe ser no negativo")
+
+    try:
+        run = start_run(
+            batch_id=body.batch_id,
+            n_candidates=body.n_candidates,
+            n_batches=body.n_batches,
+            random_seed=body.random_seed,
+            use_mlff=body.use_mlff,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=501, detail=f"Falta la configuración: {exc}") from exc
+
+    _auditar(
+        request,
+        "screening_run",
+        batch_id=run.batch_id,
+        random_seed=run.random_seed,
+        lotes=run.n_batches,
+        n=run.n_requested,
+    )
+    resultado = run.as_dict()
+    resultado.pop("items", None)
+    resultado.pop("dropped", None)
+    return resultado
+
+
+@router.get("/api/screening/runs")
+async def screening_runs() -> dict:
+    from .services.screening import list_runs
+
+    return {"items": list_runs()}
+
+
+@router.get("/api/screening/runs/{run_id}")
+async def screening_run_detail(
+    run_id: str,
+    limit: int = Query(200, ge=1, le=500, description="Filas del ranking a devolver."),
+) -> dict:
+    from .services.screening import get_run
+
+    run = get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Ejecución '{run_id}' no encontrada")
+
+    resultado = run.as_dict()
+    resultado["items"] = resultado["items"][:limit]
+    resultado["n_items_total"] = len(run.items)
+    return resultado
+
+
+@router.post("/api/screening/runs/{run_id}/start-dft")
+async def screening_start_dft(
+    request: Request,
+    run_id: str,
+    body: ScreeningStartDftRequest,
+) -> dict:
+    """Prepara los seleccionados del cribado como jobs DFT y puede lanzar el runner."""
+    from .services.control import ControlError
+    from .services.screening import start_dft_for_run
+
+    try:
+        result = start_dft_for_run(
+            get_poller(request),
+            run_id,
+            start_runner=body.start_runner,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Ejecución '{run_id}' no encontrada") from exc
+    except (RuntimeError, ControlError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ImportError as exc:
+        # Preparar los jobs construye las estructuras en proceso y necesita
+        # `ase`. Si falta —porque el empaquetado la dejó fuera— el usuario veía
+        # un 500 sin explicación. Mejor decir exactamente qué falta.
+        falta = getattr(exc, "name", None) or str(exc)
+        raise HTTPException(
+            status_code=501,
+            detail=(f"Esta instalación no puede preparar jobs DFT: falta el módulo "
+                    f"'{falta}'. Prepara el lote desde el repositorio."),
+        ) from exc
+
+    _auditar(
+        request,
+        "screening_start_dft",
+        run_id=run_id,
+        batch_id=result["batch_id"],
+        n_prepared=result["n_prepared"],
+        runner_launched=result["runner_launched"],
+    )
+    return result
+
+
+@router.get("/api/activity")
+async def activity(request: Request) -> dict:
+    """Qué está haciendo el sistema ahora y cuánto le queda."""
+    from .services.activity import describe
+
+    return describe(get_poller(request))
+
+
+# ── Calibración de rendimiento ───────────────────────────────────────────────
+
+class BenchRunRequest(BaseModel):
+    mode: Literal["quick", "full"] = "quick"
+    force: bool = False
+
+
+@router.get("/api/bench")
+async def bench_status(request: Request) -> dict:
+    """Máquina detectada, última calibración y barrido en curso si lo hay."""
+    from .services.bench import status
+
+    return status(get_poller(request))
+
+
+@router.post("/api/bench/run")
+async def bench_run(request: Request, body: BenchRunRequest) -> dict:
+    """Lanza el barrido slots×cores. Arranca procesos: queda auditado."""
+    from .services.bench import start
+    from .services.control import ControlError
+
+    try:
+        resultado = start(get_poller(request), mode=body.mode, force=body.force)
+    except ControlError as exc:
+        _auditar(request, "bench_rechazado", modo=body.mode, motivo=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _auditar(request, "bench_run", modo=body.mode, pid=resultado["pid"])
+    return resultado
+
+
+@router.post("/api/bench/cancel")
+async def bench_cancel(request: Request) -> dict:
+    """Detiene el barrido en marcha. Acción destructiva: queda auditada."""
+    from .services.bench import cancel
+    from .services.control import ControlError
+
+    try:
+        resultado = cancel()
+    except ControlError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _auditar(request, "bench_cancel", pids=resultado["killed_pids"])
+    return resultado
+
+
+# ── Candidatos y ML ──────────────────────────────────────────────────────────
+
+@router.get("/api/candidates")
+async def list_candidates(
+    request: Request,
+    q: str | None = Query(None, description="Subcadena en la fórmula."),
+    generation_mode: str | None = Query(None, description="pure/A_mixed/B_mixed/X_mixed, coma."),
+    b_family: str | None = Query(None, description="Familia del sitio B, coma."),
+    halide: str | None = Query(None, description="Haluro dominante, coma."),
+    sort: str = Query("score", pattern="^(score|formula|tolerance_t|oct_factor)$"),
+    desc: bool = True,
+    verified_only: bool = Query(True, description="Solo viables, con DFT terminado y buen score PV."),
+    pv_min: float = Query(0.5, ge=0.0, le=1.0, description="Score fotovoltaico mínimo."),
+    limit: int = Query(500, ge=1, le=5000),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    """Candidatos del generador BUHO.
+
+    `source` indica de dónde salieron: el CSV del generador si está disponible,
+    o los metadata.json de los jobs como alternativa.
+    """
+    from .services.candidates import query_candidates
+
+    return query_candidates(
+        get_poller(request).runs_dir,
+        solo_verificados=verified_only,
+        umbral_pv=pv_min,
+        q=q,
+        generation_mode=generation_mode,
+        b_family=b_family,
+        halide=halide,
+        sort=sort,
+        desc=desc,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/api/models")
+async def list_models() -> dict:
+    """Métricas de los surrogates y estado de carga del modelo de bandgap."""
+    from .services.ml import model_metrics
+
+    return model_metrics()
+
+
+class PredictRequest(BaseModel):
+    A: str
+    B: str
+    X: str
+    a_lat: float | None = None
+    e_mace_ev_atom: float | None = None
+    band_gap_gga_ev: float | None = None
+    eform_ev_atom: float | None = None
+    material: str | None = None
+
+
+@router.post("/api/ml/predict")
+async def ml_predict(body: PredictRequest) -> dict:
+    """Bandgap predicho con incertidumbre bootstrap para una composición ABX3."""
+    from .services.ml import SurrogateUnavailableError, predict
+
+    try:
+        return predict(
+            body.A,
+            body.B,
+            body.X,
+            a_lat=body.a_lat,
+            e_mace_ev_atom=body.e_mace_ev_atom,
+            band_gap_gga_ev=body.band_gap_gga_ev,
+            eform_ev_atom=body.eform_ev_atom,
+            material=body.material,
+        )
+    except SurrogateUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (KeyError, ValueError) as exc:
+        # Composición fuera del espacio químico del modelo.
+        raise HTTPException(status_code=422, detail=f"Composición no soportada: {exc}") from exc
+
+
+@router.get("/api/ml/top8")
+async def ml_top8() -> dict:
+    """Predicción ML frente a DFT y experimento para los 8 candidatos top."""
+    from .services.ml import top8_reference
+
+    return {"items": top8_reference()}
+
+
+@router.get("/api/ml/parity")
+async def ml_parity(request: Request,
+                    limit: int = Query(8, ge=1, le=50)) -> dict:
+    """Los mejores del lote según el predictor, frente al DFT ya calculado.
+
+    Sustituye a la comparación contra referencias de literatura: aquí ambas
+    columnas son gap PBE, así que la diferencia mide solo el predictor.
+    """
+    from .services.activity import runners_activos
+    from .services.control import _raiz_batches
+    from .services.ml import parity_from_batch
+
+    poller = get_poller(request)
+
+    # Se prefiere el lote que se está calculando; si no hay ninguno, el más
+    # reciente con jobs terminados.
+    batch = next((r["batch"] for r in runners_activos() if r.get("batch")), None)
+    if batch is None:
+        raiz = _raiz_batches(poller)
+        lotes = sorted((d for d in raiz.glob("batch_*") if d.is_dir()),
+                       key=lambda d: d.stat().st_mtime, reverse=True)
+        batch = next((d for d in lotes if any(d.glob("*/status.json"))), None)
+
+    if batch is None:
+        return {"batch": None, "items": [], "n_converged": 0, "n_with_gap": 0,
+                "error": "No hay ningún lote con resultados."}
+
+    return parity_from_batch(batch, limit=limit)
+
+
 @router.post("/api/notify/test")
 async def notify_test(request: Request) -> dict:
     from .notifier import send_test
@@ -545,44 +1179,3 @@ async def notify_test(request: Request) -> dict:
     chat_id  = tg.get("chat_id", "")
     ok       = await send_test(token, chat_id)
     return {"ok": ok, "message": "Mensaje enviado" if ok else "Fallo — revisa bot_token y chat_id"}
-
-
-# ── WebSocket ─────────────────────────────────────────────────────────────────
-
-@router.websocket("/ws/events")
-async def ws_events(websocket: WebSocket) -> None:
-    await websocket.accept()
-    queue: asyncio.Queue[str] = asyncio.Queue(maxsize=128)
-    _ws_clients.append(queue)
-    log.info("WebSocket conectado desde %s", websocket.client)
-
-    # Reenviar eventos del poller a todos los clientes
-    poller: DFTPoller = websocket.app.state.poller
-
-    async def _forward_from_poller():
-        while True:
-            event: WsEvent = await poller.event_queue.get()
-            payload = event.model_dump_json()
-            # broadcast a todos
-            for q in list(_ws_clients):
-                try:
-                    q.put_nowait(payload)
-                except asyncio.QueueFull:
-                    pass
-
-    forward_task = asyncio.create_task(_forward_from_poller())
-
-    try:
-        while True:
-            # Enviar mensajes pendientes
-            while not queue.empty():
-                msg = queue.get_nowait()
-                await websocket.send_text(msg)
-
-            # Keepalive ping cada 15 s
-            await asyncio.sleep(1)
-    except WebSocketDisconnect:
-        log.info("WebSocket desconectado")
-    finally:
-        _ws_clients.remove(queue)
-        forward_task.cancel()

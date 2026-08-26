@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dft-cspbi3-gpaw"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Simulaciones DFT automatizadas de perovskita haluro CsPbI3 con GPAW"
 readme = "README.md"
 license = { text = "GPL-3.0" }
@@ -32,22 +32,55 @@ dependencies = [
     "pyyaml>=6.0",
     "click>=8.1",
     "scipy>=1.12",
+    # Lo usan ml_surrogate y analytics; faltaba declararlo. Los modelos de
+    # models/*.pkl se serializaron con 1.8.0: una versión distinta puede
+    # fallar al despicklear (lo reporta GET /api/models).
+    "scikit-learn>=1.8",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov", "ruff", "mypy"]
+# Monitor web (src/monitor_api): estas dependencias se importaban sin estar
+# declaradas, así que instalar el proyecto no instalaba su propia API.
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "httpx>=0.27",
+    "psutil>=5.9",
+    "itsdangerous>=2.1",   # firma de la cookie de sesión (SessionMiddleware)
+]
+desktop = [
+    "pywebview>=5.0",
+    "qtpy>=2.4",
+    "PyQt6>=6.7",
+    "PyQt6-WebEngine>=6.7",
+]
+# Tier 2 de la cascada de cribado (MLFF de estabilidad). Aparte porque pesa
+# ~1.5 GB y no viaja en el binario: allí el tier se declara no disponible.
+screening = [
+    "torch>=2.2",
+    "matgl>=4.0",
+    "pymatgen>=2024.1",
+]
 
 [project.scripts]
+dft-monitor = "monitor_api.launcher:main"
 dft-run = "dft_cspbi3.cli:run_full_workflow"
 dft-converge = "dft_cspbi3.cli:run_convergence_test"
 dft-scissor = "dft_cspbi3.cli:apply_scissor"
 
+[tool.hatch.version]
+# Fuente única de la versión, compartida con la app, la API y el binario.
+path = "src/monitor_api/__init__.py"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/dft_cspbi3", "src/ml_surrogate", "src/buho"]
+packages = ["src/dft_cspbi3", "src/ml_surrogate", "src/buho", "src/monitor_api"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
 

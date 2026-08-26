@@ -15,6 +15,8 @@ Uso:
 """
 from __future__ import annotations
 
+import math
+
 import json
 from datetime import datetime
 from pathlib import Path
@@ -91,7 +93,17 @@ class ABX3StructureBuilder:
             candidate.fractions["X"][sp] * IONIC_RADII[sp]
             for sp in candidate.X_site_species
         )
-        a0 = lattice_est(r_B_eff, r_X_eff)
+        # `lattice_est` devuelve 2√2·(r_B+r_X), que es la relación A–X. La red
+        # cúbica Pm-3m se fija por el enlace B–X, que vale a/2, así que
+        # a = 2·(r_B+r_X) = lattice_est/√2. Sin dividir, las estructuras salían
+        # √2 veces dilatadas —CsSnI3 a 9.56 Å en vez de 6.76— con el armazón
+        # B–X a 4.78 Å en lugar de 3.15: sin enlaces que dibujar y, como avisa
+        # `phase2_force/prepare.py`, «casi metálicas».
+        #
+        # Se corrige aquí y no en `lattice_est` porque ese valor es además la
+        # característica 11 del surrogate (`a_lat_est_A`), con la que se
+        # entrenó el modelo: cambiarla invalidaría las predicciones.
+        a0 = lattice_est(r_B_eff, r_X_eff) / math.sqrt(2.0)
 
         # ── Build primitive cell ─────────────────────────────────────────────
         atoms = StructureBuilder.build_perovskite_cubic(A_struct, B_struct, X_struct, a0)
