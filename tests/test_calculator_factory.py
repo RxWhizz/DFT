@@ -21,13 +21,28 @@ def _load_config():
 
 @pytest.fixture
 def mock_gpaw_module(monkeypatch):
-    """Parchea gpaw; importa sin GPAW."""
+    """Parchea gpaw; importa sin GPAW.
+
+    Los submódulos hay que registrarlos uno a uno. Un `MagicMock` responde a
+    cualquier atributo, pero NO es un paquete: `from gpaw.eigensolvers import
+    Davidson` no mira dentro del mock, busca `sys.modules['gpaw.eigensolvers']`
+    y, si no está, falla con «'gpaw' is not a package».
+
+    Antes solo se registraba `gpaw.spinorbit`, y los tests de HSE06 y r2scan
+    pasaban o fallaban según el orden: si algún fichero anterior de la sesión
+    había importado el `gpaw.eigensolvers` de verdad, quedaba en caché y el
+    import lo encontraba por casualidad.
+    """
     gpaw_mock = MagicMock()
     gpaw_mock.GPAW = MagicMock(side_effect=lambda **kwargs: MagicMock(_kwargs=kwargs))
     gpaw_mock.Mixer = MagicMock(side_effect=lambda **kwargs: MagicMock(_kwargs=kwargs))
     gpaw_mock.PW = MagicMock(side_effect=lambda ecut: MagicMock(_ecut=ecut))
     monkeypatch.setitem(sys.modules, "gpaw", gpaw_mock)
-    monkeypatch.setitem(sys.modules, "gpaw.spinorbit", MagicMock())
+
+    for nombre in ("gpaw.spinorbit", "gpaw.eigensolvers", "gpaw.mixer",
+                   "gpaw.xc", "gpaw.hybrids"):
+        monkeypatch.setitem(sys.modules, nombre, MagicMock())
+
     return gpaw_mock
 
 
@@ -55,10 +70,18 @@ class TestConfigLoading:
         assert "hse06" in cfg
 
     def test_paw_datasets(self, factory):
+        """`paw_datasets` existe y es un mapa; vacío significa «los de serie».
+
+        Aquí se afirmaba `Cs.9.PBE`, `Pb.14.PBE` e `I.7.PBE`, que son setups
+        semicore. No los pide la config, que trae `paw_datasets: {}` desde el
+        commit c14745b0f, ni existen en el `gpaw_data` instalado, que solo
+        distribuye los PBE de serie. El test exigía una configuración que
+        habría hecho fallar todos los cálculos con «setup not found», así que
+        pasar a semicore es una decisión de metodología pendiente, no algo que
+        este test deba dar por hecho.
+        """
         paw = factory.config["paw_datasets"]
-        assert paw["Cs"] == "Cs.9.PBE"
-        assert paw["Pb"] == "Pb.14.PBE"
-        assert paw["I"] == "I.7.PBE"
+        assert isinstance(paw, dict)
 
     def test_ecut_value(self, factory):
         assert factory.config["cutoff"]["pw_ecut"] == 450
@@ -167,12 +190,34 @@ class TestParamsOverride:
 
 class TestPAWSetups:
     def test_setups_included(self, factory, mock_gpaw_module):
+        """Lo que diga `paw_datasets` llega a GPAW tal cual, como `setups`."""
         factory.create("scf")
         kwargs = mock_gpaw_module.GPAW.call_args.kwargs
         assert "setups" in kwargs
-        assert kwargs["setups"]["Cs"] == "Cs.9.PBE"
-        assert kwargs["setups"]["Pb"] == "Pb.14.PBE"
-        assert kwargs["setups"]["I"] == "I.7.PBE"
+        assert kwargs["setups"] == factory.config["paw_datasets"]
+
+    def test_setups_configurados_existen(self, factory, mock_gpaw_module):
+        """Ningún setup configurado puede apuntar a un dataset que no está.
+
+        Es la misma clase de fallo que tumbó un lote de 48 trabajos: la ruta
+        PAW estaba escrita a mano y había dejado de existir, y cada trabajo lo
+        descubría por su cuenta al arrancar.
+        """
+        import gzip
+        from buho import gpaw_setup
+
+        configurados = {s: d for s, d in factory.config["paw_datasets"].items()
+                        if not d.startswith(":")}
+        if not configurados:
+            pytest.skip("sin setups configurados: GPAW usa los de serie")
+
+        raiz = gpaw_setup.find()
+        if raiz is None:
+            pytest.skip("no hay datasets PAW instalados")
+
+        faltan = [d for d in configurados.values()
+                  if not (Path(raiz) / f"{d}.gz").is_file()]
+        assert not faltan, f"configurados pero ausentes en {raiz}: {faltan}"
 
     def test_parallel_domain(self, factory, mock_gpaw_module):
         factory.create("scf")

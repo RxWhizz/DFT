@@ -1,5 +1,5 @@
 {
-  "calculation_dir": "calculations/alpha",
+  "calculation_dir": "/media/luis-ochoa/Nuevo vol/teoria/calculations/alpha",
   "output_dir": "imagenes",
   "generated_files": [
     "imagenes/cell_views_initial.png",
@@ -10,14 +10,6 @@
     "imagenes/cell_views_relaxed.pdf",
     "imagenes/cell_3d_relaxed.png",
     "imagenes/cell_3d_relaxed.pdf",
-    "imagenes/cell_views_relax_checkpoint.png",
-    "imagenes/cell_views_relax_checkpoint.pdf",
-    "imagenes/cell_3d_relax_checkpoint.png",
-    "imagenes/cell_3d_relax_checkpoint.pdf",
-    "imagenes/cell_views_scf_checkpoint.png",
-    "imagenes/cell_views_scf_checkpoint.pdf",
-    "imagenes/cell_3d_scf_checkpoint.png",
-    "imagenes/cell_3d_scf_checkpoint.pdf",
     "imagenes/cell_3d_relaxed_3x3x3.png",
     "imagenes/cell_3d_relaxed_3x3x3.pdf",
     "imagenes/cell_3d_relaxed_6x6x6.png",
@@ -26,10 +18,6 @@
     "imagenes/octahedra_relaxed_2x2x2.pdf",
     "imagenes/octahedra_relaxed_3x3x3.png",
     "imagenes/octahedra_relaxed_3x3x3.pdf",
-    "imagenes/dos_pdos_from_gpw.png",
-    "imagenes/dos_pdos_from_gpw.pdf",
-    "imagenes/band_structure_from_gpw.png",
-    "imagenes/band_structure_from_gpw.pdf",
     "imagenes/phonon_dispersion_from_npy.png",
     "imagenes/phonon_dispersion_from_npy.pdf",
     "imagenes/phonon_dos_from_npy.png",
@@ -38,8 +26,6 @@
     "imagenes/hessian_matrix.pdf",
     "imagenes/hessian_eigenvalues.png",
     "imagenes/hessian_eigenvalues.pdf",
-    "imagenes/hessian_gamma_frequencies.png",
-    "imagenes/hessian_gamma_frequencies.pdf",
     "imagenes/pes_scan_from_npy.png",
     "imagenes/pes_scan_from_npy.pdf",
     "imagenes/soc_eigenvalues_map.png",
@@ -55,5 +41,11 @@
     "imagenes/loto_dielectric_tensor.png",
     "imagenes/loto_dielectric_tensor.pdf"
   ],
-  "messages": []
+  "messages": [
+    "Estructura omitida /media/luis-ochoa/Nuevo vol/teoria/calculations/alpha/01_relax/relax.gpw: No module named 'gpaw'",
+    "Estructura omitida /media/luis-ochoa/Nuevo vol/teoria/calculations/alpha/02_scf/scf.gpw: No module named 'gpaw'",
+    "DOS omitido desde /media/luis-ochoa/Nuevo vol/teoria/calculations/alpha/04_dos/dos.gpw: No module named 'gpaw'",
+    "Bandas omitidas desde /media/luis-ochoa/Nuevo vol/teoria/calculations/alpha/03_bands/bands.gpw: No module named 'gpaw'",
+    "No pude calcular frecuencias Hessiano ponderado: No module named 'gpaw'"
+  ]
 }

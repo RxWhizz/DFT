@@ -1,8 +1,0 @@
-{
-  "status": "fetched_from_colab",
-  "tag": "mh_b000",
-  "model": "/home/luis-ochoa/Documents/Vscode/py/dft/models/mace_phase2/phase2_mlip_mh_b000.model",
-  "dtype": "float32",
-  "trained_on": "colab_gpu",
-  "fetched_at": "2026-06-14T07:35:26.964186+00:00"
-}

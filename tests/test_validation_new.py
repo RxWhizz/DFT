@@ -3,12 +3,60 @@
 from __future__ import annotations
 
 import sys
+
+import pytest
 import types
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, mock_open
 
 import numpy as np
+
+
+def _instalar_stub(nombre: str, modulo) -> None:
+    """Instala una maqueta según de qué biblioteca se trate.
+
+    Hay dos casos distintos y confundirlos rompe algo en cada dirección:
+
+    * `gpaw` **siempre** se maquetea. Estos tests comprueban cómo se construyen
+      las llamadas, no que GPAW calcule: con el GPAW real intentarían resolver
+      datasets y converger. Da igual si está instalado.
+
+    * `ase`, `yaml`, `pandas`, `scipy`, `matplotlib` y `click` se maquetean
+      **solo si faltan**. Pytest importa todos los ficheros de test durante la
+      recolección, así que sustituirlos aquí se los daba falsos a TODA la
+      sesión: eran dieciséis fallos en `test_monitor_api` que no se reproducían
+      en aislamiento.
+
+    Se comprueba el paquete raíz, no el submódulo: `find_spec("ase.build")`
+    importa `ase` para localizarlo, y colgar submódulos falsos de un paquete a
+    medio inicializar da «partially initialized module».
+    """
+    import importlib.util
+
+    raiz = nombre.split(".")[0]
+
+    if raiz in _SIEMPRE_MAQUETADOS:
+        sys.modules[nombre] = modulo
+        return
+
+    if raiz in _REALES_DISPONIBLES:
+        return
+    if raiz not in _REALES_COMPROBADAS:
+        try:
+            disponible = importlib.util.find_spec(raiz) is not None
+        except (ImportError, ValueError, ModuleNotFoundError):
+            disponible = False
+        _REALES_COMPROBADAS.add(raiz)
+        if disponible:
+            _REALES_DISPONIBLES.add(raiz)
+            return
+    sys.modules.setdefault(nombre, modulo)
+
+
+_SIEMPRE_MAQUETADOS = {"gpaw"}
+_REALES_COMPROBADAS: set[str] = set()
+_REALES_DISPONIBLES: set[str] = set()
 
 
 def _build_mocks():
@@ -79,7 +127,7 @@ def _build_mocks():
         ("ase.spacegroup",   ase_spacegroup),
         ("ase.units",        ase_units),
     ]:
-        sys.modules[mod_name] = mod
+        _instalar_stub(mod_name, mod)
 
     # GPAW stubs
     class _PW:
@@ -109,13 +157,13 @@ def _build_mocks():
     spinorbit_mod.spinorbit_eigenvalues = MagicMock(
         return_value=(np.linspace(-5, 5, 88).reshape(1, 88), np.ones((1, 88)) * 0.1)
     )
-    sys.modules.setdefault("gpaw", gpaw_mod)
-    sys.modules.setdefault("gpaw.spinorbit", spinorbit_mod)
+    _instalar_stub("gpaw", gpaw_mod)
+    _instalar_stub("gpaw.spinorbit", spinorbit_mod)
 
     # Other heavy deps
     pandas_mod = types.ModuleType("pandas")
     pandas_mod.DataFrame = MagicMock
-    sys.modules.setdefault("pandas", pandas_mod)
+    _instalar_stub("pandas", pandas_mod)
 
     yaml_mod = types.ModuleType("yaml")
     yaml_mod.safe_load = MagicMock(return_value={
@@ -133,17 +181,51 @@ def _build_mocks():
         "paw_datasets": {"Cs": "Cs.9.PBE", "Pb": "Pb.14.PBE", "I": "I.7.PBE"},
         "cutoff": {"pw_ecut": 450, "convergence_range": [300, 350, 400, 450, 500]},
     })
-    sys.modules.setdefault("yaml", yaml_mod)
+    _instalar_stub("yaml", yaml_mod)
 
     scipy_mod = types.ModuleType("scipy")
-    sys.modules.setdefault("scipy", scipy_mod)
-    sys.modules.setdefault("scipy.linalg", types.ModuleType("scipy.linalg"))
-    sys.modules.setdefault("matplotlib", types.ModuleType("matplotlib"))
-    sys.modules.setdefault("matplotlib.pyplot", types.ModuleType("matplotlib.pyplot"))
-    sys.modules.setdefault("click", types.ModuleType("click"))
+    _instalar_stub("scipy", scipy_mod)
+    _instalar_stub("scipy.linalg", types.ModuleType("scipy.linalg"))
+    _instalar_stub("matplotlib", types.ModuleType("matplotlib"))
+    _instalar_stub("matplotlib.pyplot", types.ModuleType("matplotlib.pyplot"))
+    _instalar_stub("click", types.ModuleType("click"))
 
 
-_build_mocks()
+# Las maquetas NO se instalan al importar este fichero, y es deliberado.
+#
+# Pytest importa TODOS los ficheros de test durante la recolección, mucho antes
+# de correr el primero. Instalarlas aquí dejaba un `gpaw` de mentira en
+# `sys.modules` desde ese momento, así que `test_calculator_factory` y
+# `test_migration` (que van antes por orden alfabético) se lo encontraban
+# puesto y reventaban con «No module named \'gpaw.eigensolvers\'; \'gpaw\' is not
+# a package». Devolverlas a su sitio en el teardown no llegaba a tiempo: ese
+# teardown corre al acabar ESTE fichero, que es de los últimos.
+#
+# Instalándolas en el fixture, existen solo mientras corren estos tests.
+_MODULOS_TOCADOS = (
+    "ase", "ase.io", "ase.dft", "ase.dft.kpoints", "ase.dft.dos",
+    "ase.phonons", "ase.vibrations", "ase.build", "ase.spacegroup",
+    "ase.units", "gpaw", "gpaw.spinorbit", "gpaw.mixer", "click",
+)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _maquetas():
+    """Sostiene las maquetas durante este fichero y las retira al salir."""
+    originales = {n: sys.modules.get(n) for n in _MODULOS_TOCADOS}
+    _build_mocks()
+    yield
+    for nombre, original in originales.items():
+        if original is None:
+            sys.modules.pop(nombre, None)
+        else:
+            sys.modules[nombre] = original
+    # El código bajo prueba se importa dentro de cada test, así que queda en
+    # caché con el `gpaw` de mentira ya enlazado. Sin purgarlo, el siguiente
+    # fichero que importe `dft_cspbi3` recibe esa versión contaminada.
+    for nombre in [n for n in sys.modules if n.startswith("dft_cspbi3")]:
+        del sys.modules[nombre]
+
 
 BASE = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(BASE))

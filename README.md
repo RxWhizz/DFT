@@ -1,7 +1,84 @@
-# REPO PARTE DFT
+# BUHO: descubrimiento de perovskitas fotovoltaicas
 
-Paquete DFT automatizado para polimorfos CsPbI₃ (α, γ, δ).
-Backend: **GPAW**. Estructuras: **ASE**.
+Pipeline completo para buscar perovskitas ABX₃ con bandgap útil en fotovoltaica:
+genera candidatos, los criba con un modelo de aprendizaje automático, calcula
+los supervivientes con DFT, y reentrena el modelo con lo aprendido.
+
+Backend de cálculo: **GPAW**. Estructuras: **ASE**. Interfaz: aplicación de
+escritorio autónoma.
+
+## El ciclo
+
+```
+   generar          cribar              calcular            aprender
+  ─────────      ────────────         ──────────         ─────────────
+  Heurística  →  Cascada HTS      →   DFT (GPAW)    →    Reentrenar el
+  ABX₃ mixtas    3 tiers              PBE / r2SCAN       surrogate con
+                 física → ML → MLFF   bandgap, energía   los resultados
+                                                              │
+                          └───────────────────────────────────┘
+```
+
+Cada vuelta criba más fino, porque el modelo aprende de los cálculos que él
+mismo pidió. Eso es lo que separa el *active learning* de un simple «predecir
+y filtrar».
+
+### 1. Generación
+
+`src/buho/generator/` produce composiciones ABX₃, puras y mixtas en cualquiera
+de los tres sitios, con sus factores de Goldschmidt y octaédrico. Un candidato
+mixto como `Cs₀.₅₂FA₀.₄₈SnI₃` sale con sus fracciones por sitio, no como una
+etiqueta suelta.
+
+### 2. Cribado
+
+`src/buho/screening/cascade.py` es una torre de tres tiers donde cada uno solo
+evalúa lo que sobrevivió al anterior:
+
+| Tier | Qué mira | Coste |
+|---|---|---|
+| 0. Física | Cotas de tolerancia, factor octaédrico, neutralidad de carga | µs |
+| 1. Surrogate | Bandgap predicho ± σ contra la ventana fotovoltaica | ms |
+| 2. MLFF | Energía de formación con MEGNet/M3GNet | s |
+
+El Tier 1 criba **con holgura de σ**: el surrogate tiene un MAE de 0.31 eV y la
+ventana mide 0.7 eV, así que cribar por la estimación puntual tiraría materiales
+cuyo bandgap real sí cae dentro. En una prueba de 100 candidatos, esa holgura
+rescató 10.
+
+### 3. Cálculo
+
+Los supervivientes se materializan como estructuras cristalinas
+(`src/buho/structure/`) y se preparan como trabajos DFT que un runner lanza con
+la concurrencia que aguante la máquina. El paquete `src/dft_cspbi3/` es el que
+sabe de GPAW: relajación, SCF, bandas, DOS, acoplamiento espín-órbita y
+corrección scissor.
+
+### 4. Aprendizaje
+
+`src/buho/active_learning/` acumula los resultados DFT, reentrena el surrogate y
+prepara el siguiente lote. La adquisición usa UCB (`score + β·σ`) para no
+quedarse solo con lo que ya parece bueno.
+
+## La aplicación
+
+Todo lo anterior se conduce desde una aplicación de escritorio con el motor
+empaquetado dentro: no necesita Python, Node ni el repositorio.
+
+- **En vivo**: qué está haciendo el sistema y cuánto le queda, estimado con la
+  mediana real de los trabajos ya terminados.
+- **Cribado**: lanza la cascada y enseña cuántos caen en cada tier.
+- **Candidatos**: los viables, verificados por DFT, ordenados por score
+  fotovoltaico. Exportables a CSV.
+- **Predictor**: precisión del modelo contra los cálculos hechos.
+- **Estructuras**: visor 3D con bolas y palos, exportable a PNG.
+- **Resultados**: informes, figuras y el log de GPAW en vivo.
+- **Lotes**: lanzar, detener y calibrar cuántos trabajos concurrentes aguanta
+  la máquina.
+
+Se descarga desde [Releases](https://github.com/RxWhizz/DFT/releases). Hay una
+versión de escritorio y otra que se abre en el navegador. Ver
+[Monitor (GUI)](#monitor-gui) más abajo.
 
 ## Por qué GPAW sobre VASP
 
@@ -10,7 +87,7 @@ Backend: **GPAW**. Estructuras: **ASE**.
 | Licencia | GPLv3 (open-source) | Comercial (~4 000 €/grupo) |
 | Método PAW | Nativo (`gpaw-setups`) | Nativo (`POTCAR`) |
 | Integración Python | Directa (objetos ASE, API Python) | Limitada (archivos POSCAR/INCAR) |
-| Pseudopotenciales externos | No necesita — datasets propios | Requiere POTCAR compilado |
+| Pseudopotenciales externos | No necesita, trae los suyos | Requiere POTCAR compilado |
 | SOC | `spinorbit_eigenvalues()` + no-colineal | `LSORBIT = .TRUE.` + `LNONCOLLINEAR` |
 | Híbridos | HSE06 vía `xc={'name':'HSE06','omega':0.11}` | `HFSCREEN`, `AEXX` |
 | Ondas planas | `mode=PW(450)` | `ENCUT = 450` |
@@ -21,7 +98,7 @@ Backend: **GPAW**. Estructuras: **ASE**.
 
 | VASP | GPAW | Notas |
 |---|---|---|
-| `ENCUT = 450` | `mode=PW(450)` | Ecut en eV — idéntico significado físico |
+| `ENCUT = 450` | `mode=PW(450)` | Ecut en eV, idéntico significado físico |
 | `POTCAR` (Cs_sv, Pb_d, I) | `setups={'Cs':'Cs.9.PBE','Pb':'Pb.14.PBE','I':'I.7.PBE'}` | Datasets PAW equivalentes |
 | `LSORBIT = .TRUE.` | `spinorbit_eigenvalues(calc)` | SOC perturbativo post-SCF |
 | `LNONCOLLINEAR = .TRUE.` | `nspins=4` en GPAW | SOC no-colineal completo |
@@ -40,36 +117,83 @@ Backend: **GPAW**. Estructuras: **ASE**.
 ## Estructura del repositorio
 
 ```
-dft-cspbi3-gpaw/
-├── README.md
-├── pyproject.toml
-├── requirements.txt
-├── configs/
-│   └── default_params.yaml          # Parámetros DFT centralizados
-├── structures/
-│   ├── alpha_cubic.json             # α-Pm̄3m, 5 átomos
-│   ├── gamma_ortho.json             # γ-Pnma, 20 átomos
-│   └── delta_ortho.json             # δ-Pnma, 20 átomos (fase amarilla)
+DFT/
 ├── src/
-│   └── dft_cspbi3/
-│       ├── __init__.py
-│       ├── structure_builder.py     # crystal() ASE para las 3 fases
-│       ├── calculator_factory.py    # GPAW calculators desde YAML
-│       ├── workflow_manager.py      # relax→scf→bands→dos→soc
-│       ├── convergence.py           # barrido Ecut y k-mesh
-│       ├── postprocessing.py        # extrae Eg, DOS, bandas
-│       ├── bandgap_correction.py    # scissor operator χSOC + χHSE
-│       └── plotting.py              # band structure, DOS, convergencia
-├── scripts/
-│   ├── run_full_workflow.py         # CLI completo (Click)
-│   ├── run_convergence_test.py      # CLI de convergencia
-│   └── apply_scissor.py            # CLI corrección scissor
-└── tests/
-    ├── test_structure_builder.py
-    ├── test_calculator_factory.py
-    ├── test_bandgap_correction.py
-    └── test_postprocessing.py
+│   ├── buho/                     # El pipeline de descubrimiento
+│   │   ├── generator/            #   candidatos ABX3 puros y mixtos
+│   │   ├── screening/cascade.py  #   torre de cribado de 3 tiers
+│   │   ├── structure/            #   construcción de la celda cristalina
+│   │   ├── dft_jobs/             #   prepara los trabajos DFT
+│   │   ├── active_learning/      #   acumula, reentrena, prepara el siguiente
+│   │   ├── phase2_force/         #   relajación con MLFF antes del DFT
+│   │   ├── bench/                #   calibración de rendimiento por máquina
+│   │   └── gpaw_setup.py         #   localiza los datasets PAW
+│   │
+│   ├── dft_cspbi3/               # El cálculo DFT con GPAW
+│   │   ├── structure_builder.py  #   las tres fases de CsPbI3
+│   │   ├── calculator_factory.py #   calculadoras desde YAML
+│   │   ├── workflow_manager.py   #   relax → scf → bands → dos → soc
+│   │   ├── convergence.py        #   barrido de Ecut y k-mesh
+│   │   ├── bandgap_correction.py #   scissor: chi_SOC + chi_HSE
+│   │   └── analysis/             #   óptica, fonones, post-proceso
+│   │
+│   ├── ml_surrogate/             # El predictor de bandgap
+│   │   ├── features.py           #   radios, electronegatividades, t, mu
+│   │   ├── model.py              #   ensemble RF + GBR con sigma bootstrap
+│   │   └── gnn_predictor.py      #   MEGNet/M3GNet, carga diferida
+│   │
+│   └── monitor_api/              # El backend de la interfaz
+│       ├── paths.py              #   bundle / datos / configuración
+│       ├── poller.py             #   vigila los lotes y lanza runners
+│       ├── router.py             #   la API REST
+│       ├── launcher.py           #   arranque, congelado o desde el repo
+│       └── services/             #   cribado, candidatos, ML, actividad…
+│
+├── apps/dft_monitor_flutter/     # La aplicación de escritorio
+├── frontend/                     # El SPA de la versión web
+├── packaging/                    # Specs de PyInstaller y .desktop
+├── scripts/                      # CLIs: runners, benchmarks, figuras, build
+├── configs/                      # Parámetros DFT y del monitor
+├── structures/                   # Fases de referencia y top 8
+├── models/                       # Surrogates entrenados (.pkl + métricas)
+└── tests/                        # 502 tests (461 sin necesitar GPAW)
 ```
+
+Los directorios de datos (`runs/`, `local_runs/`, `data/`, `reports/`,
+`imagenes/`, `calculations/`) son enlaces al volumen de trabajo y no viajan en
+el repositorio.
+
+## Empezar
+
+**Solo mirar y conducir el pipeline**: descarga la aplicación desde
+[Releases](https://github.com/RxWhizz/DFT/releases). No necesita nada instalado:
+
+```bash
+tar xzf dft-monitor-desktop-0.2.0-linux-x86_64.tar.gz
+./dft-monitor-desktop-0.2.0-linux-x86_64/dft_monitor_flutter
+```
+
+**Correr el pipeline de verdad** hace falta GPAW, porque los cálculos son
+reales. Sigue la instalación de abajo y luego:
+
+```bash
+# Comprobar que el entorno está sano antes de nada
+buho doctor
+
+# Una vuelta completa del ciclo: acumula lo calculado, reentrena el surrogate,
+# genera el siguiente lote y lo deja preparado.
+buho active-learning advance
+
+# Lanzar el runner sobre un lote preparado
+buho dft-jobs run-relax
+
+# Medir cuántos trabajos concurrentes y cuántos núcleos aguanta la máquina
+buho bench machine
+```
+
+Desde la aplicación es lo mismo sin comandos: **Cribado** lanza la cascada y
+enseña cuántos caen en cada tier, **Empezar DFT** prepara los supervivientes, y
+**Lotes** los ejecuta con la concurrencia configurada.
 
 ## Instalación
 
@@ -99,19 +223,106 @@ gpaw install-data /path/to/datasets --register
 ```
 
 Datasets usados para CsPbI₃:
-- `Cs.9.PBE` — semicore 5s²5p⁶6s¹ (9 electrones de valencia)
-- `Pb.14.PBE` — semicore 5d¹⁰6s²6p² (14 electrones, **crítico para SOC**)
-- `I.7.PBE` — 5s²5p⁵ (7 electrones)
+- `Cs.9.PBE`: semicore 5s²5p⁶6s¹ (9 electrones de valencia)
+- `Pb.14.PBE`: semicore 5d¹⁰6s²6p² (14 electrones, **crítico para SOC**)
+- `I.7.PBE`: 5s²5p⁵ (7 electrones)
 
 ### Paso 3: Instalar este paquete
 
 ```bash
-git clone https://github.com/rxwhizz/gpaw-repo.git
-cd gpaw-repo/dft-cspbi3-gpaw
+git clone https://github.com/RxWhizz/DFT.git
+cd DFT
 pip install -e ".[dev]"
 ```
 
-## Inicio rápido — α-CsPbI₃ en 5 comandos
+## El CLI
+
+Cada capacidad del pipeline tiene un comando. Después de instalar el paquete
+(Paso 3, arriba) queda `buho` en el PATH:
+
+```bash
+buho --help
+```
+
+Son **30 grupos y 140 comandos**. Lo primero que conviene correr es el
+diagnóstico, que revisa el intérprete, los datasets PAW, los datos y los modelos
+antes de que falle un lote entero:
+
+```bash
+buho doctor
+```
+
+### Una vuelta del ciclo, comando a comando
+
+```bash
+# 1. Generar candidatos ABX3 y construir sus estructuras
+buho generate generate
+buho generate build-structures
+
+# 2. Cribar con la cascada de tres tiers
+buho screening run --n-candidates 500 --n-batches 1
+buho screening tiers              # cuántos caen en cada tier
+
+# 3. Preparar y lanzar los cálculos DFT
+buho dft-jobs prepare-relax
+buho dft-jobs run-relax
+buho dft-jobs collect-results
+
+# 4. Reentrenar el surrogate con lo que salió
+buho ml train-from-dft
+buho active-learning advance
+```
+
+Y para ver dónde va todo sin interrumpir nada:
+
+```bash
+buho status              # estado del workflow, sin cargar GPAW
+buho batches list        # lotes conocidos y su avance
+buho activity runners    # qué procesos están vivos ahora mismo
+buho candidates list     # candidatos viables y verificados
+```
+
+### Los 30 grupos
+
+| Grupo | Cmds | Para qué |
+|---|---:|---|
+| `active-learning` | 4 | Bucle de aprendizaje activo por lotes |
+| `activity` | 2 | Actividad real de runners y procesos |
+| `agent` | 5 | Agente local del monitor |
+| `analysis` | 13 | Análisis científico de salidas DFT |
+| `batches` | 1 | Inspección y control de lotes |
+| `bench` | 16 | Benchmarks, calibración y rendimiento |
+| `calc` | 10 | Cálculos DFT, pasos del workflow y postproceso |
+| `candidates` | 1 | Consulta de candidatos generados o verificados |
+| `data` | 3 | Ingesta y extracción de datasets |
+| `dft-jobs` | 4 | Preparación, recolección y runners de trabajos DFT |
+| `doctor` | 1 | Diagnóstico de entorno, PAW, datos y modelos |
+| `files` | 2 | Acceso controlado a archivos de resultados |
+| `g0w0` | 4 | Correcciones G0W0 |
+| `generate` | 4 | Generación, filtrado y estructuras ABX3 |
+| `jobs` | 2 | Artefactos y logs de trabajos |
+| `ml` | 9 | Surrogates composicionales y predicción |
+| `mlip` | 10 | Entrenamiento, validación y empaquetado MLIP/MACE |
+| `monitor` | 5 | Servidor, rutas y utilidades del monitor |
+| `notify` | 3 | Notificaciones por Telegram |
+| `paw` | 2 | Inspección de datasets PAW de GPAW |
+| `phase2-force` | 10 | Fase 2A: etiquetado DFT de energía y fuerzas |
+| `report` | 6 | Reportes, figuras y visualizaciones |
+| `run` | 1 | Ejecuta el workflow DFT |
+| `screening` | 3 | Cascada de cribado HTS |
+| `status` | 1 | Estado del workflow sin cargar GPAW |
+| `structures` | 2 | Estructuras de referencia y pre-generadas |
+| `top8` | 7 | Flujos comparativos de las top-8 perovskitas |
+| `u-scan` | 6 | Barridos de Hubbard U con r2SCAN/SOC/DOS |
+| `validate` | 1 | Validaciones científicas |
+| `watchdog` | 2 | Guardas de recursos |
+
+Los grupos pesados llevan su propio `--help` con las opciones reales: `buho calc
+steps` lista los pasos del workflow con el estado de cada artefacto, `buho paw
+check` avisa si falta un dataset antes de lanzar nada, y `buho bench machine`
+calibra cuántos trabajos concurrentes y cuántos núcleos aguanta el equipo.
+
+## La parte DFT: α-CsPbI₃ en 5 comandos
 
 ```bash
 # 1. Verificar que la estructura α tiene 5 átomos y a₀ ≈ 6.18 Å
@@ -153,7 +364,7 @@ DRY_RUN=1 calculations/top8_pbe/run_top8_pbe.sh
 # ejecutar PBE para los 8 candidatos
 calculations/top8_pbe/run_top8_pbe.sh
 
-# ejecutar todo automatico: DFT PBE por material y luego AI
+# ejecutar todo automático: DFT PBE por material y luego AI
 scripts/run_top8_auto.sh
 
 # inicializar/supervisar en segundo plano con MPI_N=7 por defecto
@@ -162,7 +373,7 @@ scripts/supervise_top8_auto.sh status
 scripts/supervise_top8_auto.sh phase-log
 scripts/supervise_top8_auto.sh calc-log
 
-# refrescar la tabla despues de corridas parciales o completas
+# refrescar la tabla después de corridas parciales o completas
 .venv/bin/python scripts/setup_top8_pbe.py --collect-only
 ```
 
@@ -175,10 +386,10 @@ Cuando `score` esta incluido y `MPI_N>1`, el runner separa automaticamente la
 corrida: los pasos DFT pesados usan MPI y `score` se ejecuta serial por defecto
 (`SCORE_MPI_N=1`) para evitar escrituras JSON concurrentes.
 
-El runner automatico acepta variables de entorno utiles:
+El runner automático acepta estas variables de entorno:
 
 ```bash
-# prueba sin calculos pesados
+# prueba sin cálculos pesados
 DRY_RUN=1 scripts/run_top8_auto.sh
 
 # correr en MPI y continuar aunque un material falle
@@ -197,12 +408,12 @@ RUN_AI=0 PHASES="CsSnI3" scripts/run_top8_auto.sh
 RUN_DFT=0 RUN_AI=1 scripts/run_top8_auto.sh
 ```
 
-Los logs quedan en `calculations/top8_pbe/logs/` y el resumen de ejecucion en
+Los logs quedan en `calculations/top8_pbe/logs/` y el resumen de ejecución en
 `calculations/top8_pbe/top8_auto_status.csv`.
 El supervisor guarda el unit activo en `calculations/top8_pbe/top8_auto.unit`;
 para detenerlo usa `scripts/supervise_top8_auto.sh stop`.
 
-### Paso opcional: fisica dispositivo OghmaNano
+### Paso opcional: física de dispositivo con OghmaNano
 
 OghmaNano no es ML; es un simulador físico de dispositivo
 drift-diffusion/óptica. En este repo queda como paso DFT opcional para preparar
@@ -294,11 +505,11 @@ pueden separar y corregir independientemente:
 | HSE06 (sin SOC) | 1.76 | +0.03 eV (casi exacto) | ~30× |
 | HSE06 + SOC | 1.55 | −0.18 eV | ~60× |
 | **Scissor (PBE+D3 + χSOC + χHSE)** | **~1.52** | **~−0.2 eV** | **~5×** |
-| Experimento (α, 5K) | 1.73 | — | — |
+| Experimento (α, 5K) | 1.73 | n/d | n/d |
 
 **Estrategia scissor (Eg = E_PBE+D3 + χSOC + χHSE):**
-- χSOC = Eg(PBE+SOC) − Eg(PBE) ≈ −0.84 eV — SOC reduce dramáticamente Eg en Pb
-- χHSE = Eg(HSE06) − Eg(PBE) ≈ +0.32 eV — HSE06 abre el gap
+- χSOC = Eg(PBE+SOC) − Eg(PBE) ≈ −0.84 eV. El SOC reduce dramáticamente Eg en Pb
+- χHSE = Eg(HSE06) − Eg(PBE) ≈ +0.32 eV. HSE06 abre el gap
 - Ambos calculados en celdas pequeñas y transferidos al sistema real
 - Equivalente a HSE06+SOC pero **~10× más barato**
 
@@ -354,7 +565,7 @@ e_kn, s_kn = spinorbit_eigenvalues(calc, theta=0, phi=0)
 ```python
 from gpaw import GPAW, PW
 calc = GPAW(mode=PW(450), xc='PBEsol', nspins=4, ...)
-# Requiere cálculo SCF completo no-colineal — ~4× más costoso
+# Requiere cálculo SCF completo no-colineal, ~4× más costoso
 ```
 
 ## Monitor (GUI)
@@ -436,8 +647,8 @@ bash scripts/build_web.sh      # → dist/dft-monitor-<versión>-<plataforma>.ta
 ```
 
 Compila el SPA, preconvierte las estructuras (con eso `ase` no entra en el
-artefacto), congela con PyInstaller y **prueba el resultado** —salud, SPA,
-estructuras y una predicción ML— antes de comprimir. Se distribuye como
+artefacto), congela con PyInstaller y **prueba el resultado** (salud, SPA,
+estructuras y una predicción ML) antes de comprimir. Se distribuye como
 directorio comprimido y no como ejecutable único porque `--onefile` con este
 tamaño descomprimiría todo a un temporal en cada arranque.
 
@@ -545,7 +756,7 @@ suficiente; si aun así se expone, debe ir tras un proxy con TLS y
 | `POST /api/notify/*` | Envío manual a Telegram |
 | `WS /ws/events` | Cambios de estado en vivo, con `seq` y aviso de huecos |
 
-**Acciones de control** — destructivas, confirmadas en la UI y registradas en `logs/monitor_audit.jsonl`:
+**Acciones de control**, destructivas, confirmadas en la UI y registradas en `logs/monitor_audit.jsonl`:
 
 | Endpoint | Descripción |
 |---|---|
@@ -564,19 +775,29 @@ suficiente; si aun así se expone, debe ir tras un proxy con TLS y
 ## Tests
 
 ```bash
-# Todos los tests (no requiere GPAW instalado — usan mocks)
-pytest tests/ -v
+# La suite completa
+PYTHONPATH=src pytest tests/ -q
+
+# Solo el monitor, el cribado y el empaquetado: los más rápidos
+PYTHONPATH=src pytest tests/test_monitor_api.py tests/test_packaging.py \
+    tests/test_activity.py tests/test_seguimiento_lote.py \
+    tests/test_geometria_abx3.py tests/test_gpaw_setup.py -q
 
 # Con cobertura
-pytest tests/ --cov=dft_cspbi3 --cov-report=html
-
-# Test específico
-pytest tests/test_structure_builder.py -v
-pytest tests/test_bandgap_correction.py -v
+PYTHONPATH=src pytest tests/ --cov=src --cov-report=html
 ```
 
-Los tests de `test_calculator_factory.py` y `test_postprocessing.py` usan
-`unittest.mock` para parchear el módulo `gpaw`, por lo que corren sin GPAW instalado.
+**531 tests pasan y 7 se saltan; ninguno falla.** Los 7 saltados dependen del
+entorno y dicen por qué al saltarse: `.gpw` de r2scan que solo lee la GPAW que
+los escribió, y el mezclador MSR1, que únicamente existe en GPAW master.
+
+Los tests no dependen del orden en que corran. Que lo hicieran costó caro:
+pytest importa **todos** los ficheros de test durante la recolección, así que
+un fichero que sustituía `gpaw` por una maqueta al importarse se la dejaba
+puesta a los que corrían antes que él por orden alfabético. Salían fallos como
+«'gpaw' is not a package» que no se reproducían en aislamiento. La regla que
+queda: las maquetas se instalan dentro de un fixture, nunca al importar el
+módulo, y se retiran al terminar.
 
 ## Desarrollo
 
@@ -604,4 +825,4 @@ Si usas este código, cita herramientas base:
 
 ## Licencia
 
-GPLv3 — compatible con GPAW y ASE.
+GPLv3, compatible con GPAW y ASE.

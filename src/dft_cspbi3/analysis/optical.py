@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # α(ω) [cm⁻¹] = (ω / ħc) × ε₂(ω) / n(ω) con ω en eV
 _C_CM_PER_S = 2.998e10
 _HBAR_EV_S  = 6.582e-16
+_EV_CM = 1.239841984e-4
 
 # ASTM G173-03 AM1.5G. 18 puntos, 0.31-4.50 eV [W/m²/eV].
 # Derivado de tabla estándar λ (280-4000 nm). E = hc/λ.
@@ -30,6 +31,42 @@ _AM15G_WATT = np.array([
 
 # Referencia normalización.
 _AM15G_NORM = float(np.trapezoid(_AM15G_WATT, _AM15G_EV))
+
+
+def _absorption_from_k(omega_eV: np.ndarray, k_omega: np.ndarray) -> np.ndarray:
+    """Absorcion alpha desde coeficiente de extincion k, en cm^-1."""
+    omega = np.asarray(omega_eV, dtype=float)
+    k = np.asarray(k_omega, dtype=float)
+    alpha = np.zeros_like(omega, dtype=float)
+    mask = omega > 0.0
+    wavelength_cm = np.zeros_like(omega, dtype=float)
+    wavelength_cm[mask] = _EV_CM / omega[mask]
+    alpha[mask] = 4.0 * np.pi * k[mask] / wavelength_cm[mask]
+    return alpha
+
+
+def _apply_onset_override(
+    omega_eV: np.ndarray,
+    k_omega: np.ndarray,
+    onset_eV: float,
+    *,
+    urbach_energy_meV: float = 25.0,
+) -> np.ndarray:
+    """Impone una cola de Urbach suave por debajo del onset experimental."""
+    omega = np.asarray(omega_eV, dtype=float)
+    corrected = np.asarray(k_omega, dtype=float).copy()
+    below = omega < onset_eV
+    if not np.any(below):
+        return corrected
+
+    above = np.where(~below)[0]
+    if len(above):
+        anchor = max(float(corrected[above[0]]), 1e-12)
+    else:
+        anchor = max(float(np.nanmax(corrected)), 1e-12)
+    urbach_eV = max(float(urbach_energy_meV) / 1000.0, 1e-6)
+    corrected[below] = anchor * np.exp((omega[below] - onset_eV) / urbach_eV)
+    return corrected
 
 
 @dataclass
@@ -81,6 +118,8 @@ def compute_optical_spectrum(
     eta_eV: float = 0.1,
     onset_threshold_cm1: float = 1e4,
     scissor_eV: Optional[float] = None,
+    onset_eV_override: Optional[float] = None,
+    urbach_energy_meV: float = 25.0,
     alpha_sample_eV: tuple = (1.5, 2.0, 2.5, 3.0),
 ) -> OpticalResult:
     """Calcula función dieléctrica óptica con respuesta lineal GPAW."""
@@ -152,13 +191,24 @@ def compute_optical_spectrum(
     n_w = np.real(sqrt_eps)
     k_w = np.imag(sqrt_eps)
 
-    # α(ω) [cm⁻¹] = (ω / ħc) × ε₂ / n. Evita n→0.
-    n_safe = np.where(n_w < 1e-6, 1.0, n_w)
-    alpha_w = (omega_w / (_HBAR_EV_S * _C_CM_PER_S)) * eps2_w / n_safe
+    if onset_eV_override is not None:
+        k_w = _apply_onset_override(
+            omega_w,
+            k_w,
+            float(onset_eV_override),
+            urbach_energy_meV=urbach_energy_meV,
+        )
+        flags.append(f"ONSET_OVERRIDE:{float(onset_eV_override):.4f}eV")
+        flags.append(f"URBACH_TAIL:{float(urbach_energy_meV):.1f}meV")
+
+    alpha_w = _absorption_from_k(omega_w, k_w)
 
     # Inicio absorción.
-    onset_mask = alpha_w > onset_threshold_cm1
-    onset_eV = float(omega_w[onset_mask][0]) if onset_mask.any() else None
+    if onset_eV_override is not None:
+        onset_eV = float(onset_eV_override)
+    else:
+        onset_mask = alpha_w > onset_threshold_cm1
+        onset_eV = float(omega_w[onset_mask][0]) if onset_mask.any() else None
 
     # ε∞
     eps_inf = float(eps1_w[1]) if len(eps1_w) > 1 else None
