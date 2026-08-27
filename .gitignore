@@ -85,3 +85,17 @@ apps/dft_monitor_flutter/test/_alpha.cif
 configs/*.bak-*
 configs/*.save
 openapitools.json
+
+# Secretos: el .env nunca se comitea. La plantilla .env.example sí.
+.env
+.env.*
+!.env.example
+
+# Configuración de asistentes y de IDE: no pertenece al repositorio.
+.claude/
+.codex
+.codex/
+.cursor/
+.aider*
+.idea/
+.vscode/

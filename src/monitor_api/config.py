@@ -10,11 +10,17 @@ from pathlib import Path
 
 import yaml
 
-from . import paths
+from . import entorno, paths
 
 
 def load_config(config_path: Path | None = None) -> dict:
-    """Lee monitor.yaml y le superpone monitor.local.yaml si existe."""
+    """Lee monitor.yaml y le superpone monitor.local.yaml si existe.
+
+    Antes carga el `.env`, para que quien lea la configuración tenga ya las
+    claves en el entorno. El YAML no las lleva: lo que trae son los huecos
+    vacíos y un comentario diciendo qué variable los rellena.
+    """
+    entorno.cargar()
     path = config_path or paths.config_file()
     cfg: dict = {}
     if path.exists():

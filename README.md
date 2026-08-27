@@ -710,6 +710,29 @@ python scripts/dump_openapi.py     # vuelca src/monitor_api/openapi.json
 cd frontend && npm run gen:api     # regenera src/lib/api.d.ts
 ```
 
+### Secretos
+
+Las claves no van en `monitor.yaml`: ese fichero se comparte, se copia al
+directorio de configuración al instalar y se edita a mano, así que es el
+candidato natural a colarse en un commit. Van en un `.env`, que está
+gitignorado y no viaja dentro de los binarios publicados.
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Para qué |
+|---|---|
+| `DFT_MONITOR_TOKEN` | Token compartido de la interfaz web. Ponerlo activa la autenticación |
+| `DFT_MONITOR_SESSION_SECRET` | Firma de las cookies. Vacío genera uno nuevo en cada arranque y cierra las sesiones abiertas |
+| `DFT_MONITOR_TELEGRAM_BOT_TOKEN` | Token de @BotFather. Vacío desactiva el bot |
+| `DFT_MONITOR_TELEGRAM_CHAT_ID` | Chat autorizado; los mensajes de cualquier otro se ignoran |
+
+El `.env` se busca en la ruta que indique `DFT_ENV_FILE`, luego junto a
+`monitor.yaml`, luego en la raíz de datos y por último en el directorio actual.
+**Lo que ya esté en el entorno gana siempre**, así que un
+`DFT_MONITOR_TOKEN=xxx buho monitor serve` puntual no lo pisa un fichero viejo.
+
 ### Acceso remoto y seguridad
 
 El monitor puede matar procesos y lanzar runners, así que:

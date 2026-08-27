@@ -12,10 +12,13 @@ ve pisado por un fichero olvidado de hace meses.
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from . import paths
+
+log = logging.getLogger(__name__)
 
 #: Variable para apuntar a un `.env` concreto, saltándose la búsqueda.
 VARIABLE_RUTA = "DFT_ENV_FILE"
@@ -69,6 +72,15 @@ def cargar(data_root: Path | None = None) -> Path | None:
         try:
             from dotenv import load_dotenv
         except ImportError:
+            # Degradar en silencio aquí sería peligroso: habría un .env con las
+            # claves puestas, nadie las leería, y el monitor arrancaría sin
+            # autenticación como si esa fuera la configuración deseada.
+            log.warning(
+                "Hay un .env en %s pero python-dotenv no está instalado: "
+                "sus claves NO se han cargado. Instálalo con "
+                "'pip install python-dotenv' o exporta las variables a mano.",
+                ruta,
+            )
             return None
         # override=False: el entorno real manda sobre el fichero.
         load_dotenv(ruta, override=False)

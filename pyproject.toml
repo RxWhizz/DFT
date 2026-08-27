@@ -36,6 +36,9 @@ dependencies = [
     # models/*.pkl se serializaron con 1.8.0: una versión distinta puede
     # fallar al despicklear (lo reporta GET /api/models).
     "scikit-learn>=1.8",
+    # Los secretos se leen de .env. Estaba llegando de rebote como dependencia
+    # de otra cosa, y apoyarse en eso para algo de seguridad es frágil.
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

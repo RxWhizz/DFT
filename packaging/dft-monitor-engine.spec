@@ -34,6 +34,10 @@ for met in sorted((ROOT / "models").glob("surrogate_*.metrics.json")):
     datas.append((str(met), "models"))
 
 hiddenimports = [
+    # Los secretos se leen de .env. El import es perezoso, así que sin
+    # declararlo aquí el binario podría quedarse sin él y no cargar
+    # ninguna clave, en silencio.
+    "dotenv",
     "uvicorn.lifespan.on",
     "uvicorn.lifespan.off",
     "uvicorn.loops.auto",

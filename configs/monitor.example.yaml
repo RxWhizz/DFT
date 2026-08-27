@@ -91,8 +91,9 @@ monitor:
   # Se activa SOLA en cuanto hay token. Sin token queda desactivada y
   # scripts/start_monitor.py se niega a escuchar en 0.0.0.0.
   auth:
-    # Token compartido. Puede venir también de la variable de entorno
-    # DFT_MONITOR_TOKEN, que tiene prioridad sobre este valor.
+    # Token compartido. El sitio recomendado es el `.env`, en la variable
+    # DFT_MONITOR_TOKEN, que además tiene prioridad sobre lo que se escriba
+    # aquí: este fichero se copia y se comparte, y el `.env` está gitignorado.
     # Genera uno con:  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
     token: ""
 
@@ -102,7 +103,7 @@ monitor:
 
     # Clave de firma de la cookie de sesión. Si se omite se genera una nueva en
     # cada arranque, lo que invalida las sesiones abiertas al reiniciar.
-    # También se puede pasar por DFT_MONITOR_SESSION_SECRET.
+    # Ponla en el `.env` como DFT_MONITOR_SESSION_SECRET.
     session_secret: ""
 
     # Validez de la sesión (7 días por defecto).
@@ -116,7 +117,9 @@ monitor:
     audit_path: logs/monitor_audit.jsonl
 
 telegram:
-  # Token de @BotFather. DEJAR VACÍO desactiva el bot (no es un error).
+  # Credenciales del bot. Van en el `.env`, como
+  # DFT_MONITOR_TELEGRAM_BOT_TOKEN y DFT_MONITOR_TELEGRAM_CHAT_ID, que ganan a
+  # lo que haya aquí. Dejarlas vacías desactiva el bot: no es un error.
+  # El token lo da @BotFather; los mensajes de otros chats se ignoran.
   bot_token: ""
-  # ID del chat autorizado. Los mensajes de cualquier otro chat se ignoran.
   chat_id: ""

@@ -43,6 +43,10 @@ for met in sorted((ROOT / "models").glob("surrogate_*.metrics.json")):
 
 # ── Imports que PyInstaller no ve ────────────────────────────────────────────
 hiddenimports = [
+    # Los secretos se leen de .env. El import es perezoso, así que sin
+    # declararlo aquí el binario podría quedarse sin él y no cargar
+    # ninguna clave, en silencio.
+    "dotenv",
     # uvicorn carga sus implementaciones por nombre en tiempo de ejecución.
     "uvicorn.lifespan.on",
     "uvicorn.lifespan.off",

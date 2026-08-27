@@ -9,13 +9,36 @@ import pytest
 from monitor_api import entorno
 
 
+_VARIABLES = (
+    "DFT_MONITOR_TOKEN",
+    "DFT_MONITOR_SESSION_SECRET",
+    "DFT_MONITOR_TELEGRAM_BOT_TOKEN",
+    "DFT_MONITOR_TELEGRAM_CHAT_ID",
+    entorno.VARIABLE_RUTA,
+)
+
+
 @pytest.fixture(autouse=True)
-def _entorno_limpio(monkeypatch):
-    """Aísla las variables que tocan estos tests."""
-    for var in ("DFT_MONITOR_TOKEN", "DFT_MONITOR_SESSION_SECRET",
-                "DFT_MONITOR_TELEGRAM_BOT_TOKEN", "DFT_MONITOR_TELEGRAM_CHAT_ID",
-                entorno.VARIABLE_RUTA):
-        monkeypatch.delenv(var, raising=False)
+def _entorno_limpio():
+    """Aísla las variables que tocan estos tests, antes y después.
+
+    Hay que restaurarlas a mano: `load_dotenv` escribe directamente en
+    `os.environ`, así que `monkeypatch` no se entera y no puede deshacerlo. Sin
+    esto, el primer test dejaba un DFT_MONITOR_TOKEN puesto para el resto de la
+    sesión y `test_packaging` empezaba a recibir 401 en endpoints que espera
+    abiertos.
+    """
+    previos = {v: os.environ.get(v) for v in _VARIABLES}
+    for var in _VARIABLES:
+        os.environ.pop(var, None)
+
+    yield
+
+    for var, valor in previos.items():
+        if valor is None:
+            os.environ.pop(var, None)
+        else:
+            os.environ[var] = valor
 
 
 def test_carga_desde_el_directorio_actual(tmp_path, monkeypatch):

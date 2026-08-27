@@ -43,6 +43,27 @@ _ERROR_RE = re.compile(r"Traceback|MemoryError|Segfault|Killed", re.I)
 
 # ── Helpers reutilizados ──────────────────────────────────────────────────────
 
+def _telegram_bot_token(cfg: dict) -> str:
+    """Token del bot: primero el entorno, y el YAML solo como respaldo.
+
+    Las credenciales de Telegram vivían únicamente en `monitor.yaml`. Ese
+    fichero se edita a mano y se copia al directorio XDG al instalar, así que
+    es el candidato natural a colarse en un commit o en un artefacto. Con esto
+    el sitio recomendado pasa a ser el `.env`, que está gitignorado, y el YAML
+    puede quedarse con los huecos vacíos.
+    """
+    return os.environ.get("DFT_MONITOR_TELEGRAM_BOT_TOKEN", "") or str(
+        cfg.get("bot_token", "") or ""
+    )
+
+
+def _telegram_chat_id(cfg: dict) -> str:
+    """Chat de destino: mismo orden que el token."""
+    return os.environ.get("DFT_MONITOR_TELEGRAM_CHAT_ID", "") or str(
+        cfg.get("chat_id", "") or ""
+    )
+
+
 def _is_pid_alive(pid: int) -> bool:
     return psutil.pid_exists(pid)
 
@@ -759,8 +780,8 @@ class DFTPoller:
 
         # Telegram solo para problemas
         if event_name is not None:
-            token   = self.telegram.get("bot_token", "")
-            chat_id = self.telegram.get("chat_id", "")
+            token   = _telegram_bot_token(self.telegram)
+            chat_id = _telegram_chat_id(self.telegram)
             if token and chat_id:
                 await send_telegram(token, chat_id, event_name, snap.job_id, data)
 
@@ -805,8 +826,8 @@ class DFTPoller:
         self._batch_done_notified = True
         n_conv = sum(1 for s in self._snapshots.values() if s.status == "converged")
         n_fail = sum(1 for s in self._snapshots.values() if s.status in ("failed", "stopped"))
-        token   = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        token   = _telegram_bot_token(self.telegram)
+        chat_id = _telegram_chat_id(self.telegram)
 
         next_batch = self._find_next_batch() if self._auto_advance() else None
         if not self._auto_advance():
@@ -940,8 +961,8 @@ class DFTPoller:
         cores = self.cfg.get("runner_cores", 8)
         self._launch_runner(self.runs_dir)
         log.warning("Runner muerto detectado — relanzando para %s", self.runs_dir.name)
-        token   = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        token   = _telegram_bot_token(self.telegram)
+        chat_id = _telegram_chat_id(self.telegram)
         if token and chat_id:
             await send_telegram(token, chat_id, "PING", "runner-revived", {
                 "_raw": (
@@ -959,7 +980,7 @@ class DFTPoller:
         if threshold <= 0 or not self.runs_dir.exists():
             return
         token = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        chat_id = _telegram_chat_id(self.telegram)
 
         for job_dir in sorted(self.runs_dir.iterdir()):
             if not job_dir.is_dir():
@@ -1024,7 +1045,7 @@ class DFTPoller:
         if not self.runs_dir.exists():
             return
         token = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        chat_id = _telegram_chat_id(self.telegram)
 
         for job_dir in sorted(self.runs_dir.iterdir()):
             if not job_dir.is_dir():
@@ -1087,8 +1108,8 @@ class DFTPoller:
         if mtime <= getattr(self, "_last_surrogate_mtime", 0):
             return
         self._last_surrogate_mtime = mtime
-        token   = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        token   = _telegram_bot_token(self.telegram)
+        chat_id = _telegram_chat_id(self.telegram)
         if not token or not chat_id:
             return
         try:
@@ -1112,8 +1133,8 @@ class DFTPoller:
         """Envía alerta si algún socket CPU supera el umbral configurado."""
         from .sysmetrics import collect as collect_metrics
         threshold = self.cfg.get("temp_alert_celsius", 85)
-        token   = self.telegram.get("bot_token", "")
-        chat_id = self.telegram.get("chat_id", "")
+        token   = _telegram_bot_token(self.telegram)
+        chat_id = _telegram_chat_id(self.telegram)
         if not token or not chat_id:
             return
         try:
