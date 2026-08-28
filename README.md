@@ -1,23 +1,25 @@
+# PEROVOWL: descubrimiento de perovskitas fotovoltaicas
+
+_Cribado activo de perovskitas ABX₃ con modelos ligeros, GPAW/ASE y un monitor
+de escritorio._
+
+![Python >=3.11](https://img.shields.io/badge/python-%3E%3D3.11-3776AB?logo=python&logoColor=white)
+![License GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-4B5563)
+![DFT GPAW](https://img.shields.io/badge/DFT-GPAW-0B7285)
+![Structures ASE](https://img.shields.io/badge/structures-ASE-2F9E44)
+
 ![](docs/screenshots/monitor-dft-candidatos.png)
+
+PEROVOWL busca perovskitas de haluro ABX₃ con un bandgap útil para células solares.
+Genera composiciones por millares, las criba con modelos baratos, calcula con
+DFT solo las que sobreviven, y usa esos cálculos para cribar mejor la vuelta
+siguiente.
+
+## Interface
 
 ![](docs/screenshots/monitor-dft-estructura.png)
 
 ![](docs/screenshots/monitor-dft-cribado.png)
-
-# PEROVOWL: descubrimiento de perovskitas fotovoltaicas
-
-Busca perovskitas de haluro ABX₃ con un bandgap útil para células solares. No
-las prueba una a una: genera composiciones por millares, las criba con modelos
-baratos, calcula con DFT solo las que sobreviven, y usa esos cálculos para
-cribar mejor la vuelta siguiente.
-
-El espacio de búsqueda son 5 cationes A (Cs, Rb, K, MA, FA), 3 metales B (Pb,
-Sn, Ge) y 3 haluros X (I, Br, Cl), puros o mezclados dentro de cada sitio. Con
-fracciones continuas el espacio es infinito, así que se recorre por lotes
-reproducibles en vez de enumerarlo.
-
-Motor de cálculo: **GPAW**. Estructuras: **ASE**. Se conduce desde una
-aplicación de escritorio o desde la línea de comandos.
 
 ## Las dos mitades
 
@@ -445,6 +447,4 @@ Si usas este código, cita herramientas base:
 - PBEsol: J. P. Perdew et al., *Phys. Rev. Lett.* **100**, 136406 (2008)
 - HSE06: J. Heyd, G. E. Scuseria, M. Ernzerhof, *J. Chem. Phys.* **118**, 8207 (2003)
 - DFT-D3: S. Grimme et al., *J. Chem. Phys.* **132**, 154104 (2010)
-
-
 
