@@ -1,3 +1,9 @@
+![](docs/screenshots/monitor-dft-candidatos.png)
+
+![](docs/screenshots/monitor-dft-estructura.png)
+
+![](docs/screenshots/monitor-dft-cribado.png)
+
 # BUHO: descubrimiento de perovskitas fotovoltaicas
 
 Busca perovskitas de haluro ABX₃ con un bandgap útil para células solares. No
@@ -439,7 +445,6 @@ Si usas este código, cita herramientas base:
 - PBEsol: J. P. Perdew et al., *Phys. Rev. Lett.* **100**, 136406 (2008)
 - HSE06: J. Heyd, G. E. Scuseria, M. Ernzerhof, *J. Chem. Phys.* **118**, 8207 (2003)
 - DFT-D3: S. Grimme et al., *J. Chem. Phys.* **132**, 154104 (2010)
-
 
 
 

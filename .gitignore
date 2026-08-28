@@ -15,6 +15,8 @@ __pycache__/
 *.png
 *.jpg
 *.pdf
+!docs/screenshots/
+!docs/screenshots/*.png
 *.hdf5
 *.h5
 *.pkl
