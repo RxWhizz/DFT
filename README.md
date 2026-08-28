@@ -23,9 +23,6 @@ siguiente.
 
 ## Las dos mitades
 
-El repositorio hace dos cosas distintas, y entender dónde acaba una y empieza la
-otra explica casi todo lo demás.
-
 **Descubrimiento** (`src/buho/`): mucho material, poco cálculo por material.
 Recorre el espacio composicional buscando candidatos prometedores. El DFT que
 usa es deliberadamente barato: PBE, Γ-only, single-point. No busca el número
@@ -37,9 +34,7 @@ relajación, SCF, bandas, DOS, acoplamiento espín-órbita, meta-GGA (SCAN,
 r²SCAN), híbridos (HSE06), fonones, masas efectivas, límite de
 Shockley-Queisser. Ahí sí importa el número exacto.
 
-El puente entre las dos son las **top-8**: los mejores candidatos del cribado
-pasan al workflow profundo, y lo que este devuelve reentrena el modelo que hace
-el cribado.
+
 
 ## El ciclo
 
