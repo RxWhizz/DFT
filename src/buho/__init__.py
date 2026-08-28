@@ -1,12 +1,25 @@
-"""BUHO — Pipeline de Descubrimiento de Perovskitas ABX3.
+"""BUHO: pipeline de descubrimiento de perovskitas ABX3.
 
-Fase 1: Generación → Filtrado → Estructuras → DFT básico (r2SCAN)
+Genera composiciones, las criba con una cascada de tres tiers (física,
+surrogate de bandgap, MLFF de estabilidad), calcula con DFT solo las que
+sobreviven y reentrena el surrogate con lo calculado.
 
-Uso rápido:
-    python -m buho.generator generate --config config/generator.yaml
-    python -m buho.generator filter   --config config/generator.yaml
-    python -m buho.generator build-structures --top 500
-    python -m buho.dft prepare-relax  --top 500
-    python -m buho.dft collect-results
+Todo es accesible por comandos:
+
+    buho doctor                 # entorno, datasets PAW, datos y modelos
+    buho generate generate      # componer candidatos
+    buho screening run          # cribar
+    buho dft-jobs prepare-relax # preparar los calculos
+    buho active-learning advance
+
+La version sale de los metadatos de la distribucion instalada, que hatch toma
+de src/monitor_api/__init__.py. Tenerla escrita aqui a mano la dejaba clavada
+en 0.1.0 mientras el resto del proyecto ya iba por 0.2.0, y `buho --version`
+mentia.
 """
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version as _version
+
+try:
+    __version__ = _version("buho")
+except PackageNotFoundError:  # ejecutado desde el repo, sin instalar
+    __version__ = "0.2.0"

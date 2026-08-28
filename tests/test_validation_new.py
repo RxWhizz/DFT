@@ -178,7 +178,7 @@ def _build_mocks():
         "dos": {"kpts": [12,12,12]},
         "soc": {"mode": "perturbative", "theta": 0, "phi": 0},
         "hse06": {"ecut": 450, "kpts": [4,4,4], "convergence": {"energy": 1e-6}},
-        "paw_datasets": {"Cs": "Cs.9.PBE", "Pb": "Pb.14.PBE", "I": "I.7.PBE"},
+        "paw_datasets": {},  # los de serie ya son semicore: Cs.PBE=9e, Pb.PBE=14e, I.PBE=7e
         "cutoff": {"pw_ecut": 450, "convergence_range": [300, 350, 400, 450, 500]},
     })
     _instalar_stub("yaml", yaml_mod)

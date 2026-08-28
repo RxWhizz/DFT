@@ -3,11 +3,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dft-cspbi3-gpaw"
+name = "buho"
 dynamic = ["version"]
-description = "Simulaciones DFT automatizadas de perovskita haluro CsPbI3 con GPAW"
+description = "Descubrimiento de perovskitas ABX3 fotovoltaicas: cribado en cascada, DFT con GPAW y aprendizaje activo"
 readme = "README.md"
-license = { text = "GPL-3.0" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [
     { name = "DFT-CsPbI3 Contributors" },

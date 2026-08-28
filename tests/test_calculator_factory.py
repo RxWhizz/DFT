@@ -72,13 +72,17 @@ class TestConfigLoading:
     def test_paw_datasets(self, factory):
         """`paw_datasets` existe y es un mapa; vacío significa «los de serie».
 
-        Aquí se afirmaba `Cs.9.PBE`, `Pb.14.PBE` e `I.7.PBE`, que son setups
-        semicore. No los pide la config, que trae `paw_datasets: {}` desde el
-        commit c14745b0f, ni existen en el `gpaw_data` instalado, que solo
-        distribuye los PBE de serie. El test exigía una configuración que
-        habría hecho fallar todos los cálculos con «setup not found», así que
-        pasar a semicore es una decisión de metodología pendiente, no algo que
-        este test deba dar por hecho.
+        Aquí se afirmaba `Cs.9.PBE`, `Pb.14.PBE` e `I.7.PBE`. Esos ficheros no
+        existen, y pedirlos habría hecho fallar todos los cálculos con «setup
+        not found»: GPAW usa el sufijo numérico solo para variantes que NO son
+        la de serie (`Ag.11`, `Cr.14`, `Ir.9`), y para Cs, Pb e I no hay
+        ninguna.
+
+        Ojo, que la intención sí era correcta: los datasets de serie YA son los
+        semicore. `SetupData("Cs","PBE").Nv` da 9, `Pb` da 14 con el 5d dentro
+        (lo que importa para SOC) e `I` da 7, exactamente la valencia que el
+        test quería asegurar. Por eso `paw_datasets: {}` es lo correcto y no un
+        olvido: no hay ninguna migración pendiente a semicore.
         """
         paw = factory.config["paw_datasets"]
         assert isinstance(paw, dict)

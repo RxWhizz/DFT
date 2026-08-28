@@ -1,10 +1,14 @@
-"""Prepara directorios y scripts para relajaciones DFT básicas (r2SCAN).
+"""Prepara directorios y scripts para las relajaciones DFT del cribado.
+
+El funcional es PBE. El fichero de salida se sigue llamando `r2scan.txt`
+por compatibilidad: el recolector lo busca por ese nombre y renombrarlo
+dejaría ilegibles las corridas que ya están en disco.
 
 Crea para cada candidato:
     runs/relax_basic/{candidate_id}/
     ├── structure.cif
     ├── POSCAR
-    ├── input.py          # r2SCAN via GPAWCalculatorFactory + FIRE
+    ├── input.py          # PBE via GPAWCalculatorFactory + FIRE
     ├── metadata.json
     ├── run.sh            # script de ejecución
     ├── status.json       # {"status": "pending", ...}
@@ -163,7 +167,7 @@ print(f"Done. E={e_total} eV  t={elapsed:.0f}s  mode={mode_label}  converged={co
 
 _RUN_TEMPLATE = '''\
 #!/bin/bash
-# Relajación r2SCAN — {formula}
+# Relajación PBE del cribado: {formula}
 # Generado por BUHO
 
 cd "$(dirname "$0")"

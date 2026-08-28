@@ -1,8 +1,14 @@
-"""CLI para trabajos DFT básicos (r2SCAN).
+"""CLI para los trabajos DFT del cribado.
+
+El funcional es PBE, no r2SCAN: r2SCAN se descartó aquí por coste (a un core
+son unos 195 s por iteración, unos cinco días para 482 superceldas) y queda
+reservado para la caracterización profunda.
 
 Uso:
-    python -m buho.dft prepare-relax  --top 500 [--config ...]
-    python -m buho.dft collect-results [--relax-dir runs/relax_basic]
+    buho dft-jobs prepare-relax --top 500 [--config ...]
+    buho dft-jobs collect-results [--relax-dir runs/relax_basic]
+
+El módulo se invoca como `python -m buho.dft_jobs`; `buho.dft` no existe.
 """
 from __future__ import annotations
 
@@ -23,7 +29,7 @@ def _load_config(config: str) -> dict:
 
 @click.group()
 def cli():
-    """BUHO — trabajos DFT básicos (r2SCAN)."""
+    """Trabajos DFT del cribado: preparar, lanzar y recolectar."""
 
 
 @cli.command("prepare-relax")

@@ -30,7 +30,7 @@ import pandas as pd
 
 
 class ResultCollector:
-    """Recoge resultados de relajaciones DFT básicas (r2SCAN).
+    """Recoge resultados de las relajaciones DFT del cribado (PBE).
 
     Parámetros
     ----------
