@@ -4,7 +4,7 @@
 
 ![](docs/screenshots/monitor-dft-cribado.png)
 
-# BUHO: descubrimiento de perovskitas fotovoltaicas
+# PEROVOWL: descubrimiento de perovskitas fotovoltaicas
 
 Busca perovskitas de haluro ABX₃ con un bandgap útil para células solares. No
 las prueba una a una: genera composiciones por millares, las criba con modelos
