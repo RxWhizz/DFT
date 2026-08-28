@@ -18,7 +18,7 @@ import json
 import platform
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -128,7 +128,7 @@ def _build_formula(A_sp: list, B_sp: list, X_sp: list,
 
 def _metadata(config_hash: str) -> dict:
     return {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "hostname": platform.node(),
         "python_version": sys.version.split()[0],
         "config_hash": config_hash,

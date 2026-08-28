@@ -1,3 +1,4 @@
+perovskite-utils @ git+https://github.com/RxWhizz/perovskite-utils@v0.1.0
 gpaw>=24.1.0
 ase>=3.23.0
 numpy>=1.26
