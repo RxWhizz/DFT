@@ -76,16 +76,70 @@ cat dist/SHA256SUMS
 ## 5. Publicar
 
 ```bash
-gh release create v0.2.0 \
-  dist/dft-monitor-desktop-0.2.0-linux-x86_64.tar.gz \
-  dist/dft-monitor-web-0.2.0-linux-x86_64.tar.gz \
+gh release create v0.3.0 \
+  dist/dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz \
+  dist/dft-monitor-web-0.3.0-linux-x86_64.tar.gz \
   dist/SHA256SUMS \
-  --title "Monitor DFT 0.2.0" \
+  --title "PEROVOWL DFT Monitor 0.3.0" \
   --notes-file docs/notas-release.md
 ```
 
-Sin `gh`: en GitHub, **Releases → Draft a new release**, tag `v0.2.0`, y arrastra
+Sin `gh`: en GitHub, **Releases → Draft a new release**, tag `v0.3.0`, y arrastra
 los tres archivos.
+
+## Publicacion manual desde PowerShell
+
+Para la entrega con GUI Windows y paquete Debian, primero comitea la
+documentacion, scripts y cambios de version. Los binarios se suben como assets
+del release, no al historial de Git:
+
+```powershell
+cd "C:\Users\LUIS\Documents\GitHub\PEROVOWL"
+
+git status --short
+git add `
+  .gitignore `
+  apps\dft_monitor_flutter\pubspec.yaml `
+  docs\notas-release.md `
+  docs\publicar-release.md `
+  docs\release-post-v0.3.0-gui.md `
+  frontend\package.json `
+  frontend\package-lock.json `
+  scripts\package_linux_deb_from_release.ps1 `
+  scripts\package_linux_deb_from_release.sh `
+  src\monitor_api\__init__.py
+
+git commit -m "Prepare PEROVOWL DFT Monitor 0.3.0"
+git push origin main
+```
+
+Despues crea el tag local y subelo:
+
+```powershell
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+Por ultimo, sube o reemplaza los assets del release:
+
+```powershell
+gh release upload v0.3.0 `
+  ".\dist\dft-monitor-desktop-0.3.0-windows-x64.zip" `
+  ".\dist\dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz" `
+  ".\dist\dft-monitor-web-0.3.0-linux-x86_64.tar.gz" `
+  ".\dist\perovowl-dft-monitor-0.3.0-linux-amd64.deb" `
+  ".\dist\SHA256SUMS-gui-deliverables.txt" `
+  --repo RxWhizz/PEROVOWL `
+  --clobber
+```
+
+Y actualiza el texto del release con el instructivo:
+
+```powershell
+gh release edit v0.3.0 `
+  --repo RxWhizz/PEROVOWL `
+  --notes-file ".\docs\release-post-v0.3.0-gui.md"
+```
 
 ---
 

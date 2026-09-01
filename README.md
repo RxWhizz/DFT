@@ -196,7 +196,7 @@ empaquetado dentro: no necesita Python, Node ni el repositorio.
 - **Trabajos**: cada cálculo con su estado, sus artefactos y sus logs.
 - **Diagnóstico**: qué ve el motor, dónde tiene los datos y qué le falta.
 
-Se descarga desde [Releases](https://github.com/RxWhizz/DFT/releases). Hay una
+Se descarga desde [Releases](https://github.com/RxWhizz/PEROVOWL/releases). Hay una
 versión de escritorio y otra que se abre en el navegador. La puesta en marcha,
 los endpoints, el acceso remoto y dónde van las claves están en
 **[docs/monitor.md](docs/monitor.md)**.
@@ -258,11 +258,11 @@ el repositorio.
 ## Empezar
 
 **Solo mirar y conducir el pipeline**: descarga la aplicación desde
-[Releases](https://github.com/RxWhizz/DFT/releases). No necesita nada instalado:
+[Releases](https://github.com/RxWhizz/PEROVOWL/releases). No necesita nada instalado:
 
 ```bash
-tar xzf dft-monitor-desktop-0.2.0-linux-x86_64.tar.gz
-./dft-monitor-desktop-0.2.0-linux-x86_64/dft_monitor_flutter
+tar xzf dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz
+./dft-monitor-desktop-0.3.0-linux-x86_64/dft_monitor_flutter
 ```
 
 **Correr el pipeline de verdad** hace falta GPAW, porque los cálculos son
@@ -327,8 +327,8 @@ hay que configurar nada:
 ### Paso 3: Instalar este paquete
 
 ```bash
-git clone https://github.com/RxWhizz/DFT.git
-cd DFT
+git clone https://github.com/RxWhizz/PEROVOWL.git
+cd PEROVOWL
 pip install -e ".[dev]"
 ```
 

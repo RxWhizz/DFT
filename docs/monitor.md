@@ -42,14 +42,14 @@ para que encuentre tus datos.
 
 ## El servidor web: instalación desde el binario
 
-Cada tag publica en [Releases](https://github.com/RxWhizz/DFT/releases) un
+Cada tag publica en [Releases](https://github.com/RxWhizz/PEROVOWL/releases) un
 artefacto autocontenido: **no necesita Python, ni Node, ni el repositorio**.
 Lleva dentro el SPA compilado, el surrogate ML y las estructuras de referencia.
 
 ```bash
 # Linux
-tar xzf dft-monitor-0.2.0-linux-x86_64.tar.gz
-./dft-monitor/dft-monitor --data-root /ruta/a/tus/datos
+tar xzf dft-monitor-web-0.3.0-linux-x86_64.tar.gz
+./dft-monitor-web/dft-monitor-web --data-root /ruta/a/tus/datos
 ```
 
 En Windows, descomprime el `.zip` y ejecuta `dft-monitor.exe`.
@@ -77,7 +77,7 @@ Verifica la descarga con `sha256sum -c SHA256SUMS`.
 #### Compilar el binario en local
 
 ```bash
-bash scripts/build_web.sh      # → dist/dft-monitor-<versión>-<plataforma>.tar.gz
+bash scripts/build_web.sh      # → dist/dft-monitor-web-<versión>-<plataforma>.tar.gz
 ```
 
 Compila el SPA, preconvierte las estructuras (con eso `ase` no entra en el

@@ -1,5 +1,6 @@
 .venv/
 .venv_*/
+.venv-win/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
@@ -72,6 +73,9 @@ dist/
 /runs
 /local_runs
 /calculations
+
+# Assets descargados o generados para publicar releases; no van al historial.
+/releases/
 
 # Entornos y cachés de prueba
 .pytest_cache/

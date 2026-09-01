@@ -87,6 +87,10 @@ jobs:
       - name: Instalar dependencias
         shell: bash
         run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          fi
           python -m pip install --upgrade pip
           # scikit-learn acotado a 1.8.x: los models/*.pkl se serializaron con
           # esa versión y 1.9 no los despickliza.
@@ -94,19 +98,31 @@ jobs:
             "fastapi>=0.110" "uvicorn[standard]>=0.27" "httpx>=0.27" \
             "psutil>=5.9" "pyyaml>=6.0" "itsdangerous>=2.1" \
             "numpy>=1.26" "pandas>=2.0" "scipy>=1.12" "scikit-learn>=1.8,<1.9" \
-            "ase>=3.23" pyinstaller
+            "ase>=3.23" pyinstaller python-dotenv
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
       - name: Construir y probar
         shell: bash
         env:
           PYTHON: python
-        run: bash scripts/build_web.sh --skip-npm
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          rm -f apps/dft_monitor_flutter/build apps/dft_monitor_flutter/.dart_tool
+          bash scripts/build_web.sh --skip-npm
+          bash scripts/build_desktop.sh
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            bash scripts/package_linux_deb_from_release.sh "$VERSION"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dft-monitor-web-${{ matrix.plataforma }}
+          name: dft-monitor-${{ matrix.plataforma }}
           path: |
             dist/*.${{ matrix.artefacto }}
+            dist/*.deb
             dist/*.sha256
           retention-days: 7
 
@@ -133,21 +149,46 @@ jobs:
           files: artefactos/*
           generate_release_notes: true
           body: |
-            ## Monitor DFT ${{ needs.version.outputs.version }}
+            ## PEROVOWL DFT Monitor ${{ needs.version.outputs.version }}
 
-            Dos formas de usar la misma interfaz. Descarga la que te sirva:
+            Interfaz gráfica del pipeline de cribado de perovskitas: genera candidatos,
+            los criba con la cascada HTS, prepara y lanza cálculos DFT, y sigue el
+            progreso en vivo.
 
-            **`dft-monitor-desktop-…`** — aplicación de escritorio con ventana
-            nativa y el motor congelado dentro. Autónoma: no necesita Python,
-            Node ni el repositorio. Es la recomendada para el uso diario.
+            ### Descargar
+
+            En **Assets**, descarga el archivo correspondiente a tu sistema:
+
+            - Windows: `dft-monitor-desktop-${{ needs.version.outputs.version }}-windows-x64.zip`
+            - Debian/Ubuntu: `perovowl-dft-monitor-${{ needs.version.outputs.version }}-linux-amd64.deb`
+            - Linux portable: `dft-monitor-desktop-${{ needs.version.outputs.version }}-linux-x86_64.tar.gz`
+            - Linux web/servidor: `dft-monitor-web-${{ needs.version.outputs.version }}-linux-x86_64.tar.gz`
+
+            La aplicación de escritorio incluye el motor local congelado y no necesita
+            Python, Node, Flutter ni clonar el repositorio para uso normal.
+
+            ### Windows
+
+            ```powershell
+            Expand-Archive .\dft-monitor-desktop-${{ needs.version.outputs.version }}-windows-x64.zip
+            .\dft-monitor-desktop-${{ needs.version.outputs.version }}-windows-x64\dft_monitor_flutter.exe
+            ```
+
+            ### Debian/Ubuntu
+
+            ```bash
+            sudo apt install ./perovowl-dft-monitor-${{ needs.version.outputs.version }}-linux-amd64.deb
+            perovowl-dft-monitor
+            ```
+
+            ### Linux portable
 
             ```bash
             tar xzf dft-monitor-desktop-${{ needs.version.outputs.version }}-linux-x86_64.tar.gz
             ./dft-monitor-desktop-${{ needs.version.outputs.version }}-linux-x86_64/dft_monitor_flutter
             ```
 
-            **`dft-monitor-web-…`** — servidor que se abre en el navegador. Úsalo
-            para mirar el pipeline desde otra máquina.
+            ### Linux web/servidor
 
             ```bash
             tar xzf dft-monitor-web-${{ needs.version.outputs.version }}-linux-x86_64.tar.gz
@@ -156,8 +197,6 @@ jobs:
 
             Se abre en `http://127.0.0.1:8000`. Con `--host 0.0.0.0` se expone en
             la red y exige un token en `monitor.auth.token`.
-
-            En Windows, descomprime el `.zip` y ejecuta el `.exe`.
 
             Comprueba la descarga con `sha256sum -c SHA256SUMS`.
 
