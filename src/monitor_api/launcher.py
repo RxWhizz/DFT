@@ -29,6 +29,10 @@ from pathlib import Path
 
 from . import paths
 
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 
 def config_file() -> Path:
     return paths.config_file()
