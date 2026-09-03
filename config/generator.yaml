@@ -140,6 +140,13 @@ discovery:
   runner_preflight_timeout: 90
   runner_conda_env: gpaw246  # valor por defecto; se puede cambiar sin tocar codigo
   poll_interval_sec: 60
+  # Si el runner DFT no escribe nada (STATUS, GPAW logs) en este tiempo, se le
+  # da por muerto y el bucle lo relanza -- aunque queden jobs marcados
+  # "running" con un PID que ya no existe.
+  runner_stale_after_sec: 600
+  # Relanzamientos consecutivos sin que progrese ningun job antes de rendirse
+  # con estado "error" en vez de reintentar en bucle.
+  max_stale_relaunches: 5
   max_per_b_family: 15
   max_per_halide: 18
   windows_mounts:

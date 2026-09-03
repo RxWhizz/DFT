@@ -917,9 +917,48 @@ class DiscoveryLoop:
             if not self._round_finished(round_id):
                 diagnostics = self.runner_diagnostics(round_id, state=state)
                 if diagnostics.get("stale"):
+                    # Un runner que se cae a medias deja jobs en "running" con un
+                    # PID muerto; sin devolverlos a "pending" el round nunca
+                    # cuenta como terminado y el bucle se cuelga para siempre.
+                    n_reset = self._reset_phantom_running(round_id)
+
+                    # Cortafuegos: si tras varios relanzamientos SEGUIDOS nada
+                    # progresa, WSL está roto de verdad — mejor un estado de
+                    # error legible que un bucle relanzando cada 10 min sin fin.
+                    # Si el relanzamiento anterior sí completó algún job, el
+                    # incidente se considera nuevo y el contador vuelve a empezar.
+                    finished_now = (
+                        (diagnostics.get("status_counts") or {}).get("converged", 0)
+                        + (diagnostics.get("status_counts") or {}).get("dft_failed", 0)
+                        + (diagnostics.get("status_counts") or {}).get("failed", 0)
+                    )
+                    if finished_now > int(state.get("stale_relaunch_finished", -1)):
+                        intentos = 1
+                    else:
+                        intentos = int(state.get("stale_relaunches", 0)) + 1
+                    max_intentos = int(self.discovery.get("max_stale_relaunches", 5))
+                    if intentos > max_intentos:
+                        state["status"] = "error"
+                        state["last_error"] = (
+                            f"El runner DFT de la ronda {round_id} no progresa tras "
+                            f"{max_intentos} relanzamientos. Revisa el runtime WSL/GPAW "
+                            f"y reanuda con /api/discovery/run."
+                        )
+                        state.pop("stale_relaunches", None)
+                        self._save_state(state)
+                        return self.status()
+
                     state["status"] = "dft_prepared"
+                    state["stale_relaunches"] = intentos
+                    state["stale_relaunch_finished"] = finished_now
                     if diagnostics.get("error"):
                         state["runner_error"] = diagnostics["error"]
+                    elif diagnostics.get("no_progress"):
+                        state["runner_error"] = (
+                            f"sin progreso del runner en {diagnostics.get('progress_age_sec')} s"
+                            + (f"; {n_reset} job(s) 'running' fantasma devueltos a 'pending'"
+                               if n_reset else "")
+                        )
                     self._set_round_ledger_status(
                         round_id,
                         "dft_prepared",
@@ -1303,8 +1342,40 @@ class DiscoveryLoop:
         state["last_completed_round"] = round_id
         state["last_finalized_at"] = _utc()
         state["last_finalize"] = manifest
+        # La ronda terminó: el contador de relanzamientos por atasco no debe
+        # arrastrarse a la siguiente.
+        state.pop("stale_relaunches", None)
+        state.pop("stale_relaunch_finished", None)
+        state.pop("runner_error", None)
         self._save_state(state)
         return manifest
+
+    def _reset_phantom_running(self, round_id: int) -> int:
+        """Devuelve a "pending" los jobs que un runner muerto dejó en "running".
+
+        `_round_finished` trata "running" como activo, así que un job huérfano
+        —su runner ya no existe— impide que la ronda cuente como terminada y el
+        bucle se queda esperando indefinidamente. Marcarlo "pending" deja que el
+        siguiente runner lo reintente.
+        """
+        runs_dir = self._round_runs_dir(round_id)
+        reset = 0
+        for path in runs_dir.glob("*/status.json"):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if payload.get("status") not in {"running", "stalled", "oscillating"}:
+                continue
+            payload["status"] = "pending"
+            payload["phantom_reset_at"] = _utc()
+            payload.pop("pid", None)
+            try:
+                path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                reset += 1
+            except OSError:
+                pass
+        return reset
 
     def _append_training(self, results: pd.DataFrame, ledger: pd.DataFrame, round_id: int) -> int:
         if results.empty or "trusted_label" not in results:
@@ -1538,8 +1609,38 @@ class DiscoveryLoop:
         total = sum(status_counts.values())
         active = status_counts.get("running", 0) > 0
         all_pending = total > 0 and status_counts.get("pending", 0) == total
+        finished = status_counts.get("converged", 0) + status_counts.get("dft_failed", 0) + status_counts.get("failed", 0)
+        unfinished = total - finished
         expected_running = (state or {}).get("status") in {"dft_prepared", "dft_running"}
-        stale = bool(expected_running and all_pending and (error_text or runner_out.is_file()) and not active)
+
+        # Antigüedad de la última señal de vida del runner. Un runner sano escribe
+        # una línea STATUS cada ~30 s y los GPAW logs crecen sin parar; si nada de
+        # esto se ha tocado en `runner_stale_after_sec`, el runner murió — aunque
+        # queden jobs en "running" con un PID que ya no existe (el bug que dejaba
+        # el bucle colgado horas: el runner WSL se caía tras completar 15/30 y la
+        # detección de "stale" solo miraba si TODOS los jobs seguían pendientes).
+        progreso_files = [runner_out, runner_log, *runs_dir.glob("*/status.json")]
+        progreso_files += list(runs_dir.glob("*/*.log")) + list(runs_dir.glob("*/*.txt"))
+        mtimes = []
+        for p in progreso_files:
+            try:
+                mtimes.append(p.stat().st_mtime)
+            except OSError:
+                pass
+        progress_age = (time.time() - max(mtimes)) if mtimes else None
+        stale_after = int(self.discovery.get("runner_stale_after_sec", 600))
+        no_progress = progress_age is not None and progress_age > stale_after
+
+        stale = bool(
+            expected_running
+            and total > 0
+            and unfinished > 0
+            and (error_text or runner_out.is_file())
+            and (
+                (all_pending and not active)   # el runner murió sin empezar
+                or no_progress                 # el runner murió a medias: nada avanza
+            )
+        )
         return {
             "round_id": round_id,
             "exists": True,
@@ -1552,6 +1653,9 @@ class DiscoveryLoop:
             "runner_command": runner_command,
             "has_gpaw_logs": bool(has_gpaw_logs),
             "stale": stale,
+            "progress_age_sec": round(progress_age, 1) if progress_age is not None else None,
+            "no_progress": no_progress,
+            "unfinished": unfinished,
             "error": error_text,
             "runner_out_tail": runner_out_tail,
             "runner_log_tail": runner_log_tail,

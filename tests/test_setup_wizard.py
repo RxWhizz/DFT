@@ -8,7 +8,9 @@ en vez de matarla.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -815,3 +817,117 @@ def test_reset_de_tests_no_borra_un_bucle_vivo(monkeypatch, tmp_path):
     monkeypatch.setattr(svc, "_vivo", lambda pid: False)
     svc.reset_background_for_tests()
     assert not svc._pid_file().is_file()
+
+
+# ── El bucle no se cuelga si el runner muere a medias ─────────────────────────
+
+
+def _round_runs(tmp_path: Path, round_id: int = 0):
+    """Crea el directorio de runs de una ronda con jobs en estados dados."""
+    d = tmp_path / "runs" / "batches" / "discovery" / f"round_{round_id:03d}"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _job(runs_dir: Path, cid: str, status: str, pid: int | None = None):
+    jd = runs_dir / cid
+    jd.mkdir(exist_ok=True)
+    payload = {"status": status, "candidate_id": cid}
+    if pid is not None:
+        payload["pid"] = pid
+    (jd / "status.json").write_text(json.dumps(payload), encoding="utf-8")
+    return jd
+
+
+def test_runner_stale_cuando_no_avanza_pese_a_un_running_fantasma(tmp_path, monkeypatch):
+    """El bug real: runner WSL muerto tras 15/30, 1 job 'running' con PID muerto,
+    y la deteccion antigua no marcaba stale porque no *todos* seguian pending."""
+    from buho.discovery import DiscoveryLoop
+
+    loop = DiscoveryLoop(config_path=_engine_config(tmp_path), project_root=ROOT,
+                         data_root=tmp_path, models_root=tmp_path)
+    runs = _round_runs(tmp_path, 0)
+    for i in range(15):
+        _job(runs, f"c{i}", "converged")
+    for i in range(15, 29):
+        _job(runs, f"c{i}", "pending")
+    _job(runs, "c29", "running", pid=99999)          # PID muerto
+    (runs / "runner.out").write_text("preflight ok\n", encoding="utf-8")
+
+    # Envejecer todo lo que sirve de senal de vida.
+    viejo = time.time() - 3600
+    for p in list(runs.glob("**/*")):
+        os.utime(p, (viejo, viejo))
+    os.utime(runs / "runner.out", (viejo, viejo))
+
+    diag = loop.runner_diagnostics(0, state={"status": "dft_running"})
+    assert diag["stale"] is True
+    assert diag["no_progress"] is True
+    assert diag["unfinished"] == 15
+
+
+def test_runner_no_stale_si_progresa(tmp_path):
+    from buho.discovery import DiscoveryLoop
+
+    loop = DiscoveryLoop(config_path=_engine_config(tmp_path), project_root=ROOT,
+                         data_root=tmp_path, models_root=tmp_path)
+    runs = _round_runs(tmp_path, 0)
+    for i in range(10):
+        _job(runs, f"c{i}", "converged")
+    for i in range(10, 20):
+        _job(runs, f"c{i}", "pending")
+    _job(runs, "c20", "running", pid=1)
+    (runs / "runner.out").write_text("STATUS ...\n", encoding="utf-8")   # recién tocado
+
+    diag = loop.runner_diagnostics(0, state={"status": "dft_running"})
+    assert diag["stale"] is False
+    assert diag["no_progress"] is False
+
+
+def test_reset_phantom_running_desbloquea_round_finished(tmp_path):
+    from buho.discovery import DiscoveryLoop
+
+    loop = DiscoveryLoop(config_path=_engine_config(tmp_path), project_root=ROOT,
+                         data_root=tmp_path, models_root=tmp_path)
+    runs = _round_runs(tmp_path, 0)
+    for i in range(29):
+        _job(runs, f"c{i}", "converged")
+    _job(runs, "c29", "running", pid=99999)
+
+    assert loop._round_finished(0) is False          # el 'running' lo bloquea
+    n = loop._reset_phantom_running(0)
+    assert n == 1
+    payload = json.loads((runs / "c29" / "status.json").read_text(encoding="utf-8"))
+    assert payload["status"] == "pending"
+    assert "pid" not in payload
+
+
+def test_advance_se_rinde_con_error_tras_demasiados_relanzamientos(tmp_path, monkeypatch):
+    from buho.discovery import DiscoveryLoop
+
+    loop = DiscoveryLoop(config_path=_engine_config(tmp_path), project_root=ROOT,
+                         data_root=tmp_path, models_root=tmp_path)
+    loop.init_space(reset=True)
+    runs = _round_runs(tmp_path, 0)
+    for i in range(10):
+        _job(runs, f"c{i}", "converged")
+    for i in range(10, 30):
+        _job(runs, f"c{i}", "pending")
+    (runs / "runner.out").write_text("x\n", encoding="utf-8")
+    viejo = time.time() - 3600
+    for p in list(runs.glob("**/*")):
+        os.utime(p, (viejo, viejo))
+
+    st = loop._load_state()
+    st["status"] = "dft_running"
+    st["current_round"] = 0
+    st["stale_relaunches"] = 5           # ya en el limite
+    st["stale_relaunch_finished"] = 10   # el relanzamiento previo no aporto nada
+    loop._save_state(st)
+
+    # El relanzamiento real no importa: monkeypatch para no tocar WSL.
+    monkeypatch.setattr(loop, "_launch_runner", lambda *a, **k: {"pid": 1})
+    loop.advance(start_runner=True)
+
+    assert loop._load_state()["status"] == "error"
+    assert "no progresa" in loop._load_state()["last_error"]
