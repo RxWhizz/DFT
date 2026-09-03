@@ -20,13 +20,25 @@ const Ml = lazy(() => import('./pages/Ml').then((m) => ({ default: m.Ml })))
 const Screening = lazy(() =>
   import('./pages/Screening').then((m) => ({ default: m.Screening })),
 )
+const Discovery = lazy(() =>
+  import('./pages/Discovery').then((m) => ({ default: m.Discovery })),
+)
 const Structures = lazy(() =>
   import('./pages/Structures').then((m) => ({ default: m.Structures })),
 )
 const Results = lazy(() => import('./pages/Results').then((m) => ({ default: m.Results })))
+const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })))
 
 function Cargando() {
   return <p className="p-4 text-sm text-ink-400">Cargando vista…</p>
+}
+
+function DiscoveryRoute() {
+  return (
+    <Suspense fallback={<Cargando />}>
+      <Discovery />
+    </Suspense>
+  )
 }
 
 export default function App() {
@@ -83,6 +95,14 @@ export default function App() {
           }
         />
         <Route
+          path="discovery"
+          element={<DiscoveryRoute />}
+        />
+        <Route
+          path="protocolo-descubrimiento-autonomo"
+          element={<DiscoveryRoute />}
+        />
+        <Route
           path="candidates"
           element={
             <Suspense fallback={<Cargando />}>
@@ -111,6 +131,14 @@ export default function App() {
           element={
             <Suspense fallback={<Cargando />}>
               <Results />
+            </Suspense>
+          }
+        />
+        <Route
+          path="entorno"
+          element={
+            <Suspense fallback={<Cargando />}>
+              <Setup />
             </Suspense>
           }
         />

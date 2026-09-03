@@ -998,6 +998,227 @@ async def screening_start_dft(
     return result
 
 
+# ── Descubrimiento autónomo ─────────────────────────────────────────────────
+
+class DiscoveryInitRequest(BaseModel):
+    reset: bool = False
+
+
+class DiscoverySpaceRequest(BaseModel):
+    A_sites: list[str] | None = None
+    B_sites: list[str] | None = None
+    X_sites: list[str] | None = None
+    modes: dict[str, bool] | None = None
+    min_fraction: float | None = None
+    max_fraction: float | None = None
+    fraction_step: float | None = None
+    include_multi_mixed: bool | None = None
+    dft_per_round: int | None = None
+
+
+def _discovery_space_payload(body: DiscoverySpaceRequest) -> dict:
+    if hasattr(body, "model_dump"):
+        return body.model_dump(exclude_none=True)
+    return body.dict(exclude_none=True)
+
+
+class DiscoveryRunRequest(BaseModel):
+    start_runner: bool = True
+    dry_run: bool = False
+    use_mlff: bool | None = None
+    max_rounds: int | None = None
+
+
+@router.get("/api/discovery/config")
+async def discovery_config() -> dict:
+    """Configuración efectiva del espacio químico del protocolo."""
+    from .services.discovery import current_config
+
+    return current_config()
+
+
+@router.post("/api/discovery/config/preview")
+async def discovery_config_preview(body: DiscoverySpaceRequest | None = None) -> dict:
+    """Cuenta el espacio químico que produciría una configuración."""
+    from .services.discovery import preview_config
+
+    body = body or DiscoverySpaceRequest()
+    try:
+        return preview_config(_discovery_space_payload(body))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/api/discovery/config")
+async def discovery_config_save(request: Request, body: DiscoverySpaceRequest) -> dict:
+    """Guarda el override editable del espacio químico."""
+    from .services.discovery import save_config
+
+    try:
+        result = save_config(_discovery_space_payload(body))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _auditar(request, "discovery_config_save", override=result.get("override_path"))
+    return result
+
+
+@router.get("/api/discovery/status")
+async def discovery_status() -> dict:
+    """Estado persistente del loop autónomo de descubrimiento."""
+    from .services.discovery import status
+
+    return status()
+
+
+@router.post("/api/discovery/init")
+async def discovery_init(request: Request, body: DiscoveryInitRequest | None = None) -> dict:
+    """Enumera el espacio químico finito y crea el ledger persistente."""
+    from .services.discovery import init
+
+    body = body or DiscoveryInitRequest()
+    try:
+        result = init(reset=body.reset)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=501, detail=f"Falta la configuración: {exc}") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _auditar(request, "discovery_init", reset=body.reset)
+    return result
+
+
+@router.post("/api/discovery/run")
+async def discovery_run(request: Request, body: DiscoveryRunRequest | None = None) -> dict:
+    """Arranca el loop autónomo en segundo plano."""
+    from .services.discovery import start
+
+    body = body or DiscoveryRunRequest()
+    if body.max_rounds is not None and body.max_rounds < 1:
+        raise HTTPException(status_code=422, detail="max_rounds debe ser positivo")
+    try:
+        result = start(
+            start_runner=body.start_runner,
+            dry_run=body.dry_run,
+            use_mlff=body.use_mlff,
+            max_rounds=body.max_rounds,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=501, detail=f"Falta un recurso: {exc}") from exc
+    _auditar(
+        request,
+        "discovery_run",
+        start_runner=body.start_runner,
+        dry_run=body.dry_run,
+        use_mlff=body.use_mlff,
+        max_rounds=body.max_rounds,
+    )
+    return result
+
+
+@router.post("/api/discovery/pause")
+async def discovery_pause(request: Request) -> dict:
+    from .services.discovery import pause
+
+    result = pause()
+    _auditar(request, "discovery_pause")
+    return result
+
+
+@router.post("/api/discovery/resume")
+async def discovery_resume(request: Request) -> dict:
+    from .services.discovery import resume
+
+    result = resume()
+    _auditar(request, "discovery_resume")
+    return result
+
+
+@router.get("/api/discovery/frontier")
+async def discovery_frontier(
+    limit: int = Query(100, ge=1, le=500, description="Candidatos de la frontera a devolver."),
+) -> dict:
+    from .services.discovery import frontier
+
+    return frontier(limit=limit)
+
+
+@router.post("/api/discovery/export")
+async def discovery_export(request: Request) -> dict:
+    from .services.discovery import export
+
+    result = export()
+    _auditar(request, "discovery_export", report=result.get("report"))
+    return result
+
+
+class SetupInstallRequest(BaseModel):
+    target: str
+    cuda: bool = False
+    recreate: bool = False
+    env_name: str | None = None
+    distro: str | None = None
+
+
+def _setup_opciones(body: SetupInstallRequest) -> dict:
+    """Solo `mlff` acepta opciones; los grupos pip no tienen ninguna."""
+    if body.target != "mlff":
+        return {}
+    return {
+        "cuda": body.cuda,
+        "recrear": body.recreate,
+        "env_name": body.env_name,
+        "distro": body.distro,
+    }
+
+
+@router.get("/api/setup/status")
+async def setup_status(
+    fast: bool = Query(False, description="Omite la sonda MLFF, que lanza un proceso."),
+) -> dict:
+    """Qué entornos funcionan en esta máquina y qué falta para los que no."""
+    from .services.setup import status
+
+    return status(fast=fast)
+
+
+@router.post("/api/setup/plan")
+async def setup_plan(body: SetupInstallRequest) -> dict:
+    """Los comandos que se ejecutarían, sin ejecutar ninguno."""
+    from .services.setup import plan
+
+    try:
+        return plan(body.target, **_setup_opciones(body))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/api/setup/install")
+async def setup_install(request: Request, body: SetupInstallRequest) -> dict:
+    """Instala en segundo plano lo que falta para `target`."""
+    from .services.setup import start_install
+
+    try:
+        result = start_install(body.target, **_setup_opciones(body))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        # Ya hay una instalación, o el protocolo está cribando: las dos son
+        # colisiones de estado, no errores del cliente.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _auditar(request, "setup_install", target=body.target, cuda=body.cuda,
+             recreate=body.recreate)
+    return result
+
+
+@router.get("/api/setup/job")
+async def setup_job() -> dict:
+    """Estado y log de la instalación en curso (o de la última)."""
+    from .services.setup import job
+
+    return job()
+
+
 @router.get("/api/activity")
 async def activity(request: Request) -> dict:
     """Qué está haciendo el sistema ahora y cuánto le queda."""

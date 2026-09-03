@@ -168,9 +168,18 @@ class ResultCollector:
         gpw = job_dir / "relaxed.gpw"
         if gpw.exists():
             self._extract_from_gpw(gpw, row)
-        else:
-            # Fallback: parsear archivos de texto
-            self._extract_from_text(job_dir, row, status)
+
+        # Fallback/complemento: Windows puede recolectar corridas hechas en WSL
+        # aunque su Python no tenga GPAW para abrir .gpw. El status.json y el
+        # log de texto conservan la etiqueta preliminar necesaria para el loop.
+        self._extract_from_text(job_dir, row, status)
+        if (
+            isinstance(row.get("error_message"), str)
+            and row["error_message"].startswith("gpw_parse_error")
+            and row.get("final_energy_eV") is not None
+            and row.get("bandgap_preliminary_eV") is not None
+        ):
+            row["error_message"] = None
 
         # Tiempo de cálculo desde status.json
         if "elapsed_s" in status:
@@ -208,21 +217,25 @@ class ResultCollector:
 
     def _extract_from_text(self, job_dir: Path, row: dict, status: dict) -> None:
         # Energía desde status.json (guardada por input.py)
-        if "final_energy_eV" in status:
+        if row.get("final_energy_eV") is None and "final_energy_eV" in status:
             row["final_energy_eV"] = status["final_energy_eV"]
-            n = row.get("n_atoms")
-            if n and row["final_energy_eV"] is not None:
-                row["energy_per_atom_eV"] = row["final_energy_eV"] / n
+        if row.get("energy_per_atom_eV") is None and "energy_per_atom_eV" in status:
+            row["energy_per_atom_eV"] = status["energy_per_atom_eV"]
+        n = row.get("n_atoms")
+        if row.get("energy_per_atom_eV") is None and n and row.get("final_energy_eV") is not None:
+            row["energy_per_atom_eV"] = row["final_energy_eV"] / n
 
         # Convergencia desde r2scan.txt o gpaw.txt
         for txt_name in ("r2scan.txt", "gpaw.txt", "relax.log"):
             txt = job_dir / txt_name
             if txt.exists():
-                converged, e = self._parse_gpaw_txt(txt)
+                converged, e, gap = self._parse_gpaw_txt(txt)
                 if converged is not None:
                     row["converged"] = converged
                 if e is not None and row["final_energy_eV"] is None:
                     row["final_energy_eV"] = e
+                if gap is not None and row["bandgap_preliminary_eV"] is None:
+                    row["bandgap_preliminary_eV"] = gap
                 break
 
         # Volumen desde relaxed.cif
@@ -248,21 +261,32 @@ class ResultCollector:
             row["error_message"] = err.read_text().strip()[:200]
 
     @staticmethod
-    def _parse_gpaw_txt(txt: Path) -> tuple[Optional[bool], Optional[float]]:
+    def _parse_gpaw_txt(txt: Path) -> tuple[Optional[bool], Optional[float], Optional[float]]:
         converged = None
         energy = None
+        gap = None
         try:
             content = txt.read_text(errors="replace")
             if "SCF Converged" in content or "Converged" in content:
                 converged = True
             elif "Did not converge" in content:
                 converged = False
-            # Buscar última energía
-            for m in re.finditer(r"energy:\s*([-\d.]+)", content):
+
+            for m in re.finditer(r"^Extrapolated:\s*([-\d.]+)", content, re.MULTILINE):
                 energy = float(m.group(1))
+            if energy is None:
+                for m in re.finditer(r"^Free energy:\s*([-\d.]+)", content, re.MULTILINE):
+                    energy = float(m.group(1))
+            if energy is None:
+                for m in re.finditer(r"^\s*energy:\s*([-\d.]+)", content, re.MULTILINE):
+                    energy = float(m.group(1))
+            for m in re.finditer(r"\bGap:\s*([-\d.]+)\s*eV", content):
+                gap = float(m.group(1))
+            if gap is None and re.search(r"\bNo gap\b|\bmetallic\b", content, re.IGNORECASE):
+                gap = 0.0
         except Exception:
             pass
-        return converged, energy
+        return converged, energy, gap
 
     @staticmethod
     def _parse_max_force(log: Path) -> Optional[float]:

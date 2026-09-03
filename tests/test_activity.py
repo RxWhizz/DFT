@@ -94,6 +94,7 @@ def sin_procesos_reales(monkeypatch):
 
     monkeypatch.setattr(act, "runners_activos", lambda: [])
     monkeypatch.setattr(act, "n_calculos_vivos", lambda: 0)
+    monkeypatch.setattr(act, "_estado_descubrimiento", lambda: None)
     monkeypatch.setattr(DFTPoller, "_seguir_lote_activo", lambda self: None)
     act._CACHE.update(t=0.0, clave=None, valor=None)
 
@@ -117,8 +118,18 @@ def test_lote_terminado_esta_en_reposo(cliente):
     assert d["eta_seconds"] is None
 
 
-def test_lote_en_cola_estima_el_tiempo(cliente):
-    with cliente("local_runs/phase2_force/batch_991") as c:
+def _lote_con_cola(tmp_path):
+    b = tmp_path / "batch_991"
+    for i, s in enumerate([100.0, 120.0, 140.0]):
+        _job(b, f"conv{i}", status="converged", elapsed_s=s)
+    for i in range(8):
+        _job(b, f"pend{i}", status="pending")
+    return b
+
+
+def test_lote_en_cola_estima_el_tiempo(cliente, tmp_path):
+    lote = _lote_con_cola(tmp_path)
+    with cliente(str(lote)) as c:
         d = c.get("/api/activity").json()
     assert d["activity"] in ("queued", "dft")
     assert d["n_pending"] > 0
@@ -128,15 +139,79 @@ def test_lote_en_cola_estima_el_tiempo(cliente):
         assert "mediana" in (d["eta_basis"] or "")
 
 
-def test_la_concurrencia_divide_la_espera(cliente):
+def test_la_concurrencia_divide_la_espera(cliente, tmp_path):
     """Con 8 slots la cola tarda menos que con 1: dividir por 1 daría 8× de más."""
-    with cliente("local_runs/phase2_force/batch_991", slots=1) as c:
+    lote = _lote_con_cola(tmp_path)
+    with cliente(str(lote), slots=1) as c:
         lento = c.get("/api/activity").json()
-    with cliente("local_runs/phase2_force/batch_991", slots=8) as c:
+    with cliente(str(lote), slots=8) as c:
         rapido = c.get("/api/activity").json()
 
     if lento["eta_seconds"] and rapido["eta_seconds"]:
         assert rapido["eta_seconds"] < lento["eta_seconds"]
+
+
+def test_descubrimiento_aparece_en_la_barra_global(cliente, monkeypatch):
+    from monitor_api.services import activity as act
+
+    payload = {
+        "state": {
+            "status": "dft_selected",
+            "current_round": 2,
+            "last_prepared": {"n_selected": 30},
+        },
+        "counts": {"dft_selected": 30},
+        "coverage": {"total": 53676, "seen": 53676, "percent": 100.0},
+        "queue": [{"candidate_id": "a"} for _ in range(30)],
+        "background": {"running": False, "last_error": None},
+    }
+    monkeypatch.setattr(
+        act,
+        "_estado_descubrimiento",
+        lambda: act._activity_from_discovery_payload(payload),
+    )
+
+    with cliente("local_runs/phase2_force/batch_000") as c:
+        d = c.get("/api/activity").json()
+
+    assert d["activity"] == "discovery"
+    assert d["label"] == "Protocolo listo para DFT"
+    assert d["busy"] is False
+    assert d["n_done"] == 53676
+    assert "30 en cola DFT" in d["detail"]
+
+
+def test_descubrimiento_avisa_si_dft_no_se_lanzo(cliente, monkeypatch):
+    from monitor_api.services import activity as act
+
+    payload = {
+        "state": {
+            "status": "dft_running",
+            "current_round": 0,
+            "n_selected_active": 30,
+        },
+        "counts": {"dft_running": 30},
+        "coverage": {"total": 53676, "seen": 53676, "percent": 100.0},
+        "queue": [],
+        "runner": {
+            "stale": True,
+            "error": "No se encuentran los datasets PAW de GPAW.",
+        },
+        "background": {"running": False, "last_error": None},
+    }
+    monkeypatch.setattr(
+        act,
+        "_estado_descubrimiento",
+        lambda: act._activity_from_discovery_payload(payload),
+    )
+
+    with cliente("local_runs/phase2_force/batch_000") as c:
+        d = c.get("/api/activity").json()
+
+    assert d["activity"] == "discovery"
+    assert d["label"] == "Protocolo DFT no lanzado"
+    assert d["busy"] is False
+    assert "datasets PAW" in d["detail"]
 
 
 # ── El poller vigila un lote; el runner puede estar en otro ──────────────────

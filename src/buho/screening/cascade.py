@@ -15,7 +15,13 @@ Score de adquisición (active learning):
 
 Reusa: filters/physical_filters.PhysicalFilter, structure/build_abx3,
 ml_surrogate.model.SurrogateEnsemble, ml_surrogate.gnn_predictor.GNNPredictor.
-NO requiere DFT — todo corre en el venv (.venv) con matgl/mace/torch.
+NO requiere DFT.
+
+Tier 2 no tiene por qué correr en este intérprete: torch/matgl/pymatgen pesan
+~2 GB y en Windows son la parte más frágil de la pila, así que `buho.mlff_runtime`
+decide si se evalúa aquí mismo o en un proceso aparte (WSL). Los dos caminos
+devuelven exactamente la misma forma de resultado; el resto de la cascada no
+sabe cuál se usó.
 """
 from __future__ import annotations
 
@@ -29,6 +35,7 @@ import pandas as pd
 
 from buho.filters.physical_filters import PhysicalFilter
 from buho.generator.heuristic_generator import GeneratedCandidate
+from buho.mlff_runtime import MLFFUnavailableError, resolve as resolve_mlff
 from buho.structure.build_abx3 import ABX3StructureBuilder
 from ml_surrogate.features import (
     CHARGES,
@@ -71,11 +78,15 @@ class ScreeningCascade:
     ----------
     config       : dict completo de generator.yaml
     project_root : raíz del proyecto (para resolver model_path)
+    mlff_runtime : dónde evaluar Tier 2. Por defecto se resuelve de la config;
+                   los tests lo inyectan para no depender de la máquina.
     """
 
-    def __init__(self, config: dict, project_root: Optional[Path] = None):
+    def __init__(self, config: dict, project_root: Optional[Path] = None,
+                 mlff_runtime=None):
         self._cfg = config
         self._root = Path(project_root) if project_root else Path.cwd()
+        self._mlff_runtime = mlff_runtime
         self._scr = config.get("screening", {})
         self._acq = config.get("acquisition", {})
         self._filter = PhysicalFilter(config)
@@ -121,12 +132,102 @@ class ScreeningCascade:
             warnings.warn(f"Cascade: surrogate no encontrado en {mp}; Tier 1 omitido.")
         return self._surrogate
 
+    def _runtime(self):
+        if self._mlff_runtime is None:
+            self._mlff_runtime = resolve_mlff(self._cfg, project_root=self._root)
+        return self._mlff_runtime
+
     def _load_gnn(self):
-        if self._gnn is not None or not self._use_mlff:
+        """Predictor GNN en este mismo proceso (backend `local`)."""
+        if self._gnn is not None:
             return self._gnn
-        from ml_surrogate.gnn_predictor import GNNPredictor
+        try:
+            from ml_surrogate.gnn_predictor import GNNPredictor
+        except ImportError as exc:
+            # Traducido a un error tipado: la cascada y el engine tienen que
+            # poder degradar a Tier 0/1 sin confundir "falta el entorno MLFF"
+            # con un bug de importación cualquiera.
+            raise MLFFUnavailableError(
+                f"Tier 2 no puede importarse en este intérprete: {exc}",
+                remediation="Ejecuta 'buho setup install mlff' o usa el backend WSL.",
+            ) from exc
         self._gnn = GNNPredictor(device="cpu")
         return self._gnn
+
+    # ── Tier 2: los dos caminos, misma forma de salida ────────────────────────
+
+    def _tier2_local(self, targets: list[tuple[int, GeneratedCandidate]]) -> dict[int, dict]:
+        gnn = self._load_gnn()
+        try:
+            from pymatgen.io.ase import AseAtomsAdaptor
+        except ImportError as exc:
+            raise MLFFUnavailableError(
+                f"Tier 2 necesita pymatgen y no está instalado: {exc}",
+                remediation="Ejecuta 'buho setup install mlff'.",
+            ) from exc
+
+        out: dict[int, dict] = {}
+        for i, candidate in targets:
+            try:
+                atoms, meta = self._builder.build(candidate, out_dir=None, export=False)
+                origen = "pseudoatom" if meta.get("molecular_A_placeholder") else "cubic"
+                structure = AseAtomsAdaptor.get_structure(atoms)
+            except Exception as exc:
+                out[i] = {"error": f"no se pudo construir la estructura: {exc}"}
+                continue
+            try:
+                res = gnn.predict(structure, structure_source=origen)
+            except Exception as exc:
+                out[i] = {"error": f"{type(exc).__name__}: {exc}"}
+                continue
+            out[i] = {
+                "Eg_gnn_eV": res.Eg_eV,
+                "Eform_megnet_eV_atom": res.Eform_megnet_eV_atom,
+                "Eform_m3gnet_eV_atom": res.Eform_m3gnet_eV_atom,
+                "structure_source": res.structure_source,
+                "error": None,
+            }
+        return out
+
+    def _tier2_remote(self, targets: list[tuple[int, GeneratedCandidate]]) -> dict[int, dict]:
+        """Delega el lote entero a un proceso con el entorno MLFF (p. ej. WSL)."""
+        runtime = self._runtime()
+        by_id: dict[str, int] = {}
+        payload: list[dict] = []
+        for i, candidate in targets:
+            cid = str(candidate.candidate_id)
+            # Un id repetido haría que el segundo resultado pisara al primero.
+            # Es imposible por construcción (el id es hash de la composición),
+            # pero si pasara preferimos perder la fila a mezclar dos materiales.
+            if cid in by_id:
+                continue
+            by_id[cid] = i
+            payload.append(candidate.to_dict())
+
+        respuesta = runtime.predict(payload, self._cfg)
+
+        out: dict[int, dict] = {}
+        for item in respuesta:
+            idx = by_id.get(str(item.get("candidate_id", "")))
+            if idx is None:
+                continue
+            out[idx] = item
+        for i, _ in targets:
+            out.setdefault(i, {"error": "el worker MLFF no devolvió resultado"})
+        return out
+
+    def _tier2_predictions(self, targets: list[tuple[int, GeneratedCandidate]]) -> dict[int, dict]:
+        if not targets:
+            return {}
+        runtime = self._runtime()
+        if runtime.backend == "off":
+            raise MLFFUnavailableError(
+                "El tier MLFF está desactivado por configuración.",
+                remediation="Pon discovery.mlff.backend en 'auto' en config/generator.yaml.",
+            )
+        if runtime.backend == "local":
+            return self._tier2_local(targets)
+        return self._tier2_remote(targets)
 
     # ── Features desde un candidato mixto (radios efectivos) ──────────────────
     @staticmethod
@@ -239,67 +340,67 @@ class ScreeningCascade:
 
         # ── Tier 2: MLFF energía de formación / estabilidad ──────────────────
         if use_mlff:
-            gnn = self._load_gnn()
-            if gnn is not None:
-                from pymatgen.io.ase import AseAtomsAdaptor
+            # Solo los que siguen vivos: construir estructura y evaluar el
+            # MLFF cuesta ~0.5 s por candidato, y es exactamente lo que la
+            # torre existe para no gastar en material ya descartado.
+            targets = [
+                (i, passed[i]) for i, row in enumerate(rows)
+                if row["dropped_at_tier"] is None
+            ]
+            # MLFFUnavailableError NO se captura aquí: que falte el entorno MLFF es
+            # una condición del sistema, no de un candidato, y quien llama
+            # (el engine) tiene que poder distinguirla para degradar a Tier 0/1
+            # en vez de marcar 5000 materiales como fallidos.
+            predicciones = self._tier2_predictions(targets)
 
-                # Solo los que siguen vivos: construir estructura y evaluar el
-                # MLFF cuesta ~0.5 s por candidato, y es exactamente lo que la
-                # torre existe para no gastar en material ya descartado.
-                vivos = [i for i, row in enumerate(rows) if row["dropped_at_tier"] is None]
-
-                structs = {}
-                for i in vivos:
-                    try:
-                        atoms, meta = self._builder.build(passed[i], out_dir=None, export=False)
-                        origen = "pseudoatom" if meta.get("molecular_A_placeholder") else "cubic"
-                        structs[i] = (AseAtomsAdaptor.get_structure(atoms), origen)
-                    except Exception as exc:
-                        structs[i] = (None, "failed")
-                        rows[i]["dropped_at_tier"] = 2
-                        rows[i]["drop_reason"] = f"no se pudo construir la estructura: {exc}"
-
-                for i in vivos:
-                    st, src = structs[i]
-                    row = rows[i]
-                    if st is None:
-                        continue
-                    try:
-                        res = gnn.predict(st, structure_source=src)
-                        row["Eg_gnn_eV"] = round(res.Eg_eV, 4)
-                        # Combinar Eform robustamente: MEGNet-Eform a veces da NaN
-                        # (el ensemble de GNNResult lo propaga). Promediar solo
-                        # valores finitos de MEGNet/M3GNet.
-                        vals = [v for v in (res.Eform_megnet_eV_atom,
-                                            res.Eform_m3gnet_eV_atom)
-                                if v is not None and not math.isnan(v)]
-                        if vals:
-                            eform = sum(vals) / len(vals)
-                            row["Eform_eV_atom"] = round(eform, 4)
-                            row["Eform_std_eV_atom"] = (round(abs(vals[0] - vals[1]) / 2, 4)
-                                                        if len(vals) == 2 else None)
-                            row["is_stable"] = bool(eform < -0.1)
-                            row["stab_score"] = round(_stab_score(eform), 4)
-                            row["passed_eform"] = bool(eform <= self._eform_max)
-
-                            if self._tier2_gate and not row["passed_eform"]:
-                                # Misma holgura que arriba: no se tira un
-                                # material por un Eform que el propio ensemble
-                                # no sabe fijar mejor que su discrepancia.
-                                std = row["Eform_std_eV_atom"] or 0.0
-                                if eform - self._sigma_k * std > self._eform_max:
-                                    row["dropped_at_tier"] = 2
-                                    row["drop_reason"] = (
-                                        f"E_form {eform:.3f}±{std:.3f} eV/át por encima "
-                                        f"del umbral {self._eform_max}"
-                                    )
-                                else:
-                                    row["passed_eform"] = True
-                        row["tier_reached"] = 2
-                    except Exception as exc:
+            for i, _ in targets:
+                row = rows[i]
+                pred = predicciones.get(i) or {}
+                if pred.get("error"):
+                    motivo = str(pred["error"])
+                    if motivo.startswith("no se pudo construir la estructura"):
+                        row["dropped_at_tier"] = 2
+                        row["drop_reason"] = motivo
+                    else:
                         # Antes era un `pass` mudo: un fallo del MLFF dejaba la
                         # fila sin estabilidad y sin decir por qué.
-                        warnings.warn(f"Cascade Tier2 falló en {row['formula']}: {exc}")
+                        warnings.warn(f"Cascade Tier2 falló en {row['formula']}: {motivo}")
+                    continue
+
+                eg = pred.get("Eg_gnn_eV")
+                if eg is not None and not math.isnan(float(eg)):
+                    row["Eg_gnn_eV"] = round(float(eg), 4)
+                # Combinar Eform robustamente: MEGNet-Eform a veces da NaN
+                # (el ensemble de GNNResult lo propaga). Promediar solo
+                # valores finitos de MEGNet/M3GNet.
+                vals = [
+                    float(v) for v in (pred.get("Eform_megnet_eV_atom"),
+                                       pred.get("Eform_m3gnet_eV_atom"))
+                    if v is not None and not math.isnan(float(v))
+                ]
+                if vals:
+                    eform = sum(vals) / len(vals)
+                    row["Eform_eV_atom"] = round(eform, 4)
+                    row["Eform_std_eV_atom"] = (round(abs(vals[0] - vals[1]) / 2, 4)
+                                                if len(vals) == 2 else None)
+                    row["is_stable"] = bool(eform < -0.1)
+                    row["stab_score"] = round(_stab_score(eform), 4)
+                    row["passed_eform"] = bool(eform <= self._eform_max)
+
+                    if self._tier2_gate and not row["passed_eform"]:
+                        # Misma holgura que arriba: no se tira un material por
+                        # un Eform que el propio ensemble no sabe fijar mejor
+                        # que su discrepancia.
+                        std = row["Eform_std_eV_atom"] or 0.0
+                        if eform - self._sigma_k * std > self._eform_max:
+                            row["dropped_at_tier"] = 2
+                            row["drop_reason"] = (
+                                f"E_form {eform:.3f}±{std:.3f} eV/át por encima "
+                                f"del umbral {self._eform_max}"
+                            )
+                        else:
+                            row["passed_eform"] = True
+                row["tier_reached"] = 2
 
         # ── Score de adquisición ─────────────────────────────────────────────
         for row in rows:

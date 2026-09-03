@@ -70,10 +70,14 @@ screening = [
 
 [project.scripts]
 buho = "buho.cli:main"
+perovowl = "buho.cli:main"
 dft-monitor = "monitor_api.launcher:main"
 dft-run = "dft_cspbi3.cli:run_full_workflow"
 dft-converge = "dft_cspbi3.cli:run_convergence_test"
 dft-scissor = "dft_cspbi3.cli:apply_scissor"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.version]
 # Fuente única de la versión, compartida con la app, la API y el binario.

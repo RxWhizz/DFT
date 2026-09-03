@@ -1,4 +1,4 @@
-# Monitor DFT 0.3.0
+# Monitor DFT 0.4.0
 
 Interfaz gráfica del pipeline de cribado de perovskitas: genera candidatos, los
 criba con la cascada HTS, prepara y lanza los cálculos DFT, y sigue el progreso
@@ -8,16 +8,16 @@ en vivo.
 
 Abre la pagina del release:
 
-<https://github.com/RxWhizz/PEROVOWL/releases/tag/v0.3.0>
+<https://github.com/RxWhizz/PEROVOWL/releases/tag/v0.4.0>
 
 En **Assets**, descarga el paquete que corresponda a tu sistema:
 
 | Sistema | Archivo recomendado | Uso |
 |---|---|---|
-| Windows 10/11 x64 | `dft-monitor-desktop-0.3.0-windows-x64.zip` | GUI de escritorio nativa con motor local embebido |
-| Debian/Ubuntu x64 | `perovowl-dft-monitor-0.3.0-linux-amd64.deb` | GUI de escritorio instalable en el sistema |
-| Linux x86_64 portable | `dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz` | GUI portable sin instalador |
-| Linux servidor/web | `dft-monitor-web-0.3.0-linux-x86_64.tar.gz` | Servidor local que abre la interfaz en navegador |
+| Windows 10/11 x64 | `dft-monitor-desktop-0.4.0-windows-x64.zip` | GUI de escritorio nativa con motor local embebido |
+| Debian/Ubuntu x64 | `perovowl-dft-monitor-0.4.0-linux-amd64.deb` | GUI de escritorio instalable en el sistema |
+| Linux x86_64 portable | `dft-monitor-desktop-0.4.0-linux-x86_64.tar.gz` | GUI portable sin instalador |
+| Linux servidor/web | `dft-monitor-web-0.4.0-linux-x86_64.tar.gz` | Servidor local que abre la interfaz en navegador |
 
 Tambien descarga `SHA256SUMS-gui-deliverables.txt` si quieres verificar los
 entregables nuevos, o `SHA256SUMS` para los artefactos Linux publicados
@@ -27,11 +27,11 @@ originalmente.
 
 ### Windows
 
-Descarga `dft-monitor-desktop-0.3.0-windows-x64.zip`, descomprimelo y ejecuta:
+Descarga `dft-monitor-desktop-0.4.0-windows-x64.zip`, descomprimelo y ejecuta:
 
 ```powershell
-Expand-Archive .\dft-monitor-desktop-0.3.0-windows-x64.zip
-.\dft-monitor-desktop-0.3.0-windows-x64\dft_monitor_flutter.exe
+Expand-Archive .\dft-monitor-desktop-0.4.0-windows-x64.zip
+.\dft-monitor-desktop-0.4.0-windows-x64\dft_monitor_flutter.exe
 ```
 
 No necesita Python, Node, Flutter ni el repositorio. El motor local viaja dentro
@@ -39,10 +39,10 @@ de la carpeta `engine/`.
 
 ### Debian/Ubuntu
 
-Descarga `perovowl-dft-monitor-0.3.0-linux-amd64.deb` e instalalo con:
+Descarga `perovowl-dft-monitor-0.4.0-linux-amd64.deb` e instalalo con:
 
 ```bash
-sudo apt install ./perovowl-dft-monitor-0.3.0-linux-amd64.deb
+sudo apt install ./perovowl-dft-monitor-0.4.0-linux-amd64.deb
 perovowl-dft-monitor
 ```
 
@@ -55,8 +55,8 @@ no defines `DFT_DATA_ROOT`.
 Si no quieres instalar el paquete `.deb`, usa el bundle portable:
 
 ```bash
-tar xzf dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz
-./dft-monitor-desktop-0.3.0-linux-x86_64/dft_monitor_flutter
+tar xzf dft-monitor-desktop-0.4.0-linux-x86_64.tar.gz
+./dft-monitor-desktop-0.4.0-linux-x86_64/dft_monitor_flutter
 ```
 
 ### Linux web/servidor
@@ -64,7 +64,7 @@ tar xzf dft-monitor-desktop-0.3.0-linux-x86_64.tar.gz
 Para abrir la interfaz desde navegador o mirar el pipeline desde otra maquina:
 
 ```bash
-tar xzf dft-monitor-web-0.3.0-linux-x86_64.tar.gz
+tar xzf dft-monitor-web-0.4.0-linux-x86_64.tar.gz
 ./dft-monitor-web/dft-monitor-web --data-root /ruta/a/tus/datos
 ```
 
@@ -76,8 +76,8 @@ exige un token en `monitor.auth.token`.
 En Windows:
 
 ```powershell
-Get-FileHash .\dft-monitor-desktop-0.3.0-windows-x64.zip -Algorithm SHA256
-Get-FileHash .\perovowl-dft-monitor-0.3.0-linux-amd64.deb -Algorithm SHA256
+Get-FileHash .\dft-monitor-desktop-0.4.0-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\perovowl-dft-monitor-0.4.0-linux-amd64.deb -Algorithm SHA256
 ```
 
 En Linux:
@@ -88,6 +88,21 @@ sha256sum -c SHA256SUMS-gui-deliverables.txt
 ```
 
 ## Qué trae
+
+### Nuevo en 0.4.0
+
+- **Pantalla Entorno**: una tarjeta por runtime (núcleo, API, GPAW, datasets
+  PAW, MLFF) con lo que hay instalado, lo que falta y un botón para instalarlo,
+  con el log en vivo. El equivalente en consola es `buho setup check` /
+  `buho setup install`.
+- **Tier 2 (MLFF/GNN) fuera del proceso del monitor**: `torch` + `matgl` +
+  `pymatgen` pesan ~2 GB y en Windows son la parte más frágil de la pila. Ahora
+  corren en su propio entorno —en Windows, dentro de WSL— y el monitor habla
+  con él por un worker. `buho setup install mlff` lo crea.
+- El entorno MLFF se crea **separado del de GPAW** a propósito: GPAW está fijado
+  a numpy 1.26 y `matgl` exige numpy ≥ 2. Compartirlo rompería los cálculos.
+
+### De antes
 
 - **Vista en vivo** del pipeline: qué se está haciendo y tiempo estimado,
   calculado con la mediana real de los trabajos ya terminados.
@@ -101,6 +116,21 @@ sha256sum -c SHA256SUMS-gui-deliverables.txt
   núcleos por trabajo aguanta la máquina.
 
 ## Correcciones importantes
+
+### Nuevo en 0.4.0
+
+- **Una ronda ya no muere por una dependencia opcional**: si falta el entorno
+  MLFF, el cribado sigue con los tiers 0 y 1 y lo dice en pantalla, en vez de
+  reventar a mitad. Se descarta menos material, pero el DFT —que es lo caro— no
+  se bloquea.
+- **El estado dejaba de poder rearrancarse**: al fallar durante el cribado, el
+  estado persistido se quedaba en «cribando» para siempre. Parecía que seguía
+  trabajando cuando el hilo ya había muerto, y el botón de ejecutar salía
+  deshabilitado. Ahora cualquier fallo deja el estado diagnosticable.
+- **Barra de navegación**: con once secciones ya no cabían en la ventana por
+  defecto y las últimas quedaban inalcanzables. Ahora la barra se desplaza.
+
+### De antes
 
 - **Datasets PAW**: la ruta estaba escrita a mano en siete archivos y dejó de
   existir; todos los cálculos fallaban al arrancar. Ahora se resuelve

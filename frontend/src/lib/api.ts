@@ -303,6 +303,54 @@ export interface ScreeningStartDftResult {
   runner_error?: string | null
 }
 
+export interface DiscoveryCandidate {
+  candidate_id?: string | null
+  formula?: string | null
+  generation_mode?: string | null
+  B_family?: string | null
+  dominant_halide?: string | null
+  status?: string | null
+  Eg_surrogate_eV?: number | null
+  Eg_sigma_eV?: number | null
+  Eform_eV_atom?: number | null
+  meff_e_pred_m0?: number | null
+  meff_h_pred_m0?: number | null
+  eps_inf_pred?: number | null
+  pv_score_ml?: number | null
+  acquisition_score?: number | null
+  band_score?: number | null
+  stab_score?: number | null
+  transport_score?: number | null
+  dielectric_score?: number | null
+  round_selected?: number | string | null
+}
+
+export interface DiscoveryStatus {
+  state: {
+    status: string
+    current_round?: number
+    stop_reason?: string | null
+    last_screening?: Record<string, unknown>
+    last_finalize?: Record<string, unknown>
+    space?: Record<string, unknown>
+    paths?: Record<string, string>
+    /** Presente si la última criba corrió sin Tier 2 por falta del entorno MLFF. */
+    mlff_warning?: { error: string; remediation: string } | null
+  }
+  counts: Record<string, number>
+  coverage: { total: number; seen: number; percent: number }
+  frontier: DiscoveryCandidate[]
+  queue: DiscoveryCandidate[]
+  paths: Record<string, string>
+  background?: { running: boolean; last_error?: string | null }
+}
+
+export interface DiscoveryExport {
+  report: string
+  ledger: string
+  frontier: string
+}
+
 export interface Candidate {
   candidate_id: string | null
   formula: string | null
@@ -510,6 +558,51 @@ export interface JobsQuery {
   offset?: number
 }
 
+// ── Wizard de entorno ────────────────────────────────────────────────────────
+
+export interface SetupCapability {
+  id: string
+  titulo: string
+  ok: boolean
+  requerido: boolean
+  detalle: { versiones?: Record<string, string>; [k: string]: unknown }
+  error: string | null
+  remediacion: string
+  comando: string | null
+}
+
+export interface SetupJob {
+  running: boolean
+  status?: string
+  target?: string
+  error?: string | null
+  log: string[]
+}
+
+export interface SetupStatus {
+  status: 'ok' | 'degradado' | 'error'
+  ok: boolean
+  plataforma: string
+  python: string
+  executable: string
+  frozen: boolean
+  capacidades: SetupCapability[]
+  job: SetupJob
+}
+
+export interface SetupPlanStep {
+  name: string
+  descripcion: string
+  comando: string
+  opcional: boolean
+}
+
+export interface SetupPlan {
+  target: string
+  steps: SetupPlanStep[]
+  notas: string[]
+}
+
 // ── Endpoints ────────────────────────────────────────────────────────────────
 
 export const api = {
@@ -602,6 +695,36 @@ export const api = {
       },
     ),
 
+  discoveryStatus: () => request<DiscoveryStatus>('/api/discovery/status'),
+  discoveryInit: (body: { reset?: boolean } = {}) =>
+    request<DiscoveryStatus>('/api/discovery/init', {
+      method: 'POST',
+      body: JSON.stringify({ reset: body.reset ?? false }),
+    }),
+  discoveryRun: (body: {
+    start_runner?: boolean
+    dry_run?: boolean
+    use_mlff?: boolean | null
+    max_rounds?: number | null
+  } = {}) =>
+    request<DiscoveryStatus>('/api/discovery/run', {
+      method: 'POST',
+      body: JSON.stringify({
+        start_runner: body.start_runner ?? true,
+        dry_run: body.dry_run ?? false,
+        use_mlff: body.use_mlff ?? null,
+        max_rounds: body.max_rounds ?? null,
+      }),
+    }),
+  discoveryPause: () =>
+    request<DiscoveryStatus>('/api/discovery/pause', { method: 'POST' }),
+  discoveryResume: () =>
+    request<DiscoveryStatus>('/api/discovery/resume', { method: 'POST' }),
+  discoveryFrontier: (limit = 100) =>
+    request<{ items: DiscoveryCandidate[] }>(`/api/discovery/frontier${qs({ limit })}`),
+  discoveryExport: () =>
+    request<DiscoveryExport>('/api/discovery/export', { method: 'POST' }),
+
   candidates: (params: CandidatesQuery = {}) =>
     request<CandidatePage>(`/api/candidates${qs({ ...params })}`),
 
@@ -618,6 +741,20 @@ export const api = {
 
   statusfull: () =>
     request<{ messages: string[]; count: number; timestamp: string }>('/api/statusfull'),
+
+  // `fast` omite la sonda MLFF, que lanza un proceso y tarda segundos.
+  setupStatus: (fast = false) => request<SetupStatus>(`/api/setup/status${qs({ fast })}`),
+  setupPlan: (target: string, cuda = false) =>
+    request<SetupPlan>('/api/setup/plan', {
+      method: 'POST',
+      body: JSON.stringify({ target, cuda }),
+    }),
+  setupInstall: (target: string, opts: { cuda?: boolean; recreate?: boolean } = {}) =>
+    request<SetupJob>('/api/setup/install', {
+      method: 'POST',
+      body: JSON.stringify({ target, cuda: false, recreate: false, ...opts }),
+    }),
+  setupJob: () => request<SetupJob>('/api/setup/job'),
 }
 
 

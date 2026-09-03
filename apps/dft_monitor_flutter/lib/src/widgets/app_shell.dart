@@ -1,10 +1,12 @@
 import 'activity_banner.dart';
 import '../api/errors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../engine/engine_supervisor.dart';
+import '../models/activity.dart';
 import '../models/models.dart';
 import '../repositories/repositories.dart';
 
@@ -18,47 +20,89 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(engineSupervisorProvider);
     final auth = ref.watch(authStateProvider);
+    final activity =
+        engine.isReady ? ref.watch(activityProvider).valueOrNull : null;
 
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _indexFor(location),
-            labelType: NavigationRailLabelType.all,
-            minWidth: 88,
-            onDestinationSelected: (index) => context.go(_pathFor(index)),
-            destinations: const [
-              NavigationRailDestination(
-                  icon: Icon(Icons.monitor_heart_outlined),
-                  label: Text('En vivo')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.list_alt_outlined), label: Text('Trabajos')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.filter_alt_outlined),
-                  label: Text('Cribado')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.hub_outlined), label: Text('Candidatos')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.psychology_alt_outlined), label: Text('Predictor')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  label: Text('Lotes')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.view_in_ar_outlined),
-                  label: Text('Estructuras')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.article_outlined),
-                  label: Text('Resultados')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.terminal_outlined),
-                  label: Text('Diagnóstico')),
-            ],
+          // El rail va dentro de un scroll: con once destinos ya no cabe en los
+          // 720 px de alto que trae la ventana por defecto, y NavigationRail no
+          // desplaza por su cuenta — recortaba los últimos y los dejaba
+          // inalcanzables salvo maximizando. El ConstrainedBox + IntrinsicHeight
+          // mantiene el rail a la altura completa cuando sí cabe, para que el
+          // fondo no se corte a media pantalla.
+          LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: NavigationRail(
+                    selectedIndex: _indexFor(location),
+                    labelType: NavigationRailLabelType.all,
+                    minWidth: 88,
+                    onDestinationSelected: (index) =>
+                        context.go(_pathFor(index)),
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.monitor_heart_outlined),
+                        label: Text('En vivo'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.list_alt_outlined),
+                        label: Text('Trabajos'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.filter_alt_outlined),
+                        label: Text('Cribado'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.auto_awesome_motion_outlined),
+                        label: Text('Protocolo'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.hub_outlined),
+                        label: Text('Candidatos'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.psychology_alt_outlined),
+                        label: Text('Predictor'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.inventory_2_outlined),
+                        label: Text('Lotes'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.view_in_ar_outlined),
+                        label: Text('Estructuras'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.article_outlined),
+                        label: Text('Resultados'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.terminal_outlined),
+                        label: Text('Diagnóstico'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.build_outlined),
+                        label: Text('Entorno'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
           const VerticalDivider(width: 1),
           Expanded(
             child: Column(
               children: [
-                _TopBar(engine: engine, auth: auth.asData?.value),
+                _TopBar(
+                  engine: engine,
+                  auth: auth.asData?.value,
+                  activity: activity,
+                ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -78,7 +122,8 @@ class AppShell extends ConsumerWidget {
                             ),
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (error, _) => Center(child: Text(mensajeDeError(error))),
+                      error: (error, _) =>
+                          Center(child: Text(mensajeDeError(error))),
                     ),
                   ),
                 ),
@@ -92,25 +137,36 @@ class AppShell extends ConsumerWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.engine, required this.auth});
+  const _TopBar({
+    required this.engine,
+    required this.auth,
+    required this.activity,
+  });
 
   final EngineState engine;
   final AuthState? auth;
+  final Activity? activity;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (engine.status) {
-      EngineStatus.ready => Colors.greenAccent,
-      EngineStatus.starting => Colors.amberAccent,
-      EngineStatus.error => Colors.redAccent,
-      EngineStatus.stopped => Colors.grey,
-    };
-    final label = switch (engine.status) {
-      EngineStatus.ready => 'motor local listo',
-      EngineStatus.starting => 'arrancando motor',
-      EngineStatus.error => 'motor con error',
-      EngineStatus.stopped => 'motor detenido',
-    };
+    final active = activity != null && activity!.activity != 'idle';
+    final color = active
+        ? _activityColor(context, activity!)
+        : switch (engine.status) {
+            EngineStatus.ready => Colors.greenAccent,
+            EngineStatus.starting => Colors.amberAccent,
+            EngineStatus.error => Colors.redAccent,
+            EngineStatus.stopped => Colors.grey,
+          };
+    final label = active
+        ? activity!.label
+        : switch (engine.status) {
+            EngineStatus.ready => 'motor local listo',
+            EngineStatus.starting => 'arrancando motor',
+            EngineStatus.error => 'motor con error',
+            EngineStatus.stopped => 'motor detenido',
+          };
+    final detail = active ? activity!.detail : engine.ready?.dataRoot;
 
     return Container(
       height: 48,
@@ -121,20 +177,23 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text('Monitor DFT',
-              style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text(
+            'Monitor DFT',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(width: 12),
           Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 6),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
-          if (engine.ready != null) ...[
+          if (detail != null && detail.isNotEmpty) ...[
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                engine.ready!.dataRoot,
+                detail,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.end,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -150,6 +209,18 @@ class _TopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _activityColor(BuildContext context, Activity activity) {
+  final scheme = Theme.of(context).colorScheme;
+  return switch (activity.activity) {
+    'discovery' => Colors.lightBlueAccent,
+    'dft' => scheme.primary,
+    'queued' => scheme.tertiary,
+    'generating' => scheme.tertiary,
+    'benchmark' => Colors.amberAccent,
+    _ => scheme.onSurfaceVariant,
+  };
 }
 
 class _LoginPanel extends ConsumerStatefulWidget {
@@ -182,8 +253,10 @@ class _LoginPanelState extends ConsumerState<_LoginPanel> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Monitor DFT',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Monitor DFT',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _controller,
@@ -193,9 +266,12 @@ class _LoginPanelState extends ConsumerState<_LoginPanel> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 10),
-                  Text(_error!,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error)),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 16),
                 SizedBox(
@@ -251,12 +327,17 @@ int _indexFor(String location) {
   // El agente queda fuera hasta una version futura: los indices se corren.
   if (location.startsWith('/jobs')) return 1;
   if (location.startsWith('/screening')) return 2;
-  if (location.startsWith('/candidates')) return 3;
-  if (location.startsWith('/ml')) return 4;
-  if (location.startsWith('/batches')) return 5;
-  if (location.startsWith('/structures')) return 6;
-  if (location.startsWith('/results')) return 7;
-  if (location.startsWith('/diagnostics')) return 8;
+  if (location.startsWith('/protocolo-descubrimiento-autonomo') ||
+      location.startsWith('/discovery')) {
+    return 3;
+  }
+  if (location.startsWith('/candidates')) return 4;
+  if (location.startsWith('/ml')) return 5;
+  if (location.startsWith('/batches')) return 6;
+  if (location.startsWith('/structures')) return 7;
+  if (location.startsWith('/results')) return 8;
+  if (location.startsWith('/diagnostics')) return 9;
+  if (location.startsWith('/entorno')) return 10;
   return 0;
 }
 
@@ -264,12 +345,14 @@ String _pathFor(int index) {
   return switch (index) {
     1 => '/jobs',
     2 => '/screening',
-    3 => '/candidates',
-    4 => '/ml',
-    5 => '/batches',
-    6 => '/structures',
-    7 => '/results',
-    8 => '/diagnostics',
+    3 => '/protocolo-descubrimiento-autonomo',
+    4 => '/candidates',
+    5 => '/ml',
+    6 => '/batches',
+    7 => '/structures',
+    8 => '/results',
+    9 => '/diagnostics',
+    10 => '/entorno',
     _ => '/',
   };
 }

@@ -132,8 +132,11 @@ def resolve_data(rel: str | Path) -> Path:
 
     Las rutas absolutas se devuelven tal cual: la configuración admite ambas.
     """
+    raw = str(rel)
     path = Path(rel).expanduser()
-    return path if path.is_absolute() else (data_root() / path)
+    if path.is_absolute() or (raw.startswith("/") and not raw.startswith("//")):
+        return path
+    return data_root() / path
 
 
 # ── Configuración ────────────────────────────────────────────────────────────

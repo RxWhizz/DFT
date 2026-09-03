@@ -32,8 +32,10 @@ def test_no_basta_con_que_el_directorio_exista(tmp_path, monkeypatch):
     vacio = tmp_path / "vacio"
     vacio.mkdir()
     monkeypatch.setenv("GPAW_SETUP_PATH", str(vacio))
+    monkeypatch.delenv("BUHO_GPAW_SETUP_PATH", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "sin-home"))
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.setattr(gpaw_setup, "_site_package_dirs", lambda: [])
     assert gpaw_setup.find(tmp_path / "repo") is None
 
 
@@ -41,6 +43,14 @@ def test_encuentra_por_la_variable_de_entorno(tmp_path, monkeypatch):
     d = _setups_falsos(tmp_path / "propio")
     monkeypatch.setenv("GPAW_SETUP_PATH", str(d))
     assert gpaw_setup.find() == str(d)
+
+
+def test_prefiere_variable_buho_sobre_gpaw_setup_path(tmp_path, monkeypatch):
+    viejo = _setups_falsos(tmp_path / "viejo")
+    nuevo = _setups_falsos(tmp_path / "nuevo")
+    monkeypatch.setenv("GPAW_SETUP_PATH", str(viejo))
+    monkeypatch.setenv("BUHO_GPAW_SETUP_PATH", str(nuevo))
+    assert gpaw_setup.find() == str(nuevo)
 
 
 def test_cae_al_home_cuando_el_venv_no_los_tiene(tmp_path, monkeypatch):
@@ -51,7 +61,9 @@ def test_cae_al_home_cuando_el_venv_no_los_tiene(tmp_path, monkeypatch):
     (d / gpaw_setup.MARCADOR).write_bytes(b"")
 
     monkeypatch.delenv("GPAW_SETUP_PATH", raising=False)
+    monkeypatch.delenv("BUHO_GPAW_SETUP_PATH", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(gpaw_setup, "_site_package_dirs", lambda: [])
     assert gpaw_setup.find(tmp_path / "repo-sin-datasets") == str(d)
 
 
@@ -62,15 +74,19 @@ def test_prefiere_la_version_mas_reciente(tmp_path, monkeypatch):
         d.mkdir(parents=True)
         (d / gpaw_setup.MARCADOR).write_bytes(b"")
     monkeypatch.delenv("GPAW_SETUP_PATH", raising=False)
+    monkeypatch.delenv("BUHO_GPAW_SETUP_PATH", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(gpaw_setup, "_site_package_dirs", lambda: [])
     assert gpaw_setup.find().endswith("24.11.0")
 
 
 def test_sin_datasets_aborta_con_instrucciones(tmp_path, monkeypatch):
     """Fallar aquí cuesta un mensaje; no fallar costaba un lote entero."""
     monkeypatch.delenv("GPAW_SETUP_PATH", raising=False)
+    monkeypatch.delenv("BUHO_GPAW_SETUP_PATH", raising=False)
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "vacio"))
+    monkeypatch.setattr(gpaw_setup, "_site_package_dirs", lambda: [])
     with pytest.raises(SystemExit) as exc:
         gpaw_setup.resolve(tmp_path / "repo")
     mensaje = str(exc.value)
@@ -85,4 +101,6 @@ def test_ningun_runner_conserva_la_ruta_escrita_a_mano():
         cuerpo = "\n".join(l for l in fuente.splitlines()
                            if not l.lstrip().startswith("#"))
         assert "gpaw_data" not in cuerpo, f"{rel} sigue con la ruta a mano"
-        assert "gpaw_setup.resolve" in cuerpo, f"{rel} no usa el resolutor"
+        assert (
+            "gpaw_setup.resolve" in cuerpo or "dft_runtime.build_runtime" in cuerpo
+        ), f"{rel} no usa el resolutor comun"

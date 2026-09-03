@@ -19,6 +19,7 @@ Actualiza status.json:
 """
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import signal
@@ -31,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from buho import gpaw_setup
+from buho import dft_runtime
 RELAX_DIR = ROOT / "runs" / "relax_basic"
 LOG_FILE = RELAX_DIR / "runner.log"
 
@@ -44,6 +45,7 @@ def log(msg: str, also_print: bool = True) -> None:
     line = f"[{ts()}] {msg}"
     if also_print:
         print(line, flush=True)
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(LOG_FILE, "a") as f:
         f.write(line + "\n")
 
@@ -70,11 +72,13 @@ def is_pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
         return True
-    except (ProcessLookupError, PermissionError):
+    except (ProcessLookupError, PermissionError, OSError):
         return False
 
 
 def pid_cwd(pid: int) -> Path | None:
+    if os.name != "posix":
+        return None
     try:
         return Path(f"/proc/{pid}/cwd").resolve()
     except Exception:
@@ -83,27 +87,82 @@ def pid_cwd(pid: int) -> Path | None:
 
 def pid_matches_job(pid: int, job_dir: Path) -> bool:
     cwd = pid_cwd(pid)
-    return cwd == job_dir.resolve() if cwd else False
+    if cwd:
+        return cwd == job_dir.resolve()
+    return os.name != "posix" and is_pid_alive(pid)
 
 
-def acquire_runner_lock(relax_dir: Path):
+class RunnerLock:
+    def __init__(self, handle, lock_path: Path, *, remove_on_close: bool = False):
+        self.handle = handle
+        self.lock_path = lock_path
+        self.remove_on_close = remove_on_close
+
+    def close(self) -> None:
+        try:
+            self.handle.close()
+        finally:
+            if self.remove_on_close:
+                try:
+                    self.lock_path.unlink()
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+
+
+def _pid_from_lock(lock_path: Path) -> int | None:
+    try:
+        text = lock_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return None
+    for token in text.replace("\n", " ").split():
+        if token.startswith("pid="):
+            try:
+                return int(token.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def acquire_runner_lock(relax_dir: Path) -> RunnerLock | None:
     """Evita dos runners simultáneos sobre el mismo batch/directorio."""
-    import fcntl
 
     lock_path = relax_dir / ".runner.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    fh = open(lock_path, "w")
-    try:
-        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        log(f"ABORT otro runner ya tiene el candado: {lock_path}")
-        fh.close()
-        return None
+    if os.name == "posix":
+        import fcntl
+
+        fh = open(lock_path, "w")
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            log(f"ABORT otro runner ya tiene el candado: {lock_path}")
+            fh.close()
+            return None
+        remove_on_close = False
+    else:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            pid = _pid_from_lock(lock_path)
+            if pid is not None and not is_pid_alive(pid):
+                try:
+                    lock_path.unlink()
+                    fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                except Exception:
+                    log(f"ABORT otro runner ya tiene el candado: {lock_path}")
+                    return None
+            else:
+                log(f"ABORT otro runner ya tiene el candado: {lock_path}")
+                return None
+        fh = os.fdopen(fd, "w")
+        remove_on_close = True
     fh.seek(0)
     fh.truncate()
     fh.write(f"pid={os.getpid()} started={datetime.now().isoformat()}Z\n")
     fh.flush()
-    return fh
+    return RunnerLock(fh, lock_path, remove_on_close=remove_on_close)
 
 
 def cleanup_stale_running(relax_dir: Path) -> int:
@@ -159,11 +218,16 @@ def count_external_running(relax_dir: Path) -> int:
 
 
 # Mapa candidate_id → pre_dft_score (los mejores se procesan primero)
-def _load_score_map() -> dict:
+def _load_score_map(relax_dir: Path = RELAX_DIR) -> dict[str, float]:
     import csv
     scores: dict[str, float] = {}
-    top_csv = RELAX_DIR.parent.parent / "data" / "processed" / "top500_candidates.csv"
-    if top_csv.exists():
+    candidates = [
+        ROOT / "data" / "processed" / "top500_candidates.csv",
+        relax_dir.parent.parent / "data" / "processed" / "top500_candidates.csv",
+    ]
+    for top_csv in candidates:
+        if not top_csv.exists():
+            continue
         try:
             with open(top_csv) as f:
                 for row in csv.DictReader(f):
@@ -176,16 +240,14 @@ def _load_score_map() -> dict:
     return scores
 
 
-_SCORE_MAP = _load_score_map()
-
-
 def get_jobs_by_status(status: str, relax_dir: Path = RELAX_DIR) -> list[Path]:
+    score_map = _load_score_map(relax_dir)
     jobs = [
         d for d in relax_dir.iterdir()
         if d.is_dir() and read_status(d).get("status") == status
     ]
     # Orden por score descendente (mejores primero); sin score → al final
-    jobs.sort(key=lambda d: (-_SCORE_MAP.get(d.name, -1.0), d.name))
+    jobs.sort(key=lambda d: (-score_map.get(d.name, -1.0), d.name))
     return jobs
 
 
@@ -201,34 +263,20 @@ class Slot:
         return (datetime.now() - self.started).total_seconds() / 60
 
 
-# GPAW 24.6.0 estable (conda env) — domain decomposition funciona aquí, NO en
-# el master del venv. Los jobs corren bajo este env con sus datasets PAW.
-CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
-GPAW_ENV = "gpaw246"
-GPAW_SETUP_PATH = gpaw_setup.resolve(ROOT)
+def _subprocess_group_kwargs() -> dict:
+    if os.name == "posix":
+        return {"preexec_fn": os.setsid}
+    if sys.platform == "win32":
+        flag = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        return {"creationflags": flag} if flag else {}
+    return {}
 
 
-def launch_job(job_dir: Path, n_cores: int, mpirun: str = "mpirun") -> Slot:
-    """Lanza el job con GPAW 24.6 (conda) + domain=n_cores vía mpiexec del env."""
-    # conda run activa el env (mpich + libs); exportar GPAW_SETUP_PATH DENTRO de
-    # bash (el activate.d del env lo sobreescribe, así gana el nuestro).
-    if (job_dir / "job.sh").exists():
-        # Phase 2A: job.sh lanza un mpiexec por config (aislamiento de procesos MPI).
-        inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
-                 f"export NCORES={n_cores}; exec bash job.sh")
-    else:
-        inner = (f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; "
-                 f"exec mpiexec -n {n_cores} python input.py")
-    cmd = [CONDA_BIN, "run", "-n", GPAW_ENV, "bash", "-c", inner]
-
+def launch_job(job_dir: Path, n_cores: int, runtime: dft_runtime.DFTRuntime) -> Slot:
+    """Lanza un job DFT usando el runtime ya validado por preflight."""
+    cmd, env = dft_runtime.build_job_command(job_dir, runtime, n_cores)
     stdout_log = open(job_dir / "runner_stdout.log", "w")
     stderr_log = open(job_dir / "runner_stderr.log", "w")
-
-    # OMP/BLAS a 1 thread: la paralelización es por MPI domain, no threads.
-    env = os.environ.copy()
-    env["OMP_NUM_THREADS"] = "1"
-    env["OPENBLAS_NUM_THREADS"] = "1"
-    env["MKL_NUM_THREADS"] = "1"
 
     proc = subprocess.Popen(
         cmd,
@@ -236,7 +284,7 @@ def launch_job(job_dir: Path, n_cores: int, mpirun: str = "mpirun") -> Slot:
         stdout=stdout_log,
         stderr=stderr_log,
         env=env,
-        preexec_fn=os.setsid,  # grupo propio para poder matar con SIGTERM
+        **_subprocess_group_kwargs(),
     )
 
     write_status(job_dir, {
@@ -321,16 +369,56 @@ def main():
     ap.add_argument("--filter",    default=None, help="Filtrar por modo (ej: pure)")
     ap.add_argument("--poll",   type=int, default=30,   help="Intervalo de polling (s)")
     ap.add_argument("--stagger", type=int, default=8,   help="Segundos entre arranques (evita lockstep del init/FFT)")
-    ap.add_argument("--mpirun", default="mpirun",       help="Ejecutable mpirun")
+    ap.add_argument("--mpirun", default=None,           help="Ejecutable mpiexec/mpirun para modo directo")
+    ap.add_argument("--launcher", choices=["auto", "conda", "direct"], default="auto",
+                    help="Runtime GPAW: auto, conda o Python directo")
+    ap.add_argument("--conda-bin", default=None, help="Ruta/ejecutable de conda")
+    ap.add_argument("--conda-env", default=None, help="Nombre del env con GPAW")
+    ap.add_argument("--python", default=None, help="Python con gpaw/ase para launcher direct")
+    ap.add_argument("--setup-path", default=None, help="Directorio PAW datasets de GPAW")
+    ap.add_argument("--bash", default=None, help="Ruta/ejecutable bash para job.sh")
+    ap.add_argument("--preflight-only", action="store_true",
+                    help="Validar runtime y salir sin tocar la cola")
+    ap.add_argument("--skip-preflight", action="store_true",
+                    help="No validar GPAW/ASE/MPI antes de lanzar")
     ap.add_argument("--dry-run", action="store_true",   help="Solo mostrar jobs, no lanzar")
     args = ap.parse_args()
 
     relax_dir = Path(args.relax_dir)
     global LOG_FILE
     LOG_FILE = relax_dir / "runner.log"
+
+    runtime = None
+    if not args.dry_run or args.preflight_only:
+        try:
+            runtime = dft_runtime.build_runtime(
+                repo_root=ROOT,
+                launcher=args.launcher,
+                conda_bin=args.conda_bin,
+                conda_env=args.conda_env,
+                python=args.python,
+                mpi_launcher=args.mpirun,
+                setup_path=args.setup_path,
+                bash=args.bash,
+            )
+            needs_bash = relax_dir.is_dir() and any(
+                (job_dir / "job.sh").exists() for job_dir in relax_dir.iterdir() if job_dir.is_dir()
+            )
+            if not args.skip_preflight:
+                dft_runtime.preflight(runtime, n_cores=args.cores, needs_bash=needs_bash)
+        except dft_runtime.RuntimeCheckError as exc:
+            print(str(exc), file=sys.stderr, flush=True)
+            raise SystemExit(2) from exc
+
+    if args.preflight_only:
+        assert runtime is not None
+        print(json.dumps({"status": "ok", "runtime": runtime.as_dict()}, indent=2), flush=True)
+        return
+
     lock_fh = acquire_runner_lock(relax_dir)
     if lock_fh is None:
         return
+    atexit.register(lock_fh.close)
 
     # Señal de parada limpia
     _stop = [False]
@@ -354,6 +442,8 @@ def main():
     log(f"BUHO Relax Runner — {ts()}")
     log(f"Jobs pendientes: {len(pending)}  Slots: {args.slots}  Cores/slot: {args.cores}")
     log(f"Directorio: {relax_dir}")
+    if runtime:
+        log(f"Runtime DFT: {json.dumps(runtime.as_dict(), ensure_ascii=False)}")
     log(f"{'='*70}")
 
     if args.dry_run:
@@ -384,7 +474,8 @@ def main():
             if read_status(job_dir).get("status") != "pending":
                 continue
             try:
-                slot = launch_job(job_dir, args.cores, args.mpirun)
+                assert runtime is not None
+                slot = launch_job(job_dir, args.cores, runtime)
                 active_slots.append(slot)
                 slots_free -= 1
                 launched_this_wave += 1
@@ -434,7 +525,11 @@ def main():
                 check_slot(s)
             except subprocess.TimeoutExpired:
                 log(f"TIMEOUT {s.job_dir.name} — enviando SIGTERM")
-                os.killpg(os.getpgid(s.proc.pid), signal.SIGTERM)
+                if os.name == "posix":
+                    os.killpg(os.getpgid(s.proc.pid), signal.SIGTERM)
+                else:
+                    s.proc.terminate()
+    lock_fh.close()
 
 
 if __name__ == "__main__":

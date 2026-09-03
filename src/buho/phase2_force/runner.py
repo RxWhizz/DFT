@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import re
 import signal
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .. import gpaw_setup
+from .. import dft_runtime
 
 from buho.phase2_force import ROOT
 from buho.phase2_force.common import RUNS_DIR, display_path
@@ -23,9 +25,6 @@ from buho.phase2_force.self_heal import (
 )
 
 
-CONDA_BIN = str(Path.home() / "miniforge3" / "bin" / "conda")
-GPAW_ENV = "gpaw246"
-GPAW_SETUP_PATH = gpaw_setup.resolve(ROOT)
 ACTIVE_PATTERN = ("buho_relax_runner", "phase2_force_runner", "mpiexec", "mpirun", "input.py", "conda run")
 SCF_ITER_RE = re.compile(r"iter:\s*(\d+)\s+\d{1,2}:\d{2}:\d{2}")
 
@@ -50,19 +49,70 @@ def write_status(job_dir: Path, update: dict) -> None:
     tmp_path.replace(status_path)
 
 
-def acquire_lock(lock_path: Path):
-    import fcntl
+class RunnerLock:
+    def __init__(self, handle, lock_path: Path, *, remove_on_close: bool = False):
+        self.handle = handle
+        self.lock_path = lock_path
+        self.remove_on_close = remove_on_close
+
+    def close(self) -> None:
+        try:
+            self.handle.close()
+        finally:
+            if self.remove_on_close:
+                try:
+                    self.lock_path.unlink()
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    pass
+
+
+def _pid_from_lock(lock_path: Path) -> int | None:
+    try:
+        text = lock_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return None
+    for token in text.replace("\n", " ").split():
+        if token.startswith("pid="):
+            try:
+                return int(token.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def acquire_lock(lock_path: Path) -> RunnerLock | None:
 
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    handle = open(lock_path, "w")
-    try:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        handle.close()
-        return None
+    if os.name == "posix":
+        import fcntl
+
+        handle = open(lock_path, "w")
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            handle.close()
+            return None
+        remove_on_close = False
+    else:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            pid = _pid_from_lock(lock_path)
+            if pid is not None and not pid_alive(pid):
+                try:
+                    lock_path.unlink()
+                    fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                except Exception:
+                    return None
+            else:
+                return None
+        handle = os.fdopen(fd, "w")
+        remove_on_close = True
     handle.write(f"pid={os.getpid()} started={datetime.now().isoformat()}Z\n")
     handle.flush()
-    return handle
+    return RunnerLock(handle, lock_path, remove_on_close=remove_on_close)
 
 
 def active_dft_processes() -> list[str]:
@@ -367,6 +417,15 @@ class Slot:
         return (datetime.now() - self.started).total_seconds() / 60
 
 
+def _subprocess_group_kwargs() -> dict:
+    if os.name == "posix":
+        return {"preexec_fn": os.setsid}
+    if sys.platform == "win32":
+        flag = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        return {"creationflags": flag} if flag else {}
+    return {}
+
+
 def meminfo_gb() -> tuple[float, float, float]:
     """(RAM_usada_GB, RAM_disponible_GB, swap_usada_GB) desde /proc/meminfo."""
     info: dict[str, float] = {}
@@ -384,17 +443,13 @@ def meminfo_gb() -> tuple[float, float, float]:
     return total - avail, avail, swap_used
 
 
-def launch_job(batch_dir: Path, job_dir: Path, cores: int) -> Slot:
-    if (job_dir / "job.sh").exists():
-        # Template nuevo: job.sh corre un mpiexec POR config (aislamiento MPI).
-        inner = f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; export NCORES={cores}; exec bash job.sh"
-    else:
-        inner = f"export GPAW_SETUP_PATH={GPAW_SETUP_PATH}; exec mpiexec -n {cores} python input.py"
-    cmd = [CONDA_BIN, "run", "-n", GPAW_ENV, "bash", "-c", inner]
-    env = os.environ.copy()
-    env["OMP_NUM_THREADS"] = "1"
-    env["OPENBLAS_NUM_THREADS"] = "1"
-    env["MKL_NUM_THREADS"] = "1"
+def launch_job(
+    batch_dir: Path,
+    job_dir: Path,
+    cores: int,
+    runtime: dft_runtime.DFTRuntime,
+) -> Slot:
+    cmd, env = dft_runtime.build_job_command(job_dir, runtime, cores)
     stdout = open(job_dir / "runner_stdout.log", "w")
     stderr = open(job_dir / "runner_stderr.log", "w")
     proc = subprocess.Popen(
@@ -403,7 +458,7 @@ def launch_job(batch_dir: Path, job_dir: Path, cores: int) -> Slot:
         stdout=stdout,
         stderr=stderr,
         env=env,
-        preexec_fn=os.setsid,
+        **_subprocess_group_kwargs(),
     )
     write_status(job_dir, {
         "status": "running",
@@ -436,7 +491,8 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
               runs_dir: Path = RUNS_DIR, start_real: bool = False,
               limit: int | None = None, no_scf_stall_minutes: float = 30.0,
               ram_limit_gb: float = 52.0, min_avail_gb: float = 5.0,
-              swap_limit_gb: float = 4.0, ram_reserve_gb: float = 10.0) -> dict:
+              swap_limit_gb: float = 4.0, ram_reserve_gb: float = 10.0,
+              runtime: dft_runtime.DFTRuntime | None = None) -> dict:
     batch_dir = runs_dir / f"batch_{batch_id:03d}"
     if not batch_dir.exists():
         raise FileNotFoundError(f"No existe {batch_dir}; prepara el lote primero.")
@@ -448,6 +504,13 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
     if active and not override_active and not dry_run:
         raise RuntimeError("Hay procesos DFT/runner activos; usa --override-active solo si estas seguro:\n" + "\n".join(active[:20]))
 
+    if not dry_run:
+        runtime = runtime or dft_runtime.build_runtime(repo_root=ROOT)
+        needs_bash = any(
+            (job / "job.sh").exists() for job in batch_dir.iterdir() if job.is_dir()
+        )
+        dft_runtime.preflight(runtime, n_cores=cores, needs_bash=needs_bash)
+
     if dry_run:
         global_lock = None
         batch_lock = None
@@ -455,9 +518,11 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
         global_lock = acquire_lock(runs_dir / ".phase2_force_global.lock")
         if global_lock is None:
             raise RuntimeError(f"Otro runner phase2_force ya tiene lock global en {runs_dir}")
+        atexit.register(global_lock.close)
         batch_lock = acquire_lock(batch_dir / ".runner.lock")
         if batch_lock is None:
             raise RuntimeError(f"Otro runner ya tiene lock del lote {batch_id}")
+        atexit.register(batch_lock.close)
 
     if not resume and not dry_run:
         cleanup_stale_running(batch_dir)
@@ -473,8 +538,11 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
         "n_pending": len(pending),
         "limit": limit,
         "dry_run": dry_run,
+        "runtime": runtime.as_dict() if runtime else None,
     }
     log(batch_dir, f"PHASE2 FORCE runner batch={batch_id} pending={len(pending)} slots={slots} cores={cores}")
+    if runtime:
+        log(batch_dir, f"Runtime DFT: {json.dumps(runtime.as_dict(), ensure_ascii=False)}")
     if dry_run:
         for job in pending[:10]:
             log(batch_dir, f"DRY {job.name} {read_status(job).get('formula')}")
@@ -525,7 +593,8 @@ def run_batch(batch_id: int, slots: int = 5, cores: int = 8, poll: int = 30, sta
                 continue
             if read_status(job).get("status") == "failed" and not resume:
                 continue
-            active_slots.append(launch_job(batch_dir, job, cores))
+            assert runtime is not None
+            active_slots.append(launch_job(batch_dir, job, cores, runtime))
             free -= 1
             if stagger and free > 0 and idx < len(pending):
                 time.sleep(stagger)
@@ -577,13 +646,37 @@ def main() -> None:
                         help="Watchdog: no lanzar si swap usada supera esto (GiB).")
     parser.add_argument("--ram-reserve-gb", type=float, default=10.0,
                         help="Watchdog: GiB reservados por job lanzado hace <4 min (RAM aun no materializada).")
+    parser.add_argument("--launcher", choices=["auto", "conda", "direct"], default="auto",
+                        help="Runtime GPAW: auto, conda o Python directo.")
+    parser.add_argument("--conda-bin", default=None, help="Ruta/ejecutable de conda.")
+    parser.add_argument("--conda-env", default=None, help="Nombre del env con GPAW.")
+    parser.add_argument("--python", default=None, help="Python con gpaw/ase para launcher direct.")
+    parser.add_argument("--mpirun", default=None, help="Ejecutable mpiexec/mpirun para modo directo.")
+    parser.add_argument("--setup-path", default=None, help="Directorio PAW datasets de GPAW.")
+    parser.add_argument("--bash", default=None, help="Ruta/ejecutable bash para job.sh.")
     args = parser.parse_args()
+    runtime = None
+    if not args.dry_run:
+        try:
+            runtime = dft_runtime.build_runtime(
+                repo_root=ROOT,
+                launcher=args.launcher,
+                conda_bin=args.conda_bin,
+                conda_env=args.conda_env,
+                python=args.python,
+                mpi_launcher=args.mpirun,
+                setup_path=args.setup_path,
+                bash=args.bash,
+            )
+        except dft_runtime.RuntimeCheckError as exc:
+            raise SystemExit(str(exc)) from exc
     result = run_batch(args.batch_id, args.slots, args.cores, args.poll, args.stagger,
                        args.dry_run, args.resume, args.override_active, Path(args.runs_dir),
                        start_real=args.start_real, limit=args.limit,
                        no_scf_stall_minutes=args.no_scf_stall_minutes,
                        ram_limit_gb=args.ram_limit_gb, min_avail_gb=args.min_avail_gb,
-                       swap_limit_gb=args.swap_limit_gb, ram_reserve_gb=args.ram_reserve_gb)
+                       swap_limit_gb=args.swap_limit_gb, ram_reserve_gb=args.ram_reserve_gb,
+                       runtime=runtime)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

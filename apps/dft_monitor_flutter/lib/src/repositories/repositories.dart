@@ -1,6 +1,7 @@
 import '../models/parity.dart';
 import '../models/activity.dart';
 import '../models/bench.dart';
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,7 +42,8 @@ class AuthActions {
 
   Future<AuthState> login(String token) async {
     return AuthState.fromJson(
-        await api.postMap('/auth/login', body: {'token': token}));
+      await api.postMap('/auth/login', body: {'token': token}),
+    );
   }
 
   Future<AuthState> logout() async {
@@ -61,23 +63,27 @@ final summaryProvider = FutureProvider.autoDispose<Summary>((ref) async {
   return Summary.fromJson(await api.getMap('/api/summary'));
 });
 
-final systemMetricsProvider =
-    FutureProvider.autoDispose<SystemMetrics>((ref) async {
+final systemMetricsProvider = FutureProvider.autoDispose<SystemMetrics>((
+  ref,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return SystemMetrics.fromJson(await api.getMap('/api/system'));
 });
 
-final systemHistoryProvider =
-    FutureProvider.autoDispose<MetricsHistory>((ref) async {
+final systemHistoryProvider = FutureProvider.autoDispose<MetricsHistory>((
+  ref,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return MetricsHistory.fromJson(
-      await api.getMap('/api/system/history', query: {'minutes': 10}));
+    await api.getMap('/api/system/history', query: {'minutes': 10}),
+  );
 });
 
-final batchesProvider =
-    FutureProvider.autoDispose<List<BatchInfo>>((ref) async {
+final batchesProvider = FutureProvider.autoDispose<List<BatchInfo>>((
+  ref,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   final body = await api.getMap('/api/batches');
@@ -130,30 +136,37 @@ class JobsQuery {
   int get hashCode => Object.hash(status, q, sort, desc, limit, offset);
 }
 
-final jobsProvider =
-    FutureProvider.autoDispose.family<JobPage, JobsQuery>((ref, query) async {
+final jobsProvider = FutureProvider.autoDispose.family<JobPage, JobsQuery>((
+  ref,
+  query,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return JobPage.fromJson(
-      await api.getMap('/api/jobs', query: query.toQuery()));
+    await api.getMap('/api/jobs', query: query.toQuery()),
+  );
 });
 
 final activeJobsProvider = FutureProvider.autoDispose<JobPage>((ref) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
-  return JobPage.fromJson(await api.getMap(
-    '/api/jobs',
-    query: const JobsQuery(
-      status: 'running,stalled,oscillating',
-      sort: 'elapsed_min',
-      desc: true,
-      limit: 50,
-    ).toQuery(),
-  ));
+  return JobPage.fromJson(
+    await api.getMap(
+      '/api/jobs',
+      query: const JobsQuery(
+        status: 'running,stalled,oscillating',
+        sort: 'elapsed_min',
+        desc: true,
+        limit: 50,
+      ).toQuery(),
+    ),
+  );
 });
 
-final jobProvider =
-    FutureProvider.autoDispose.family<Job, String>((ref, jobId) async {
+final jobProvider = FutureProvider.autoDispose.family<Job, String>((
+  ref,
+  jobId,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return Job.fromJson(await api.getMap('/api/jobs/$jobId'));
@@ -173,8 +186,9 @@ final jobMetadataProvider = FutureProvider.autoDispose
   return api.getMap('/api/jobs/$jobId/metadata');
 });
 
-final structuresProvider =
-    FutureProvider.autoDispose<List<StructureItem>>((ref) async {
+final structuresProvider = FutureProvider.autoDispose<List<StructureItem>>((
+  ref,
+) async {
   ref.watch(slowRefreshTickProvider);
   final api = ref.watch(apiClientProvider);
   final body = await api.getMap('/api/structures');
@@ -188,17 +202,20 @@ final structureContentProvider = FutureProvider.autoDispose
     .family<StructureContent, String>((ref, id) async {
   final api = ref.watch(apiClientProvider);
   return StructureContent.fromJson(
-      await api.getMap('/api/structures/content', query: {'id': id}));
+    await api.getMap('/api/structures/content', query: {'id': id}),
+  );
 });
 
-final screeningConfigProvider =
-    FutureProvider.autoDispose<ScreeningConfig>((ref) async {
+final screeningConfigProvider = FutureProvider.autoDispose<ScreeningConfig>((
+  ref,
+) async {
   final api = ref.watch(apiClientProvider);
   return ScreeningConfig.fromJson(await api.getMap('/api/screening/config'));
 });
 
-final screeningRunsProvider =
-    FutureProvider.autoDispose<List<ScreeningRun>>((ref) async {
+final screeningRunsProvider = FutureProvider.autoDispose<List<ScreeningRun>>((
+  ref,
+) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
   final body = await api.getMap('/api/screening/runs');
@@ -212,7 +229,9 @@ final screeningRunProvider =
     FutureProvider.autoDispose.family<ScreeningRun, String>((ref, runId) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
-  return ScreeningRun.fromJson(await api.getMap('/api/screening/runs/$runId'));
+  return ScreeningRun.fromJson(
+    await api.getMap('/api/screening/runs/$runId'),
+  );
 });
 
 class ScreeningActions {
@@ -225,11 +244,14 @@ class ScreeningActions {
     required int nBatches,
     required int nCandidates,
   }) async {
-    final body = await api.postMap('/api/screening/run', body: {
-      'random_seed': randomSeed,
-      'n_batches': nBatches,
-      'n_candidates': nCandidates,
-    });
+    final body = await api.postMap(
+      '/api/screening/run',
+      body: {
+        'random_seed': randomSeed,
+        'n_batches': nBatches,
+        'n_candidates': nCandidates,
+      },
+    );
     return ScreeningRun.fromJson(body);
   }
 
@@ -247,6 +269,132 @@ class ScreeningActions {
 
 final screeningActionsProvider = Provider<ScreeningActions>((ref) {
   return ScreeningActions(ref.watch(apiClientProvider));
+});
+
+final discoveryStatusProvider = FutureProvider.autoDispose<DiscoveryStatus>((
+  ref,
+) async {
+  ref.watch(refreshTickProvider);
+  final api = ref.watch(apiClientProvider);
+  return DiscoveryStatus.fromJson(await api.getMap('/api/discovery/status'));
+});
+
+final discoveryConfigProvider =
+    FutureProvider.autoDispose<DiscoverySpaceConfig>((
+  ref,
+) async {
+  final api = ref.watch(apiClientProvider);
+  return DiscoverySpaceConfig.fromJson(
+      await api.getMap('/api/discovery/config'));
+});
+
+class DiscoveryActions {
+  const DiscoveryActions(this.api);
+
+  final ApiClient api;
+
+  Future<DiscoveryStatus> init({bool reset = false}) async {
+    return DiscoveryStatus.fromJson(
+      await api.postMap('/api/discovery/init', body: {'reset': reset}),
+    );
+  }
+
+  Future<DiscoveryStatus> run({
+    required bool startRunner,
+    required bool dryRun,
+    bool? useMlff,
+    int? maxRounds,
+  }) async {
+    return DiscoveryStatus.fromJson(
+      await api.postMap(
+        '/api/discovery/run',
+        body: {
+          'start_runner': startRunner,
+          'dry_run': dryRun,
+          if (useMlff != null) 'use_mlff': useMlff,
+          if (maxRounds != null) 'max_rounds': maxRounds,
+        },
+      ),
+    );
+  }
+
+  Future<DiscoveryStatus> pause() async {
+    return DiscoveryStatus.fromJson(await api.postMap('/api/discovery/pause'));
+  }
+
+  Future<DiscoveryStatus> resume() async {
+    return DiscoveryStatus.fromJson(await api.postMap('/api/discovery/resume'));
+  }
+
+  Future<DiscoverySpaceConfig> previewConfig(
+      DiscoverySpaceConfig config) async {
+    return DiscoverySpaceConfig.fromJson(
+      await api.postMap('/api/discovery/config/preview', body: config.toJson()),
+    );
+  }
+
+  Future<DiscoverySpaceConfig> saveConfig(DiscoverySpaceConfig config) async {
+    return DiscoverySpaceConfig.fromJson(
+      await api.postMap('/api/discovery/config', body: config.toJson()),
+    );
+  }
+
+  Future<DiscoveryExport> export() async {
+    return DiscoveryExport.fromJson(await api.postMap('/api/discovery/export'));
+  }
+}
+
+final discoveryActionsProvider = Provider<DiscoveryActions>((ref) {
+  return DiscoveryActions(ref.watch(apiClientProvider));
+});
+
+/// Capacidades del entorno.
+///
+/// `fast` omite la sonda MLFF, que lanza un proceso (y en Windows, una distro
+/// de WSL): la pantalla pide primero la versión rápida para pintar algo ya, y
+/// luego la completa.
+final setupStatusProvider =
+    FutureProvider.autoDispose.family<SetupStatus, bool>((ref, fast) async {
+  final api = ref.watch(apiClientProvider);
+  return SetupStatus.fromJson(
+    await api.getMap('/api/setup/status', query: {'fast': fast}),
+  );
+});
+
+/// Log de la instalación en curso. Se refresca solo mientras haya una viva.
+final setupJobProvider = FutureProvider.autoDispose<SetupJob>((ref) async {
+  ref.watch(refreshTickProvider);
+  final api = ref.watch(apiClientProvider);
+  return SetupJob.fromJson(await api.getMap('/api/setup/job'));
+});
+
+class SetupActions {
+  const SetupActions(this.api);
+
+  final ApiClient api;
+
+  Future<Map<String, dynamic>> plan(String target, {bool cuda = false}) {
+    return api.postMap('/api/setup/plan',
+        body: {'target': target, 'cuda': cuda});
+  }
+
+  Future<SetupJob> install(
+    String target, {
+    bool cuda = false,
+    bool recreate = false,
+  }) async {
+    return SetupJob.fromJson(
+      await api.postMap('/api/setup/install', body: {
+        'target': target,
+        'cuda': cuda,
+        'recreate': recreate,
+      }),
+    );
+  }
+}
+
+final setupActionsProvider = Provider<SetupActions>((ref) {
+  return SetupActions(ref.watch(apiClientProvider));
 });
 
 class CandidatesQuery {
@@ -299,7 +447,15 @@ class CandidatesQuery {
 
   @override
   int get hashCode => Object.hash(
-      q, generationMode, bFamily, halide, sort, desc, limit, offset);
+        q,
+        generationMode,
+        bFamily,
+        halide,
+        sort,
+        desc,
+        limit,
+        offset,
+      );
 }
 
 final candidatesProvider = FutureProvider.autoDispose
@@ -307,7 +463,8 @@ final candidatesProvider = FutureProvider.autoDispose
   ref.watch(slowRefreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return CandidatePage.fromJson(
-      await api.getMap('/api/candidates', query: query.toQuery()));
+    await api.getMap('/api/candidates', query: query.toQuery()),
+  );
 });
 
 final modelsProvider = FutureProvider.autoDispose<ModelsResponse>((ref) async {
@@ -331,7 +488,8 @@ class MlActions {
     required String x,
   }) async {
     return Prediction.fromJson(
-        await api.postMap('/api/ml/predict', body: {'A': a, 'B': b, 'X': x}));
+      await api.postMap('/api/ml/predict', body: {'A': a, 'B': b, 'X': x}),
+    );
   }
 }
 
@@ -339,8 +497,9 @@ final mlActionsProvider = Provider<MlActions>((ref) {
   return MlActions(ref.watch(apiClientProvider));
 });
 
-final reportsProvider =
-    FutureProvider.autoDispose<ReportsResponse>((ref) async {
+final reportsProvider = FutureProvider.autoDispose<ReportsResponse>((
+  ref,
+) async {
   final api = ref.watch(apiClientProvider);
   return ReportsResponse.fromJson(await api.getMap('/api/reports'));
 });
@@ -349,7 +508,8 @@ final reportDocumentProvider = FutureProvider.autoDispose
     .family<ReportDocument, String>((ref, path) async {
   final api = ref.watch(apiClientProvider);
   return ReportDocument.fromJson(
-      await api.getMap('/api/reports/document', query: {'path': path}));
+    await api.getMap('/api/reports/document', query: {'path': path}),
+  );
 });
 
 final reportFigureUrlProvider = Provider.family<String, String>((ref, path) {
@@ -357,8 +517,9 @@ final reportFigureUrlProvider = Provider.family<String, String>((ref, path) {
   return api.url('/api/reports/figure', query: {'path': path});
 });
 
-final agentHealthProvider =
-    FutureProvider.autoDispose<AgentHealth>((ref) async {
+final agentHealthProvider = FutureProvider.autoDispose<AgentHealth>((
+  ref,
+) async {
   ref.watch(slowRefreshTickProvider);
   final api = ref.watch(apiClientProvider);
   return AgentHealth.fromJson(await api.getMap('/api/agent/health'));
@@ -376,22 +537,28 @@ class AgentActions {
     String? jobId,
   }) async {
     return AgentChatResponse.fromJson(
-        await api.postMap('/api/agent/chat', body: {
-      'message': message,
-      'history': history,
-      'structured': structured,
-      if (jobId != null && jobId.isNotEmpty) 'job_id': jobId,
-    }));
+      await api.postMap(
+        '/api/agent/chat',
+        body: {
+          'message': message,
+          'history': history,
+          'structured': structured,
+          if (jobId != null && jobId.isNotEmpty) 'job_id': jobId,
+        },
+      ),
+    );
   }
 
   Future<AgentProposal> approve(String id) async {
     return AgentProposal.fromJson(
-        await api.postMap('/api/agent/proposals/$id/approve'));
+      await api.postMap('/api/agent/proposals/$id/approve'),
+    );
   }
 
   Future<AgentProposal> reject(String id) async {
     return AgentProposal.fromJson(
-        await api.postMap('/api/agent/proposals/$id/reject'));
+      await api.postMap('/api/agent/proposals/$id/reject'),
+    );
   }
 }
 
@@ -421,11 +588,12 @@ final jobActionsProvider = Provider<JobActions>((ref) {
   return JobActions(ref.watch(apiClientProvider));
 });
 
-
 // ── Calibración de rendimiento ───────────────────────────────────────────────
 
 /// Estado del barrido. En reposo basta el reloj lento; mientras mide, el rápido.
-final benchStatusProvider = FutureProvider.autoDispose<BenchStatus>((ref) async {
+final benchStatusProvider = FutureProvider.autoDispose<BenchStatus>((
+  ref,
+) async {
   final previo = ref.state.valueOrNull;
   if (previo?.running == true) {
     ref.watch(refreshTickProvider);
@@ -454,7 +622,6 @@ final benchActionsProvider = Provider<BenchActions>((ref) {
   return BenchActions(ref.watch(apiClientProvider));
 });
 
-
 // ── Actividad del sistema ────────────────────────────────────────────────────
 
 final activityProvider = FutureProvider.autoDispose<Activity>((ref) async {
@@ -463,7 +630,6 @@ final activityProvider = FutureProvider.autoDispose<Activity>((ref) async {
   return Activity.fromJson(await api.getMap('/api/activity'));
 });
 
-
 /// Paridad del lote: predicho contra el DFT ya calculado.
 ///
 /// Leer decenas de logs de GPAW cuesta, y solo cambia cuando termina un job:
@@ -471,9 +637,10 @@ final activityProvider = FutureProvider.autoDispose<Activity>((ref) async {
 final parityProvider = FutureProvider.autoDispose<ParityData>((ref) async {
   ref.watch(slowRefreshTickProvider);
   final api = ref.watch(apiClientProvider);
-  return ParityData.fromJson(await api.getMap('/api/ml/parity', query: {'limit': 50}));
+  return ParityData.fromJson(
+    await api.getMap('/api/ml/parity', query: {'limit': 50}),
+  );
 });
-
 
 // ── Log en vivo ──────────────────────────────────────────────────────────────
 
@@ -502,8 +669,10 @@ final jobLogProvider =
     FutureProvider.autoDispose.family<LogJob, JobLogPeticion>((ref, p) async {
   ref.watch(refreshTickProvider);
   final api = ref.watch(apiClientProvider);
-  return LogJob.fromJson(await api.getMap('/api/jobs/${p.jobId}/log', query: {
-    'tail': 400,
-    if (p.etiqueta != null) 'label': p.etiqueta,
-  }));
+  return LogJob.fromJson(
+    await api.getMap(
+      '/api/jobs/${p.jobId}/log',
+      query: {'tail': 400, if (p.etiqueta != null) 'label': p.etiqueta},
+    ),
+  );
 });

@@ -120,6 +120,63 @@ acquisition:
   beta: 1.0
   pv_window: [1.1, 1.8]
 
+# ── Descubrimiento autónomo ──────────────────────────────────────────────────
+# Recorre el espacio químico finito con ML/cascada y manda a DFT solo la
+# frontera viable. El conteo queda alrededor de decenas de miles de
+# composiciones, según las cotas físicas activas.
+discovery:
+  output_dir: data/discovery
+  dft_per_round: 30
+  min_pv_score: 0.45
+  frontier_size: 500
+  pareto_input_size: 5000
+  mlff_pool_size: 5000
+  require_mlff_for_dft: true
+  runner_slots: 5
+  runner_cores: 8
+  runner_stagger: 8
+  runner_backend: auto       # auto: Windows usa WSL; Linux usa local
+  runner_launcher: direct    # auto, conda o direct
+  runner_preflight_timeout: 90
+  runner_conda_env: gpaw246  # valor por defecto; se puede cambiar sin tocar codigo
+  poll_interval_sec: 60
+  max_per_b_family: 15
+  max_per_halide: 18
+  windows_mounts:
+    - posix: /media/luis-ochoa/Nuevo vol
+      windows: C:/NuevoVol
+      wsl: /mnt/n
+  # Tier 2 del cribado (MLFF/GNN). Entorno APARTE de gpaw246: GPAW esta fijado a
+  # numpy 1.26 y matgl exige numpy>=2, asi que compartirlos rompe el DFT. Se
+  # crea y se repara con `buho setup install mlff`.
+  mlff:
+    backend: auto            # auto | local | wsl | off
+    timeout: 900             # por llamada al worker, no por lote entero
+    chunk_size: 2000         # candidatos por llamada; ~15 s de carga + 0.08 s/cand
+    wsl:
+      distro: Ubuntu
+      env_name: perovowl-mlff
+      micromamba: /home/luis/perovowl-micromamba/bin/micromamba
+      python: /home/luis/perovowl-micromamba/envs/perovowl-mlff/bin/python
+      project_root: /mnt/c/Users/LUIS/Documents/GitHub/PEROVOWL
+  wsl:
+    distro: Ubuntu
+    driver_python: python3
+    project_root: /mnt/c/Users/LUIS/Documents/GitHub/PEROVOWL
+    python: /home/luis/perovowl-micromamba/envs/gpaw246/bin/python
+    mpirun: /home/luis/perovowl-micromamba/envs/gpaw246/bin/mpiexec
+    setup_path: /home/luis/perovowl-micromamba/envs/gpaw246/lib/python3.12/site-packages/gpaw_data/setups
+    mounts:
+      - windows: C:/NuevoVol
+        wsl: /mnt/n
+      - windows: C:/Users/LUIS/Documents/GitHub/PEROVOWL
+        wsl: /mnt/c/Users/LUIS/Documents/GitHub/PEROVOWL
+  space:
+    fraction_step: 0.0073
+    min_fraction: 0.05
+    max_fraction: 0.95
+    include_multi_mixed: false
+
 # ── Rutas de salida ───────────────────────────────────────────────────────────
 paths:
   raw_candidates:      data/raw/generated_candidates.jsonl

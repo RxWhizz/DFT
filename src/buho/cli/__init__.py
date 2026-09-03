@@ -12,6 +12,7 @@ from ._common import HELP_OPTS
 from .calc import calc, run_cmd, status_cmd
 from .domains import ALL_GROUPS
 from .environment import doctor, paw
+from .setup import setup
 
 
 @click.group("buho", context_settings=HELP_OPTS)
@@ -28,6 +29,7 @@ def main(debug: bool) -> None:
 
 main.add_command(doctor)
 main.add_command(paw)
+main.add_command(setup)
 main.add_command(calc)
 
 # Compatibilidad con el antiguo `python main.py run/status`.

@@ -17,6 +17,7 @@ import itertools
 import json
 import platform
 import sys
+import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -144,11 +145,16 @@ class HeuristicGenerator:
     random_seed : semilla para reproducibilidad en modos mixtos
     """
 
-    def __init__(self, config_path: str | Path, random_seed: Optional[int] = None):
-        cfg_path = Path(config_path)
-        with open(cfg_path) as f:
-            self._cfg = yaml.safe_load(f)
-        self._config_hash = hashlib.sha1(cfg_path.read_bytes()).hexdigest()[:8]
+    def __init__(self, config_path: str | Path | dict, random_seed: Optional[int] = None):
+        if isinstance(config_path, dict):
+            self._cfg = copy.deepcopy(config_path)
+            raw = json.dumps(self._cfg, sort_keys=True, default=str).encode()
+            self._config_hash = hashlib.sha1(raw).hexdigest()[:8]
+        else:
+            cfg_path = Path(config_path)
+            with open(cfg_path) as f:
+                self._cfg = yaml.safe_load(f)
+            self._config_hash = hashlib.sha1(cfg_path.read_bytes()).hexdigest()[:8]
         self._seed = random_seed if random_seed is not None else self._cfg.get("random_seed", 42)
         self._rng = np.random.RandomState(self._seed)
 

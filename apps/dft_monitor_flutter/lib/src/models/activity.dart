@@ -3,6 +3,7 @@ class Activity {
   const Activity({
     required this.activity,
     required this.label,
+    required this.busy,
     required this.nPending,
     required this.nActive,
     required this.nDone,
@@ -15,27 +16,32 @@ class Activity {
     this.runningJobs = const [],
   });
 
-  factory Activity.fromJson(Map<String, dynamic> json) => Activity(
-        activity: json['activity'] as String? ?? 'idle',
-        label: json['label'] as String? ?? '-',
-        nPending: (json['n_pending'] as num? ?? 0).toInt(),
-        nActive: (json['n_active'] as num? ?? 0).toInt(),
-        nDone: (json['n_done'] as num? ?? 0).toInt(),
-        total: (json['total'] as num? ?? 0).toInt(),
-        detail: json['detail'] as String?,
-        etaSeconds: (json['eta_seconds'] as num?)?.toDouble(),
-        etaText: json['eta_text'] as String?,
-        etaBasis: json['eta_basis'] as String?,
-        progress: (json['progress'] as num?)?.toDouble(),
-        runningJobs: ((json['running_jobs'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((e) => TrabajoVivo.fromJson(Map<String, dynamic>.from(e)))
-            .toList(),
-      );
+  factory Activity.fromJson(Map<String, dynamic> json) {
+    final activity = json['activity'] as String? ?? 'idle';
+    return Activity(
+      activity: activity,
+      label: json['label'] as String? ?? '-',
+      busy: json['busy'] as bool? ?? activity != 'idle',
+      nPending: (json['n_pending'] as num? ?? 0).toInt(),
+      nActive: (json['n_active'] as num? ?? 0).toInt(),
+      nDone: (json['n_done'] as num? ?? 0).toInt(),
+      total: (json['total'] as num? ?? 0).toInt(),
+      detail: json['detail'] as String?,
+      etaSeconds: (json['eta_seconds'] as num?)?.toDouble(),
+      etaText: json['eta_text'] as String?,
+      etaBasis: json['eta_basis'] as String?,
+      progress: (json['progress'] as num?)?.toDouble(),
+      runningJobs: ((json['running_jobs'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((e) => TrabajoVivo.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+  }
 
-  /// `dft` · `queued` · `generating` · `benchmark` · `idle`
+  /// `discovery` · `dft` · `queued` · `generating` · `benchmark` · `idle`
   final String activity;
   final String label;
+  final bool busy;
   final int nPending;
   final int nActive;
   final int nDone;
@@ -56,10 +62,7 @@ class Activity {
   /// Vienen de aquí y no de `/api/jobs` porque el poller vigila un único
   /// directorio: con el runner en otro lote, aquella lista salía vacía.
   final List<TrabajoVivo> runningJobs;
-
-  bool get busy => activity != 'idle';
 }
-
 
 class TrabajoVivo {
   const TrabajoVivo({

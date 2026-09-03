@@ -171,6 +171,13 @@ active_learning.add_command(
         help_text="Orquesta batches con criterio de paro.",
     )
 )
+active_learning.add_command(
+    module_command(
+        "buho.discovery",
+        name="discovery",
+        help_text="Loop autonomo ML discovery -> DFT -> reentrenar.",
+    )
+)
 
 
 @click.group("phase2-force", context_settings=HELP_OPTS)

@@ -31,6 +31,8 @@ def reports_dirs() -> tuple[Path, ...]:
     """Salidas del usuario — siempre en su raíz de datos, nunca empaquetadas."""
     return (paths.resolve_data("reports"), paths.resolve_data("imagenes"))
 
+VERSIONED_REPORTS = ("results_report.md", "migration/06_final_report.md")
+
 EXT_ESTRUCTURA = {".cif", ".json", ".xyz", ".extxyz"}
 EXT_REPORTE = {".md", ".json"}
 EXT_FIGURA = {".png", ".jpg", ".jpeg", ".svg", ".pdf"}
@@ -409,6 +411,19 @@ def list_reports() -> dict[str, Any]:
                     "size_bytes": path.stat().st_size,
                 }
             )
+    vistos = {d["path"] for d in documentos}
+    for rel, path in _versioned_reports():
+        if rel in vistos:
+            continue
+        parent = str(Path(rel).parent)
+        documentos.append(
+            {
+                "path": rel,
+                "name": path.stem,
+                "group": "repo" if parent == "." else parent,
+                "size_bytes": path.stat().st_size,
+            }
+        )
 
     galerias = []
     for base in reports_dirs():
@@ -440,6 +455,21 @@ def list_reports() -> dict[str, Any]:
     return {"documents": documentos, "galleries": galerias}
 
 
+def _versioned_reports() -> list[tuple[str, Path]]:
+    out: list[tuple[str, Path]] = []
+    roots = []
+    for root in (paths.data_root(), paths.bundle_root()):
+        if root not in roots:
+            roots.append(root)
+    for rel in VERSIONED_REPORTS:
+        for root in roots:
+            path = root / rel
+            if path.is_file():
+                out.append((rel, path))
+                break
+    return out
+
+
 def _resolver_en_reportes(relative: str, allowed_ext: set[str]) -> Path:
     """Resuelve una ruta como `reports/x.md` contra su propia base.
 
@@ -455,6 +485,11 @@ def _resolver_en_reportes(relative: str, allowed_ext: set[str]) -> Path:
     partes = Path(relative).parts
     if not partes:
         raise UnsafePathError(relative)
+
+    if Path(relative).suffix.lower() in allowed_ext:
+        for rel, path in _versioned_reports():
+            if relative == rel:
+                return path
 
     for base in reports_dirs():
         if partes[0] != base.name:

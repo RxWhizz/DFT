@@ -61,6 +61,7 @@ CONFIG DE CRIBADO PBE SINGLE-POINT (validado 2026-06-05, GPAW 24.6.0 conda):
   - Datasets PAW: GPAW_SETUP_PATH apunta a los del venv (vía runner).
 """
 from pathlib import Path
+from datetime import datetime, timezone
 from ase.io import read
 from ase.optimize import FIRE
 from gpaw import GPAW, PW, FermiDirac
@@ -159,7 +160,7 @@ status = {
     "fidelity": "relax_basic",
     "calc_mode": mode_label,
     "elapsed_s": round(elapsed, 1),
-    "finished_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    "finished_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
 }
 Path("status.json").write_text(json.dumps(status, indent=2))
 print(f"Done. E={e_total} eV  t={elapsed:.0f}s  mode={mode_label}  converged={converged}")
@@ -291,7 +292,7 @@ class RelaxationJobPreparer:
             fmax=float(dft.get("fmax", 0.05)),
             max_steps=int(dft.get("max_steps", 200)),
         )
-        (job_dir / "input.py").write_text(script)
+        (job_dir / "input.py").write_text(script, encoding="utf-8")
 
     def _write_run_sh(self, job_dir: Path, c: GeneratedCandidate) -> None:
         script = _RUN_TEMPLATE.format(
@@ -300,7 +301,7 @@ class RelaxationJobPreparer:
             python=self._python,
         )
         run_sh = job_dir / "run.sh"
-        run_sh.write_text(script)
+        run_sh.write_text(script, encoding="utf-8")
         run_sh.chmod(0o755)
 
     @staticmethod
@@ -311,4 +312,4 @@ class RelaxationJobPreparer:
             "formula": c.formula,
             "created": datetime.utcnow().isoformat() + "Z",
         }
-        (job_dir / "status.json").write_text(json.dumps(status, indent=2))
+        (job_dir / "status.json").write_text(json.dumps(status, indent=2), encoding="utf-8")
