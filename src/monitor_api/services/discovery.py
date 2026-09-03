@@ -519,8 +519,17 @@ def export() -> dict[str, Any]:
 
 
 def reset_background_for_tests() -> None:
-    """Olvida el subproceso anotado. Solo para tests."""
+    """Olvida el subproceso anotado, si ya no existe.
+
+    Se niega a borrar el registro de un proceso VIVO. Antes no comprobaba nada y
+    la propia suite de tests, al correr contra la raíz de datos real, borró el
+    fichero de un bucle en marcha: el proceso seguía cribando pero la API lo
+    daba por muerto. Un ayudante de tests no puede tener ese poder.
+    """
     with _lock:
+        if _vivo(_leer_pid().get("pid")):
+            log.warning("reset_background_for_tests: hay un bucle vivo, no se toca")
+            return
         try:
             _pid_file().unlink(missing_ok=True)
         except OSError:

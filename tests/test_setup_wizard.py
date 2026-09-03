@@ -796,3 +796,22 @@ def test_un_modelo_publicado_corrupto_cae_al_de_fabrica(tmp_path):
     assert [p.name for p in intentos] == [
         "surrogate_bandgap_current.pkl", "surrogate_bandgap.pkl",
     ]
+
+
+def test_reset_de_tests_no_borra_un_bucle_vivo(monkeypatch, tmp_path):
+    """La suite, corriendo contra la raiz real, borro el registro de un bucle
+    en marcha: seguia cribando pero la API lo daba por muerto."""
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "resolve_data", lambda rel: tmp_path / rel)
+    (tmp_path / "data" / "discovery").mkdir(parents=True, exist_ok=True)
+    svc._pid_file().write_text(json.dumps({"pid": 4242}), encoding="utf-8")
+
+    monkeypatch.setattr(svc, "_vivo", lambda pid: True)
+    svc.reset_background_for_tests()
+    assert svc._pid_file().is_file(), "no debia borrar el registro de un proceso vivo"
+
+    monkeypatch.setattr(svc, "_vivo", lambda pid: False)
+    svc.reset_background_for_tests()
+    assert not svc._pid_file().is_file()
