@@ -20,6 +20,16 @@ from typing import Any
 PENDIENTES = ("pending",)
 ACTIVOS = ("running", "stalled", "oscillating")
 
+DISCOVERY_VISIBLE = {
+    "screening",
+    "dft_selected",
+    "dft_prepared",
+    "dft_running",
+    "paused",
+    "failed",
+}
+DISCOVERY_BUSY = {"screening", "dft_running"}
+
 
 def _elapsed_de(job_dir: Path) -> float | None:
     """Segundos que tardó un job, si su status.json lo guardó."""
@@ -118,6 +128,89 @@ def _estado_barrido() -> dict[str, Any] | None:
     return None
 
 
+def _activity_from_discovery_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Actividad visible para el loop autónomo de descubrimiento."""
+    state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
+    background = payload.get("background") if isinstance(payload.get("background"), dict) else {}
+    coverage = payload.get("coverage") if isinstance(payload.get("coverage"), dict) else {}
+    counts = payload.get("counts") if isinstance(payload.get("counts"), dict) else {}
+    runner = payload.get("runner") if isinstance(payload.get("runner"), dict) else {}
+    prepared = state.get("last_prepared") if isinstance(state.get("last_prepared"), dict) else {}
+    queue = payload.get("queue") if isinstance(payload.get("queue"), list) else []
+
+    status = str(state.get("status") or "idle")
+    running = background.get("running") is True
+    if not running and status not in DISCOVERY_VISIBLE:
+        return None
+
+    def entero(value: Any) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    total = entero(coverage.get("total"))
+    seen = entero(coverage.get("seen"))
+    selected = (
+        len(queue)
+        or entero(state.get("n_selected_active"))
+        or entero(counts.get("dft_selected"))
+        or entero(prepared.get("n_selected"))
+    )
+    round_id = entero(state.get("current_round") or state.get("active_round"))
+
+    label = {
+        "screening": "Protocolo cribando ML",
+        "dft_selected": "Protocolo listo para DFT",
+        "dft_prepared": "Protocolo con DFT preparado",
+        "dft_running": "Protocolo verificando DFT",
+        "paused": "Protocolo pausado",
+        "failed": "Protocolo con error",
+    }.get(status, "Protocolo autónomo en curso" if running else "Protocolo autónomo")
+    if runner.get("stale"):
+        label = "Protocolo DFT no lanzado"
+
+    partes = [f"ronda {round_id}"]
+    if total:
+        partes.append(f"{seen} de {total} cribados")
+    if selected:
+        partes.append(f"{selected} en cola DFT")
+    last_error = background.get("last_error")
+    runner_error = runner.get("error")
+    if runner_error:
+        partes.append(str(runner_error))
+    if last_error:
+        partes.append(str(last_error))
+
+    busy = (running or status in DISCOVERY_BUSY) and not bool(runner.get("stale"))
+    return {
+        "activity": "discovery",
+        "label": label,
+        "detail": " · ".join(partes),
+        "eta_seconds": None,
+        "eta_text": None,
+        "eta_basis": None,
+        "progress": (seen / total) if total else None,
+        "n_pending": max(total - seen, 0),
+        "n_active": 1 if busy else 0,
+        "n_done": seen,
+        "total": total,
+        "running_jobs": [],
+        "busy": busy,
+    }
+
+
+def _estado_descubrimiento() -> dict[str, Any] | None:
+    try:
+        from .discovery import status
+    except ImportError:
+        return None
+    try:
+        return _activity_from_discovery_payload(status())
+    except Exception:
+        return None
+
+
 def describe(poller) -> dict[str, Any]:
     """Actividad actual del sistema con su tiempo estimado."""
     from .. import paths
@@ -145,6 +238,7 @@ def describe(poller) -> dict[str, Any]:
         "n_done": n_hechos,
         "total": total,
         "running_jobs": [],
+        "busy": False,
     }
 
     # El cribado y el barrido son cortos y excluyentes con el DFT en la práctica,
@@ -158,6 +252,7 @@ def describe(poller) -> dict[str, Any]:
             detail=(f"reparto {barrido['current']} — {hechos} de {tot}"
                     if barrido.get("current") else "preparando la medición"),
             progress=(hechos / tot) if tot else None,
+            busy=True,
         )
         return base
 
@@ -167,7 +262,13 @@ def describe(poller) -> dict[str, Any]:
             activity="generating",
             label="Generando candidatos",
             detail=cribado.get("stage") or "cascada de cribado en curso",
+            busy=True,
         )
+        return base
+
+    descubrimiento = _estado_descubrimiento()
+    if descubrimiento:
+        base.update(descubrimiento)
         return base
 
     # ── DFT ─────────────────────────────────────────────────────────────────
@@ -205,6 +306,7 @@ def describe(poller) -> dict[str, Any]:
             label="DFT en curso",
             detail=detalle,
             progress=(n_hechos / total) if total else None,
+            busy=True,
         )
     else:
         if n_act == 0 and n_pend == 0:
@@ -216,6 +318,7 @@ def describe(poller) -> dict[str, Any]:
             label="DFT en curso" if activo else "DFT en cola",
             detail=f"{n_act} calculando, {n_pend} en cola",
             progress=(n_hechos / total) if total else None,
+            busy=True,
         )
 
         # El lote activo: el que contiene algún job sin terminar. Los snapshots

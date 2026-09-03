@@ -163,7 +163,8 @@ class ABX3StructureBuilder:
                 traj.write(atoms)
 
         (out_dir / "metadata.json").write_text(
-            json.dumps(metadata, indent=2, default=str)
+            json.dumps(metadata, indent=2, default=str),
+            encoding="utf-8",
         )
 
     # ── Internal helpers ─────────────────────────────────────────────────────

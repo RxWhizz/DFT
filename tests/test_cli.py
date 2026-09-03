@@ -10,9 +10,11 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
 from buho.cli import main
 
-ROOT = Path(__file__).resolve().parents[1]
 HEAVY = ("gpaw", "torch", "matgl")
 
 GROUP_JSON_COMMANDS = [
@@ -84,3 +86,15 @@ def test_grupo_existe_help_ligero_y_json_valido(group: str, args: list[str]) -> 
 def test_aliases_raiz_del_cli_anterior(alias: str) -> None:
     result = CliRunner().invoke(main, [alias, "--help"])
     assert result.exit_code == 0, result.output
+
+
+def test_active_learning_expone_discovery_sin_dependencias_pesadas() -> None:
+    runner = CliRunner()
+    before = {name for name in HEAVY if name in sys.modules}
+
+    result = runner.invoke(main, ["active-learning", "--help"])
+    after = {name for name in HEAVY if name in sys.modules}
+
+    assert result.exit_code == 0, result.output
+    assert "discovery" in result.output
+    assert after == before

@@ -1,3 +1,63 @@
+String? _textOrNull(Object? value) {
+  if (value == null) return null;
+  final text = '$value';
+  return text.isEmpty ? null : text;
+}
+
+String _textOrDash(Object? value) => _textOrNull(value) ?? '-';
+
+double? _doubleOrNull(Object? value) =>
+    value is num ? value.toDouble() : double.tryParse('$value');
+
+int _intOrZero(Object? value) {
+  if (value is num) return value.toInt();
+  return int.tryParse('$value') ?? 0;
+}
+
+Map<String, dynamic> _mapOrEmpty(Object? value) {
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return {};
+}
+
+Map<String, int> _intMap(Object? value) {
+  if (value is! Map) return {};
+  return {
+    for (final entry in Map<String, dynamic>.from(value).entries)
+      entry.key: _intOrZero(entry.value),
+  };
+}
+
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return [for (final item in value) _textOrDash(item)]
+      .where((item) => item != '-')
+      .toList();
+}
+
+List<double> _doubleList(Object? value) {
+  if (value is! List) return const [];
+  return [
+    for (final item in value)
+      if (_doubleOrNull(item) != null) _doubleOrNull(item)!
+  ];
+}
+
+Map<String, bool> _boolMap(Object? value) {
+  if (value is! Map) return const {};
+  return {
+    for (final entry in Map<String, dynamic>.from(value).entries)
+      entry.key: entry.value == true,
+  };
+}
+
+Map<String, List<String>> _stringListMap(Object? value) {
+  if (value is! Map) return const {};
+  return {
+    for (final entry in Map<String, dynamic>.from(value).entries)
+      entry.key: _stringList(entry.value),
+  };
+}
+
 class Health {
   const Health({
     required this.ok,
@@ -22,9 +82,10 @@ class Health {
       nJobsTracked: (json['n_jobs_tracked'] as num? ?? 0).toInt(),
       lastPollAgeSec: (json['last_poll_age_sec'] as num?)?.toDouble(),
       wsClients: (json['ws_clients'] as num? ?? 0).toInt(),
-      autoAdvance:
-          Map<String, dynamic>.from(json['platform'] as Map? ?? {})['auto_advance'] ==
-              true,
+      autoAdvance: Map<String, dynamic>.from(
+            json['platform'] as Map? ?? {},
+          )['auto_advance'] ==
+          true,
     );
   }
 
@@ -245,8 +306,9 @@ class BatchInfo {
       batchId: (json['batch_id'] as num?)?.toInt() ?? -1,
       path: json['path'] as String? ?? '',
       counts: Map<String, int>.from(
-        (json['counts'] as Map? ?? {})
-            .map((key, value) => MapEntry('$key', (value as num).toInt())),
+        (json['counts'] as Map? ?? {}).map(
+          (key, value) => MapEntry('$key', (value as num).toInt()),
+        ),
       ),
       total: (json['total'] as num? ?? 0).toInt(),
       isCurrent: json['is_current'] == true,
@@ -462,6 +524,339 @@ class ScreeningStartDftResult {
   final String? runnerError;
 }
 
+class DiscoverySpacePreview {
+  const DiscoverySpacePreview({
+    required this.totalGenerated,
+    required this.physicallyViable,
+    required this.rejectedPhysical,
+    required this.modeCounts,
+  });
+
+  factory DiscoverySpacePreview.fromJson(Map<String, dynamic> json) {
+    return DiscoverySpacePreview(
+      totalGenerated: _intOrZero(json['total_generated']),
+      physicallyViable: _intOrZero(json['physically_viable']),
+      rejectedPhysical: _intOrZero(json['rejected_physical']),
+      modeCounts: _intMap(json['mode_counts']),
+    );
+  }
+
+  final int totalGenerated;
+  final int physicallyViable;
+  final int rejectedPhysical;
+  final Map<String, int> modeCounts;
+}
+
+class DiscoverySpaceConfig {
+  const DiscoverySpaceConfig({
+    required this.aSites,
+    required this.bSites,
+    required this.xSites,
+    required this.modes,
+    required this.minFraction,
+    required this.maxFraction,
+    required this.fractionStep,
+    required this.fractionValues,
+    required this.includeMultiMixed,
+    required this.dftPerRound,
+    required this.availableSpecies,
+    this.preview,
+    this.source,
+    this.overridePath,
+    this.overrideSaved = false,
+  });
+
+  factory DiscoverySpaceConfig.fromJson(Map<String, dynamic> json) {
+    return DiscoverySpaceConfig(
+      aSites: _stringList(json['A_sites']),
+      bSites: _stringList(json['B_sites']),
+      xSites: _stringList(json['X_sites']),
+      modes: {
+        'pure': true,
+        'A_mixed': true,
+        'B_mixed': true,
+        'X_mixed': true,
+        'multi_mixed': false,
+        ..._boolMap(json['modes']),
+      },
+      minFraction: _doubleOrNull(json['min_fraction']) ?? 0.05,
+      maxFraction: _doubleOrNull(json['max_fraction']) ?? 0.95,
+      fractionStep: _doubleOrNull(json['fraction_step']) ?? 0.01,
+      fractionValues: _doubleList(json['fraction_values']),
+      includeMultiMixed: json['include_multi_mixed'] == true,
+      dftPerRound: _intOrZero(json['dft_per_round']),
+      availableSpecies: _stringListMap(json['available_species']),
+      preview: json['preview'] is Map
+          ? DiscoverySpacePreview.fromJson(_mapOrEmpty(json['preview']))
+          : null,
+      source: _textOrNull(json['source']),
+      overridePath: _textOrNull(json['override_path']),
+      overrideSaved: json['override_saved'] == true,
+    );
+  }
+
+  final List<String> aSites;
+  final List<String> bSites;
+  final List<String> xSites;
+  final Map<String, bool> modes;
+  final double minFraction;
+  final double maxFraction;
+  final double fractionStep;
+  final List<double> fractionValues;
+  final bool includeMultiMixed;
+  final int dftPerRound;
+  final Map<String, List<String>> availableSpecies;
+  final DiscoverySpacePreview? preview;
+  final String? source;
+  final String? overridePath;
+  final bool overrideSaved;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'A_sites': aSites,
+      'B_sites': bSites,
+      'X_sites': xSites,
+      'modes': modes,
+      'min_fraction': minFraction,
+      'max_fraction': maxFraction,
+      'fraction_step': fractionStep,
+      'include_multi_mixed': includeMultiMixed,
+      'dft_per_round': dftPerRound,
+    };
+  }
+}
+
+class DiscoveryBackground {
+  const DiscoveryBackground({required this.running, this.lastError});
+
+  factory DiscoveryBackground.fromJson(Map<String, dynamic> json) {
+    return DiscoveryBackground(
+      running: json['running'] == true,
+      lastError: _textOrNull(json['last_error']),
+    );
+  }
+
+  final bool running;
+  final String? lastError;
+}
+
+class DiscoveryState {
+  const DiscoveryState({
+    required this.status,
+    required this.currentRound,
+    required this.dftPerRound,
+    required this.space,
+    required this.paths,
+    required this.lastScreening,
+    required this.lastPrepared,
+    this.stopReason,
+    this.activeRoundDir,
+    this.activeRunsDir,
+    this.nSelectedActive,
+    this.mlffWarning,
+  });
+
+  factory DiscoveryState.fromJson(Map<String, dynamic> json) {
+    return DiscoveryState(
+      status: _textOrDash(json['status']),
+      currentRound: _intOrZero(json['current_round']),
+      dftPerRound: _intOrZero(json['dft_per_round']),
+      space: _mapOrEmpty(json['space']),
+      paths: _mapOrEmpty(json['paths']),
+      lastScreening: _mapOrEmpty(json['last_screening']),
+      lastPrepared: _mapOrEmpty(json['last_prepared']),
+      stopReason: _textOrNull(json['stop_reason']),
+      activeRoundDir: _textOrNull(json['active_round_dir']),
+      activeRunsDir: _textOrNull(json['active_runs_dir']),
+      nSelectedActive: _intOrZero(json['n_selected_active']),
+      mlffWarning: json['mlff_warning'] is Map
+          ? _mapOrEmpty(json['mlff_warning'])
+          : null,
+    );
+  }
+
+  final String status;
+  final int currentRound;
+  final int dftPerRound;
+  final Map<String, dynamic> space;
+  final Map<String, dynamic> paths;
+  final Map<String, dynamic> lastScreening;
+  final Map<String, dynamic> lastPrepared;
+  final String? stopReason;
+  final String? activeRoundDir;
+  final String? activeRunsDir;
+  final int? nSelectedActive;
+
+  /// Por qué la última criba corrió sin Tier 2, si es que corrió sin él.
+  ///
+  /// Que falte el entorno MLFF ya no mata la ronda, así que hay que decirlo en
+  /// algún sitio: si no, el protocolo avanzaría con menos criba del que el
+  /// usuario cree y sin que nada lo indique.
+  final Map<String, dynamic>? mlffWarning;
+
+  String? get mlffError => _textOrNull(mlffWarning?['error']);
+  String? get mlffRemediacion => _textOrNull(mlffWarning?['remediation']);
+}
+
+class DiscoveryCandidate {
+  const DiscoveryCandidate({
+    required this.candidateId,
+    required this.formula,
+    required this.generationMode,
+    required this.bFamily,
+    required this.dominantHalide,
+    required this.status,
+    this.bandgapEv,
+    this.bandgapSigmaEv,
+    this.formationEvAtom,
+    this.electronMass,
+    this.holeMass,
+    this.epsInf,
+    this.excitonBindingMev,
+    this.pvScore,
+    this.acquisitionScore,
+    this.uncertaintyScore,
+    this.toleranceT,
+    this.octFactor,
+    this.roundSelected,
+  });
+
+  factory DiscoveryCandidate.fromJson(Map<String, dynamic> json) {
+    return DiscoveryCandidate(
+      candidateId: _textOrDash(json['candidate_id']),
+      formula: _textOrDash(json['formula']),
+      generationMode: _textOrDash(json['generation_mode']),
+      bFamily: _textOrDash(json['B_family']),
+      dominantHalide: _textOrDash(json['dominant_halide']),
+      status: _textOrDash(json['status']),
+      bandgapEv: _doubleOrNull(json['Eg_surrogate_eV']),
+      bandgapSigmaEv: _doubleOrNull(json['Eg_sigma_eV']),
+      formationEvAtom: _doubleOrNull(json['Eform_eV_atom']),
+      electronMass: _doubleOrNull(json['meff_e_pred_m0']),
+      holeMass: _doubleOrNull(json['meff_h_pred_m0']),
+      epsInf: _doubleOrNull(json['eps_inf_pred']),
+      excitonBindingMev: _doubleOrNull(json['exciton_binding_meV']),
+      pvScore: _doubleOrNull(json['pv_score_ml']),
+      acquisitionScore: _doubleOrNull(json['acquisition_score']),
+      uncertaintyScore: _doubleOrNull(json['uncertainty_score']),
+      toleranceT: _doubleOrNull(json['tolerance_t']),
+      octFactor: _doubleOrNull(json['oct_factor']),
+      roundSelected: _textOrNull(json['round_selected']),
+    );
+  }
+
+  final String candidateId;
+  final String formula;
+  final String generationMode;
+  final String bFamily;
+  final String dominantHalide;
+  final String status;
+  final double? bandgapEv;
+  final double? bandgapSigmaEv;
+  final double? formationEvAtom;
+  final double? electronMass;
+  final double? holeMass;
+  final double? epsInf;
+  final double? excitonBindingMev;
+  final double? pvScore;
+  final double? acquisitionScore;
+  final double? uncertaintyScore;
+  final double? toleranceT;
+  final double? octFactor;
+  final String? roundSelected;
+}
+
+class DiscoveryStatus {
+  const DiscoveryStatus({
+    required this.state,
+    required this.counts,
+    required this.total,
+    required this.seen,
+    required this.percent,
+    required this.frontier,
+    required this.queue,
+    required this.paths,
+    required this.runner,
+    this.config,
+    this.background,
+  });
+
+  factory DiscoveryStatus.fromJson(Map<String, dynamic> json) {
+    final coverage = _mapOrEmpty(json['coverage']);
+    return DiscoveryStatus(
+      state: DiscoveryState.fromJson(_mapOrEmpty(json['state'])),
+      counts: _intMap(json['counts']),
+      total: _intOrZero(coverage['total']),
+      seen: _intOrZero(coverage['seen']),
+      percent: _doubleOrNull(coverage['percent']) ?? 0,
+      frontier: [
+        for (final item in (json['frontier'] as List? ?? const []))
+          DiscoveryCandidate.fromJson(Map<String, dynamic>.from(item as Map)),
+      ],
+      queue: [
+        for (final item in (json['queue'] as List? ?? const []))
+          DiscoveryCandidate.fromJson(Map<String, dynamic>.from(item as Map)),
+      ],
+      paths: {
+        for (final entry in _mapOrEmpty(json['paths']).entries)
+          entry.key: _textOrDash(entry.value),
+      },
+      runner: _mapOrEmpty(json['runner']),
+      config: json['config'] is Map
+          ? DiscoverySpaceConfig.fromJson(_mapOrEmpty(json['config']))
+          : null,
+      background: json['background'] is Map
+          ? DiscoveryBackground.fromJson(_mapOrEmpty(json['background']))
+          : null,
+    );
+  }
+
+  final DiscoveryState state;
+  final Map<String, int> counts;
+  final int total;
+  final int seen;
+  final double percent;
+  final List<DiscoveryCandidate> frontier;
+  final List<DiscoveryCandidate> queue;
+  final Map<String, String> paths;
+  final Map<String, dynamic> runner;
+  final DiscoverySpaceConfig? config;
+  final DiscoveryBackground? background;
+
+  bool get backgroundRunning => background?.running ?? false;
+  bool get isWorking =>
+      backgroundRunning ||
+      state.status == 'screening' ||
+      state.status == 'dft_running';
+
+  int get selectedForDft =>
+      counts['dft_selected'] ?? state.nSelectedActive ?? queue.length;
+
+  bool get runnerStale => runner['stale'] == true;
+
+  String? get runnerError => _textOrNull(runner['error']);
+}
+
+class DiscoveryExport {
+  const DiscoveryExport({
+    required this.report,
+    required this.ledger,
+    required this.frontier,
+  });
+
+  factory DiscoveryExport.fromJson(Map<String, dynamic> json) {
+    return DiscoveryExport(
+      report: _textOrDash(json['report']),
+      ledger: _textOrDash(json['ledger']),
+      frontier: _textOrDash(json['frontier']),
+    );
+  }
+
+  final String report;
+  final String ledger;
+  final String frontier;
+}
+
 class RangeFilter {
   const RangeFilter({required this.min, required this.max});
 
@@ -566,10 +961,11 @@ class CandidatePage {
         Map<String, dynamic>.from(filters['octahedral'] as Map? ?? {}),
       ),
       facets: {
-        for (final entry
-            in Map<String, dynamic>.from(json['facets'] as Map? ?? {}).entries)
+        for (final entry in Map<String, dynamic>.from(
+          json['facets'] as Map? ?? {},
+        ).entries)
           entry.key: [
-            for (final value in (entry.value as List? ?? const [])) '$value'
+            for (final value in (entry.value as List? ?? const [])) '$value',
           ],
       },
     );
@@ -925,7 +1321,7 @@ class AgentChatResponse {
       ],
       proposalIds: [
         for (final value in (json['proposal_ids'] as List? ?? const []))
-          '$value'
+          '$value',
       ],
     );
   }
@@ -971,7 +1367,6 @@ class AgentProposal {
   final String? rationale;
 }
 
-
 /// Cola de un log de GPAW.
 class LogJob {
   const LogJob({
@@ -982,9 +1377,11 @@ class LogJob {
   });
 
   factory LogJob.fromJson(Map<String, dynamic> json) => LogJob(
-        lineas: ((json['lines'] as List?) ?? const []).map((e) => '$e').toList(),
-        disponibles:
-            ((json['available'] as List?) ?? const []).map((e) => '$e').toList(),
+        lineas:
+            ((json['lines'] as List?) ?? const []).map((e) => '$e').toList(),
+        disponibles: ((json['available'] as List?) ?? const [])
+            .map((e) => '$e')
+            .toList(),
         total: (json['total_lines'] as num? ?? 0).toInt(),
         etiqueta: json['label'] as String?,
       );
@@ -996,4 +1393,122 @@ class LogJob {
 
   final int total;
   final String? etiqueta;
+}
+
+/// Una capacidad del entorno: qué es, si funciona y cómo se arregla si no.
+class SetupCapability {
+  const SetupCapability({
+    required this.id,
+    required this.titulo,
+    required this.ok,
+    required this.requerido,
+    required this.detalle,
+    this.error,
+    this.remediacion,
+    this.comando,
+  });
+
+  factory SetupCapability.fromJson(Map<String, dynamic> json) {
+    return SetupCapability(
+      id: _textOrDash(json['id']),
+      titulo: _textOrDash(json['titulo']),
+      ok: json['ok'] == true,
+      requerido: json['requerido'] == true,
+      detalle: _mapOrEmpty(json['detalle']),
+      error: _textOrNull(json['error']),
+      remediacion: _textOrNull(json['remediacion']),
+      comando: _textOrNull(json['comando']),
+    );
+  }
+
+  final String id;
+  final String titulo;
+  final bool ok;
+  final bool requerido;
+  final Map<String, dynamic> detalle;
+  final String? error;
+  final String? remediacion;
+  final String? comando;
+
+  /// Versiones detectadas, para enseñar qué hay instalado sin abrir una consola.
+  ///
+  /// El `is! Map` no es defensivo por costumbre: una capacidad que devolviera
+  /// aquí un string suelto se pintaría como un chip por carácter.
+  Map<String, String> get versiones {
+    final raw = detalle['versiones'];
+    if (raw is! Map) return const {};
+    return {
+      for (final e in raw.entries) e.key.toString(): e.value.toString(),
+    };
+  }
+}
+
+/// Estado de la instalación en curso (o de la última que corrió).
+class SetupJob {
+  const SetupJob({
+    required this.running,
+    required this.status,
+    required this.log,
+    this.target,
+    this.error,
+  });
+
+  factory SetupJob.fromJson(Map<String, dynamic> json) {
+    return SetupJob(
+      running: json['running'] == true,
+      status: _textOrNull(json['status']),
+      target: _textOrNull(json['target']),
+      error: _textOrNull(json['error']),
+      log: [
+        for (final line in (json['log'] as List? ?? const [])) line.toString(),
+      ],
+    );
+  }
+
+  final bool running;
+  final String? status;
+  final String? target;
+  final String? error;
+  final List<String> log;
+
+  bool get vacio => target == null && log.isEmpty;
+}
+
+/// Matriz de capacidades de la máquina donde corre el monitor.
+class SetupStatus {
+  const SetupStatus({
+    required this.status,
+    required this.ok,
+    required this.plataforma,
+    required this.python,
+    required this.executable,
+    required this.frozen,
+    required this.capacidades,
+    required this.job,
+  });
+
+  factory SetupStatus.fromJson(Map<String, dynamic> json) {
+    return SetupStatus(
+      status: _textOrDash(json['status']),
+      ok: json['ok'] == true,
+      plataforma: _textOrDash(json['plataforma']),
+      python: _textOrDash(json['python']),
+      executable: _textOrDash(json['executable']),
+      frozen: json['frozen'] == true,
+      capacidades: [
+        for (final item in (json['capacidades'] as List? ?? const []))
+          SetupCapability.fromJson(Map<String, dynamic>.from(item as Map)),
+      ],
+      job: SetupJob.fromJson(_mapOrEmpty(json['job'])),
+    );
+  }
+
+  final String status;
+  final bool ok;
+  final String plataforma;
+  final String python;
+  final String executable;
+  final bool frozen;
+  final List<SetupCapability> capacidades;
+  final SetupJob job;
 }

@@ -372,6 +372,47 @@ def _avisar_runs_dir(cfg: dict) -> None:
         ))
 
 
+def _correr_bucle_descubrimiento(args) -> None:
+    """Ejecuta el bucle autónomo en primer plano de ESTE proceso.
+
+    Lo invoca el servicio del monitor como subproceso desacoplado. Al ser un
+    proceso propio, saturar la CPU aquí ya no afecta a la API: el servidor sigue
+    respondiendo `/api/discovery/status` leyendo `state.json`, que este bucle va
+    escribiendo.
+
+    La salida va a stdout/stderr, que el servicio redirige a un fichero de log;
+    si el bucle muere, ese log es lo único que explica por qué.
+    """
+    import traceback
+
+    from . import paths
+    from .services import discovery as servicio
+
+    if args.data_root:
+        os.environ["DFT_DATA_ROOT"] = str(Path(args.data_root).expanduser())
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper()),
+        format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    )
+    log = logging.getLogger("discovery.loop")
+
+    try:
+        bucle = servicio.build_loop()
+        log.info("bucle arrancado en %s (pid %s)", paths.data_root(), os.getpid())
+        bucle.run_forever(
+            start_runner=not args.no_runner,
+            dry_run=args.dry_run,
+            use_mlff=False if args.no_mlff else None,
+            max_rounds=args.max_rounds,
+        )
+        log.info("bucle terminado")
+    except Exception:
+        # Sin esto el traceback se perdería y el estado solo diría "murió".
+        log.error("el bucle de descubrimiento falló:\n%s", traceback.format_exc())
+        raise SystemExit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="dft-monitor",
@@ -398,7 +439,23 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--reload", action="store_true", help="Hot-reload (desarrollo).")
     ap.add_argument("--log-level", default="warning",
                     choices=["debug", "info", "warning", "error"])
+    # El bucle de descubrimiento corre como PROCESO APARTE, no como hilo del
+    # servidor: cribar decenas de miles de candidatos con pandas es CPU-bound y
+    # con el GIL dejaba sin turno al event loop de asyncio — la API se quedaba
+    # muda justo mientras había algo que monitorizar. Se relanza este mismo
+    # ejecutable con esta bandera porque en el binario congelado `sys.executable`
+    # es el propio binario y no existe un `python -m` al que llamar.
+    ap.add_argument("--discovery-loop", action="store_true",
+                    help=argparse.SUPPRESS)
+    ap.add_argument("--max-rounds", type=int, default=None, help=argparse.SUPPRESS)
+    ap.add_argument("--no-runner", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--no-mlff", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--dry-run", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
+
+    if args.discovery_loop:
+        _correr_bucle_descubrimiento(args)
+        return
 
     # Antes que nada: el resto del arranque resuelve rutas contra esta raíz.
     if args.data_root:

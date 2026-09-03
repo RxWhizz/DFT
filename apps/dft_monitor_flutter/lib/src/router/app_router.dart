@@ -5,6 +5,8 @@ import '../views/batches_view.dart';
 import '../views/candidates_view.dart';
 import '../views/dashboard_view.dart';
 import '../views/diagnostics_view.dart';
+import '../views/discovery_view.dart';
+import '../views/entorno_view.dart';
 import '../views/jobs_view.dart';
 import '../views/ml_view.dart';
 import '../views/results_view.dart';
@@ -23,22 +25,42 @@ final appRouter = GoRouter(
         GoRoute(path: '/agent', builder: (context, state) => const AgentView()),
         GoRoute(path: '/jobs', builder: (context, state) => const JobsView()),
         GoRoute(
-            path: '/batches', builder: (context, state) => const BatchesView()),
+          path: '/batches',
+          builder: (context, state) => const BatchesView(),
+        ),
         GoRoute(
-            path: '/candidates',
-            builder: (context, state) => const CandidatesView()),
+          path: '/candidates',
+          builder: (context, state) => const CandidatesView(),
+        ),
         GoRoute(path: '/ml', builder: (context, state) => const MlView()),
         GoRoute(
-            path: '/structures',
-            builder: (context, state) => const StructuresView()),
+          path: '/structures',
+          builder: (context, state) => const StructuresView(),
+        ),
         GoRoute(
-            path: '/screening',
-            builder: (context, state) => const ScreeningView()),
+          path: '/screening',
+          builder: (context, state) => const ScreeningView(),
+        ),
         GoRoute(
-            path: '/results', builder: (context, state) => const ResultsView()),
+          path: '/protocolo-descubrimiento-autonomo',
+          builder: (context, state) => const DiscoveryView(),
+        ),
         GoRoute(
-            path: '/diagnostics',
-            builder: (context, state) => const DiagnosticsView()),
+          path: '/discovery',
+          builder: (context, state) => const DiscoveryView(),
+        ),
+        GoRoute(
+          path: '/results',
+          builder: (context, state) => const ResultsView(),
+        ),
+        GoRoute(
+          path: '/diagnostics',
+          builder: (context, state) => const DiagnosticsView(),
+        ),
+        GoRoute(
+          path: '/entorno',
+          builder: (context, state) => const EntornoView(),
+        ),
       ],
     ),
   ],

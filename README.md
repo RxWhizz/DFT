@@ -332,6 +332,32 @@ cd PEROVOWL
 pip install -e ".[dev]"
 ```
 
+### Paso 4: Comprobar y completar el entorno
+
+PEROVOWL no corre en un solo intérprete. El monitor y el cribado Tier 0/1 van
+en el Python donde está instalado el paquete; GPAW va donde esté compilado con
+MPI (en Windows, WSL); y el Tier 2 (MLFF/GNN, ~2 GB de `torch` + `matgl`) va en
+un entorno propio. Que falte uno solía descubrirse tarde y disfrazado, como un
+`ModuleNotFoundError` en mitad de una ronda. El wizard adelanta esa comprobación:
+
+```bash
+buho setup check          # qué funciona, qué falta y con qué comando se arregla
+buho setup plan mlff      # los comandos que se ejecutarían, sin ejecutar ninguno
+buho setup install mlff   # crea el entorno MLFF y verifica que importa
+```
+
+`buho setup install mlff` crea un entorno **separado** del de GPAW a propósito:
+GPAW está fijado a numpy 1.26 y `matgl` exige numpy >= 2, así que compartirlos
+rompería los cálculos DFT. Por defecto instala la rueda CPU de `torch`
+(`--cuda` para la de GPU, ~3 GB más, que solo compensa con una NVIDIA).
+
+Lo mismo está en la app, en **Entorno**: una tarjeta por capacidad, con el
+botón de instalar y el log en vivo.
+
+Sin Tier 2 la cascada **no se para**: criba con Tier 0/1, lo dice en la pantalla
+del protocolo y sigue. Se descarta menos material del que se descartaría con
+estabilidad MLFF, pero el DFT —que es lo caro— no se bloquea.
+
 ## El CLI
 
 Cada capacidad del pipeline tiene un comando. Después de instalar el paquete
@@ -341,7 +367,7 @@ Cada capacidad del pipeline tiene un comando. Después de instalar el paquete
 buho --help
 ```
 
-Son **30 grupos y 140 comandos**. Lo primero que conviene correr es el
+Son **31 grupos y 144 comandos**. Lo primero que conviene correr es el
 diagnóstico, que revisa el intérprete, los datasets PAW, los datos y los modelos
 antes de que falle un lote entero:
 
@@ -379,7 +405,7 @@ buho activity runners    # qué procesos están vivos ahora mismo
 buho candidates list     # candidatos viables y verificados
 ```
 
-### Los 30 grupos
+### Los 31 grupos
 
 | Grupo | Cmds | Para qué |
 |---|---:|---|
@@ -407,6 +433,7 @@ buho candidates list     # candidatos viables y verificados
 | `report` | 6 | Reportes, figuras y visualizaciones |
 | `run` | 1 | Ejecuta el workflow DFT |
 | `screening` | 3 | Cascada de cribado HTS |
+| `setup` | 3 | Comprobación y reparación de los entornos |
 | `status` | 1 | Estado del workflow sin cargar GPAW |
 | `structures` | 2 | Estructuras de referencia y pre-generadas |
 | `top8` | 7 | Flujos comparativos de las top-8 perovskitas |

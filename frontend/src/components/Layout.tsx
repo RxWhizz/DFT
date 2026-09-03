@@ -10,10 +10,12 @@ const NAV = [
   { to: '/agent', label: 'Agente' },
   { to: '/jobs', label: 'Jobs' },
   { to: '/screening', label: 'Cribado' },
+  { to: '/protocolo-descubrimiento-autonomo', label: 'Protocolo Autónomo' },
   { to: '/candidates', label: 'Candidatos' },
   { to: '/ml', label: 'ML' },
   { to: '/structures', label: 'Estructuras' },
   { to: '/results', label: 'Resultados' },
+  { to: '/entorno', label: 'Entorno' },
 ]
 
 const CONN: Record<ConnState, { dot: string; text: string }> = {

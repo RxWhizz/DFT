@@ -12,27 +12,47 @@ void main() {
   final fuente = File('lib/src/widgets/app_shell.dart').readAsStringSync();
 
   test('hay un destino por cada indice del mapeo', () {
-    final destinos = RegExp('NavigationRailDestination\\(').allMatches(fuente).length;
+    final destinos =
+        RegExp('NavigationRailDestination\\(').allMatches(fuente).length;
 
-    final indexFor = RegExp(r'int _indexFor[\s\S]*?\n\}').firstMatch(fuente)!.group(0)!;
+    final indexFor =
+        RegExp(r'int _indexFor[\s\S]*?\n\}').firstMatch(fuente)!.group(0)!;
     final indices = RegExp(r'return (\d+);')
         .allMatches(indexFor)
         .map((m) => int.parse(m.group(1)!))
         .toSet();
 
-    final pathFor = RegExp(r'String _pathFor[\s\S]*?\n\}').firstMatch(fuente)!.group(0)!;
-    final rutas = RegExp(r'(\d+) =>').allMatches(pathFor).map((m) => int.parse(m.group(1)!)).toSet();
+    final pathFor =
+        RegExp(r'String _pathFor[\s\S]*?\n\}').firstMatch(fuente)!.group(0)!;
+    final rutas = RegExp(r'(\d+) =>')
+        .allMatches(pathFor)
+        .map((m) => int.parse(m.group(1)!))
+        .toSet();
 
-    expect(destinos, indices.length,
-        reason: '$destinos destinos para ${indices.length} indices en _indexFor');
-    expect(rutas, indices.difference({0}),
-        reason: '_pathFor y _indexFor no cubren los mismos indices');
-    expect(indices, equals({for (var i = 0; i < destinos; i++) i}),
-        reason: 'los indices deben ser 0..${destinos - 1} sin huecos');
+    expect(
+      destinos,
+      indices.length,
+      reason: '$destinos destinos para ${indices.length} indices en _indexFor',
+    );
+    expect(
+      rutas,
+      indices.difference({0}),
+      reason: '_pathFor y _indexFor no cubren los mismos indices',
+    );
+    expect(
+      indices,
+      equals({for (var i = 0; i < destinos; i++) i}),
+      reason: 'los indices deben ser 0..${destinos - 1} sin huecos',
+    );
   });
 
   test('el agente no esta en la barra', () {
     expect(fuente.contains("Text('Agente')"), isFalse);
     expect(fuente.contains("'/agent'"), isFalse);
+  });
+
+  test('el protocolo autonomo esta en la barra', () {
+    expect(fuente.contains("Text('Protocolo')"), isTrue);
+    expect(fuente.contains("'/protocolo-descubrimiento-autonomo'"), isTrue);
   });
 }

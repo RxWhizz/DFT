@@ -19,6 +19,10 @@ class ActivityBanner extends ConsumerWidget {
 
     final t = Theme.of(context);
     final (icono, color) = switch (d.activity) {
+      'discovery' => (
+          Icons.auto_awesome_motion_outlined,
+          t.colorScheme.primary,
+        ),
       'dft' => (Icons.memory, t.colorScheme.primary),
       'queued' => (Icons.schedule, t.colorScheme.tertiary),
       'generating' => (Icons.auto_awesome, t.colorScheme.tertiary),
@@ -42,20 +46,29 @@ class ActivityBanner extends ConsumerWidget {
                   SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: color,
+                    ),
                   )
                 else
                   Icon(icono, size: 18, color: color),
                 const SizedBox(width: 10),
-                Text(d.label,
-                    style: t.textTheme.titleSmall?.copyWith(
-                        color: color, fontWeight: FontWeight.w600)),
+                Text(
+                  d.label,
+                  style: t.textTheme.titleSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (d.detail != null) ...[
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(d.detail!,
-                        style: t.textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      d.detail!,
+                      style: t.textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ] else
                   const Spacer(),
@@ -65,27 +78,42 @@ class ActivityBanner extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Tiempo estimado ',
-                            style: t.textTheme.bodySmall?.copyWith(
-                                color: t.colorScheme.onSurfaceVariant)),
-                        Text(d.etaText!,
-                            style: t.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          'Tiempo estimado ',
+                          style: t.textTheme.bodySmall?.copyWith(
+                            color: t.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          d.etaText!,
+                          style: t.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   )
-                else if (d.busy && d.activity != 'generating')
-                  Text('Tiempo estimado: sin datos',
-                      style: t.textTheme.bodySmall?.copyWith(
-                          color: t.colorScheme.onSurfaceVariant)),
+                else if (d.busy &&
+                    d.activity != 'generating' &&
+                    d.activity != 'discovery')
+                  Text(
+                    'Tiempo estimado: sin datos',
+                    style: t.textTheme.bodySmall?.copyWith(
+                      color: t.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
               ],
             ),
             if (d.progress != null) ...[
               const SizedBox(height: 10),
               LinearProgressIndicator(value: d.progress),
               const SizedBox(height: 4),
-              Text('${d.nDone} de ${d.total} terminados',
-                  style: t.textTheme.bodySmall),
+              Text(
+                d.activity == 'discovery'
+                    ? '${d.nDone} de ${d.total} cribados'
+                    : '${d.nDone} de ${d.total} terminados',
+                style: t.textTheme.bodySmall,
+              ),
             ],
           ],
         ),
