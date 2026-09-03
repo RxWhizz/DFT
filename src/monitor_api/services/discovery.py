@@ -1,26 +1,45 @@
-"""Autonomous discovery loop service for the monitor API."""
+"""Servicio del bucle autónomo de descubrimiento.
+
+El bucle corre como **subproceso desacoplado**, no como hilo del servidor. Es la
+misma decisión que ya tomaba el runner de DFT, y por el mismo motivo: cribar
+decenas de miles de candidatos con pandas satura un núcleo durante minutos, y
+con el GIL eso dejaba sin turno al event loop de asyncio. La API se quedaba
+muda —primero timeouts, después el listener caído— justo mientras había algo
+que monitorizar, que es lo único que esta aplicación existe para hacer.
+
+La comunicación entre los dos procesos ya existía: el bucle escribe
+`state.json` y el servidor lo lee.
+"""
 
 from __future__ import annotations
 
 import copy
 import json
 import logging
+import os
+import subprocess
+import sys
 import threading
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from .. import paths
+from .. import paths, platform_caps
 
 log = logging.getLogger(__name__)
 
 _lock = threading.Lock()
-_thread: threading.Thread | None = None
-_last_error: str | None = None
 
 SPACE_OVERRIDE_REL = "data/discovery/space_config.json"
+#: Dónde se anota el subproceso vivo, para reconocerlo tras reiniciar el monitor.
+PID_REL = "data/discovery/loop.pid.json"
+LOG_REL = "data/discovery/loop.log"
+#: Config efectiva volcada a disco para el subproceso: lleva el override del
+#: espacio químico, que hasta ahora solo vivía en memoria del servidor.
+EFFECTIVE_CFG_REL = "data/discovery/effective_config.yaml"
 MODE_DEFAULTS = {
     "pure": True,
     "A_mixed": True,
@@ -74,7 +93,14 @@ def _effective_config(update: dict[str, Any] | None = None) -> dict[str, Any]:
     return cfg
 
 
-def _loop():
+def build_loop():
+    """Construye el bucle con las rutas efectivas del monitor.
+
+    Público porque lo usa también el subproceso (`launcher --discovery-loop`):
+    así los dos lados resuelven raíces y configuración por el mismo camino, en
+    vez de que el subproceso caiga en los valores por defecto del repositorio y
+    escriba el estado donde el servidor no lo está mirando.
+    """
     from buho.discovery import DiscoveryLoop
 
     models_parent = paths.find_resource("models").parent
@@ -85,6 +111,113 @@ def _loop():
         data_root=paths.data_root(),
         models_root=models_parent,
     )
+
+
+#: Alias interno histórico; el módulo entero lo usaba con este nombre.
+_loop = build_loop
+
+
+# ── Subproceso del bucle ──────────────────────────────────────────────────────
+
+
+def _pid_file() -> Path:
+    return paths.resolve_data(PID_REL)
+
+
+def _log_file() -> Path:
+    return paths.resolve_data(LOG_REL)
+
+
+def _leer_pid() -> dict[str, Any]:
+    ruta = _pid_file()
+    if not ruta.is_file():
+        return {}
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return datos if isinstance(datos, dict) else {}
+
+
+def _vivo(pid: int | None) -> bool:
+    """Si el subproceso del bucle sigue corriendo de verdad.
+
+    Se comprueba el PID, no solo el fichero: si el proceso muere de golpe el
+    fichero se queda, y sin esto la interfaz mostraría un bucle fantasma para
+    siempre y no dejaría lanzar otro.
+    """
+    if not pid:
+        return False
+    try:
+        import psutil
+
+        proc = psutil.Process(int(pid))
+        if not proc.is_running() or proc.status() == psutil.STATUS_ZOMBIE:
+            return False
+        # El PID puede haberse reciclado para otro proceso cualquiera.
+        return "discovery-loop" in " ".join(proc.cmdline()) or "--discovery-loop" in " ".join(proc.cmdline())
+    except Exception:  # noqa: BLE001 - psutil ausente o proceso inaccesible
+        return False
+
+
+def _cola_log(lineas: int = 40) -> str:
+    ruta = _log_file()
+    if not ruta.is_file():
+        return ""
+    try:
+        contenido = ruta.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    return "\n".join(contenido[-lineas:]).strip()
+
+
+def _background() -> dict[str, Any]:
+    """Estado del subproceso, para el bloque `background` de la respuesta."""
+    info = _leer_pid()
+    pid = info.get("pid")
+    corriendo = _vivo(pid)
+    salida: dict[str, Any] = {"running": corriendo, "pid": pid if corriendo else None}
+
+    if not corriendo and info:
+        # Terminó. Si fue por un fallo, el log es lo único que lo explica.
+        cola = _cola_log()
+        if info.get("expected_exit"):
+            salida["last_error"] = None
+        elif cola and ("Traceback" in cola or "ERROR" in cola or "falló" in cola):
+            salida["last_error"] = cola[-1500:]
+        else:
+            salida["last_error"] = None
+        salida["log"] = str(_log_file())
+    else:
+        salida["last_error"] = None
+    return salida
+
+
+def _comando_bucle(*, start_runner: bool, dry_run: bool, use_mlff: bool | None,
+                   max_rounds: int | None) -> list[str]:
+    """Argv para relanzar este mismo ejecutable en modo bucle.
+
+    Congelado, `sys.executable` es el propio binario y no hay un `python -m` al
+    que llamar; desde el código fuente hay que pasar por `-m monitor_api`. Las
+    dos rutas acaban en `launcher.main()` con `--discovery-loop`.
+    """
+    if paths.is_frozen():
+        argv = [sys.executable]
+    else:
+        interprete = platform_caps.runner_python() or sys.executable
+        argv = [interprete, "-m", "monitor_api"]
+
+    argv += ["--discovery-loop", "--data-root", str(paths.data_root()),
+             "--log-level", "info"]
+    if not start_runner:
+        argv.append("--no-runner")
+    if dry_run:
+        argv.append("--dry-run")
+    if use_mlff is False:
+        argv.append("--no-mlff")
+    if max_rounds is not None:
+        argv += ["--max-rounds", str(max_rounds)]
+    return argv
 
 
 def available_species() -> dict[str, list[str]]:
@@ -118,7 +251,7 @@ def preview_config(update: dict[str, Any] | None = None) -> dict[str, Any]:
 
 
 def save_config(update: dict[str, Any]) -> dict[str, Any]:
-    if _thread is not None and _thread.is_alive():
+    if _vivo(_leer_pid().get('pid')):
         raise RuntimeError("Pausa el protocolo antes de cambiar el espacio químico.")
     normalized = _validate_space_update(update)
     path = _space_config_path()
@@ -269,21 +402,15 @@ def _config_payload(cfg: dict[str, Any]) -> dict[str, Any]:
 
 def status() -> dict[str, Any]:
     payload = _loop().status()
-    payload["background"] = {
-        "running": _thread is not None and _thread.is_alive(),
-        "last_error": _last_error,
-    }
+    payload["background"] = _background()
     return payload
 
 
 def init(*, reset: bool = False) -> dict[str, Any]:
-    if reset and _thread is not None and _thread.is_alive():
+    if reset and _vivo(_leer_pid().get('pid')):
         raise RuntimeError("Pausa el protocolo antes de reiniciar la criba.")
     payload = _loop().init_space(reset=reset)
-    payload["background"] = {
-        "running": _thread is not None and _thread.is_alive(),
-        "last_error": _last_error,
-    }
+    payload["background"] = _background()
     return payload
 
 
@@ -294,49 +421,92 @@ def start(
     use_mlff: bool | None = None,
     max_rounds: int | None = None,
 ) -> dict[str, Any]:
-    """Start the loop in the background, or return the running status."""
-    global _thread, _last_error
-
+    """Lanza el bucle como subproceso desacoplado, o devuelve el ya vivo."""
     with _lock:
-        if _thread is not None and _thread.is_alive():
+        if _vivo(_leer_pid().get("pid")):
             return status()
 
-        _last_error = None
+        argv = _comando_bucle(
+            start_runner=start_runner, dry_run=dry_run,
+            use_mlff=use_mlff, max_rounds=max_rounds,
+        )
 
-        def _target() -> None:
-            global _last_error
+        registro = _log_file()
+        registro.parent.mkdir(parents=True, exist_ok=True)
+        # Se trunca en cada arranque: interesa el error de ESTA ejecución, y un
+        # log que crece sin fin acaba siendo imposible de leer desde la GUI.
+        salida = registro.open("w", encoding="utf-8", errors="replace")
+
+        entorno = os.environ.copy()
+        entorno["DFT_DATA_ROOT"] = str(paths.data_root())
+        if not paths.is_frozen():
+            # El subproceso importa monitor_api y buho del árbol de fuentes.
+            src = paths.bundle_root() / "src"
+            previo = entorno.get("PYTHONPATH", "")
+            entorno["PYTHONPATH"] = f"{src}{os.pathsep}{previo}" if previo else str(src)
+
+        # Desacoplado a propósito: cerrar el monitor no debe abortar una ronda
+        # a medias, igual que no aborta los cálculos DFT.
+        if sys.platform == "win32":
+            extra = {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)}
+        else:
+            extra = {"start_new_session": True}
+
+        try:
+            proc = subprocess.Popen(
+                argv, stdout=salida, stderr=subprocess.STDOUT,
+                cwd=str(paths.data_root()), env=entorno, **extra,
+            )
+        except OSError as exc:
+            salida.close()
+            raise RuntimeError(f"No se pudo lanzar el bucle: {exc}") from exc
+        finally:
+            salida.close()
+
+        _pid_file().write_text(
+            json.dumps({
+                "pid": proc.pid,
+                "started_at": time.time(),
+                "argv": argv,
+                "log": str(registro),
+            }, indent=2),
+            encoding="utf-8",
+        )
+        log.info("bucle de descubrimiento lanzado (pid %s)", proc.pid)
+
+    return status()
+
+
+def stop() -> dict[str, Any]:
+    """Detiene el subproceso del bucle, si lo hay."""
+    with _lock:
+        info = _leer_pid()
+        pid = info.get("pid")
+        if _vivo(pid):
             try:
-                _loop().run_forever(
-                    start_runner=start_runner,
-                    dry_run=dry_run,
-                    use_mlff=use_mlff,
-                    max_rounds=max_rounds,
-                )
-            except Exception as exc:  # background workers must not die silently
-                log.exception("Discovery loop failed")
-                _last_error = f"{type(exc).__name__}: {exc}"
+                import psutil
 
-        _thread = threading.Thread(target=_target, name="perovowl-discovery", daemon=True)
-        _thread.start()
-
+                proc = psutil.Process(int(pid))
+                for hijo in proc.children(recursive=True):
+                    hijo.terminate()
+                proc.terminate()
+                proc.wait(timeout=20)
+            except Exception:  # noqa: BLE001
+                log.warning("no se pudo terminar limpiamente el bucle pid=%s", pid)
+        info["expected_exit"] = True
+        _pid_file().write_text(json.dumps(info, indent=2), encoding="utf-8")
     return status()
 
 
 def pause() -> dict[str, Any]:
     payload = _loop().pause()
-    payload["background"] = {
-        "running": _thread is not None and _thread.is_alive(),
-        "last_error": _last_error,
-    }
+    payload["background"] = _background()
     return payload
 
 
 def resume() -> dict[str, Any]:
     payload = _loop().resume()
-    payload["background"] = {
-        "running": _thread is not None and _thread.is_alive(),
-        "last_error": _last_error,
-    }
+    payload["background"] = _background()
     return payload
 
 
@@ -349,7 +519,9 @@ def export() -> dict[str, Any]:
 
 
 def reset_background_for_tests() -> None:
-    global _thread, _last_error
+    """Olvida el subproceso anotado. Solo para tests."""
     with _lock:
-        _thread = None
-        _last_error = None
+        try:
+            _pid_file().unlink(missing_ok=True)
+        except OSError:
+            pass

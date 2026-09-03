@@ -7,6 +7,7 @@ en vez de matarla.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -318,7 +319,8 @@ def test_plan_mlff_crea_entorno_separado_de_gpaw():
     assert "perovowl-mlff" in comandos
     assert "gpaw246" not in comandos
     assert [s.name for s in plan.steps] == [
-        "crear-entorno", "instalar-torch", "instalar-mlff", "verificar",
+        "asegurar-micromamba", "crear-entorno", "instalar-torch",
+        "instalar-mlff", "verificar",
     ]
 
 
@@ -341,9 +343,11 @@ def test_plan_mlff_recrear_borra_antes_y_es_opcional():
         _cfg(wsl={"micromamba": "/opt/mm/bin/micromamba", "project_root": "/mnt/c/repo"}),
         recrear=True,
     )
-    assert plan.steps[0].name == "limpiar"
-    # Que no exista todavia no puede abortar la creacion.
-    assert plan.steps[0].opcional
+    # `limpiar` va tras asegurar micromamba: sin el binario no se puede borrar.
+    limpiar = next(s for s in plan.steps if s.name == "limpiar")
+    assert plan.steps.index(limpiar) == 1
+    # Que el entorno no exista todavia no puede abortar la creacion.
+    assert limpiar.opcional
 
 
 def test_plan_deduce_micromamba_del_runtime_gpaw():
@@ -556,3 +560,239 @@ def test_versiones_vacio_si_wsl_no_responde(monkeypatch):
 
     assert not cap["ok"]
     assert cap["detalle"]["versiones"] == {}
+
+
+# ── Bucle como subproceso ─────────────────────────────────────────────────────
+
+
+def test_comando_bucle_relanza_el_binario_si_esta_congelado(monkeypatch, tmp_path):
+    """Congelado no hay `python -m` al que llamar: sys.executable ES el binario."""
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "is_frozen", lambda: True)
+    monkeypatch.setattr(paths, "data_root", lambda: tmp_path)
+    monkeypatch.setattr(sys, "executable", r"C:\app\dft-monitor-engine.exe")
+
+    argv = svc._comando_bucle(start_runner=True, dry_run=False, use_mlff=None, max_rounds=None)
+
+    assert argv[0] == r"C:\app\dft-monitor-engine.exe"
+    assert "-m" not in argv
+    assert "--discovery-loop" in argv
+
+
+def test_comando_bucle_desde_fuentes_usa_modulo(monkeypatch, tmp_path):
+    from monitor_api import paths, platform_caps
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "is_frozen", lambda: False)
+    monkeypatch.setattr(paths, "data_root", lambda: tmp_path)
+    monkeypatch.setattr(platform_caps, "runner_python", lambda cfg=None: "/usr/bin/python3")
+
+    argv = svc._comando_bucle(start_runner=False, dry_run=True, use_mlff=False, max_rounds=2)
+
+    assert argv[:3] == ["/usr/bin/python3", "-m", "monitor_api"]
+    for flag in ("--discovery-loop", "--no-runner", "--dry-run", "--no-mlff"):
+        assert flag in argv
+    assert argv[argv.index("--max-rounds") + 1] == "2"
+
+
+def test_start_no_lanza_dos_bucles(monkeypatch, tmp_path):
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "data_root", lambda: tmp_path)
+    monkeypatch.setattr(paths, "resolve_data", lambda rel: tmp_path / rel)
+    (tmp_path / "data" / "discovery").mkdir(parents=True, exist_ok=True)
+    svc._pid_file().write_text(json.dumps({"pid": 4242}), encoding="utf-8")
+    monkeypatch.setattr(svc, "_vivo", lambda pid: True)
+    monkeypatch.setattr(svc, "status", lambda: {"ya": "corriendo"})
+
+    def _no(*a, **k):
+        pytest.fail("no debía lanzarse un segundo bucle")
+
+    monkeypatch.setattr(svc.subprocess, "Popen", _no)
+    assert svc.start() == {"ya": "corriendo"}
+
+
+def test_background_reporta_el_fallo_del_subproceso(monkeypatch, tmp_path):
+    """Muerto el subproceso, su log es lo único que explica por qué."""
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "resolve_data", lambda rel: tmp_path / rel)
+    (tmp_path / "data" / "discovery").mkdir(parents=True, exist_ok=True)
+    svc._pid_file().write_text(json.dumps({"pid": 999}), encoding="utf-8")
+    svc._log_file().write_text("arrancando\nTraceback (most recent call last):\nboom\n",
+                               encoding="utf-8")
+    monkeypatch.setattr(svc, "_vivo", lambda pid: False)
+
+    bg = svc._background()
+    assert bg["running"] is False
+    assert "boom" in bg["last_error"]
+
+
+def test_background_no_inventa_error_en_parada_limpia(monkeypatch, tmp_path):
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    monkeypatch.setattr(paths, "resolve_data", lambda rel: tmp_path / rel)
+    (tmp_path / "data" / "discovery").mkdir(parents=True, exist_ok=True)
+    svc._pid_file().write_text(json.dumps({"pid": 9, "expected_exit": True}), encoding="utf-8")
+    svc._log_file().write_text("Traceback\n", encoding="utf-8")
+    monkeypatch.setattr(svc, "_vivo", lambda pid: False)
+
+    assert svc._background()["last_error"] is None
+
+
+# ── Metrica honesta del reentrenamiento ───────────────────────────────────────
+
+
+def test_cv_detecta_un_modelo_que_no_aprende():
+    """Con y aleatorio, el CV no debe batir a predecir la media."""
+    import numpy as np
+
+    from buho.discovery.engine import _cv_metrics
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(60, 5))  # noqa: N806 - X matriz / y vector
+    y = rng.normal(size=60)          # sin relacion con X
+    cols = [f"f{i}" for i in range(5)]
+
+    m = _cv_metrics(X, y, cols)
+    assert m["cv_mae_eV"] is not None
+    # El train MAE sera minusculo por memorizacion; el CV no puede mejorar la
+    # linea base de forma apreciable. Eso es justo lo que el train no revelaba.
+    assert m["cv_mae_eV"] >= m["baseline_mae_eV"] * 0.75
+
+
+def test_cv_premia_un_modelo_que_si_aprende():
+    import numpy as np
+
+    from buho.discovery.engine import _cv_metrics
+
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(80, 5))  # noqa: N806 - X matriz / y vector
+    y = 2.0 * X[:, 0] - X[:, 1]      # relacion clara
+    cols = [f"f{i}" for i in range(5)]
+
+    m = _cv_metrics(X, y, cols)
+    assert m["cv_mae_eV"] < m["baseline_mae_eV"] * 0.6
+
+
+def test_cv_se_salta_con_pocas_muestras():
+    import numpy as np
+
+    from buho.discovery.engine import _cv_metrics
+
+    m = _cv_metrics(np.zeros((6, 5)), np.zeros(6), [f"f{i}" for i in range(5)])
+    assert m["cv_mae_eV"] is None
+    assert "6" in m["cv_skipped_reason"]
+
+
+# ── Wizard: micromamba ────────────────────────────────────────────────────────
+
+
+def test_plan_asegura_micromamba_antes_de_crear_el_entorno():
+    """En una maquina limpia el plan fallaba con un 'command not found' mudo."""
+    from buho import setup_wizard
+
+    plan = setup_wizard.plan_mlff({"discovery": {"wsl": {"project_root": "/mnt/c/repo"}}})
+
+    assert plan.steps[0].name == "asegurar-micromamba"
+    cmd = plan.steps[0].shell()
+    assert "micro.mamba.pm" in cmd
+    # Idempotente: si ya esta, el test -x corta y no se descarga nada.
+    assert "test -x" in cmd
+    # Y la ruta es absoluta, no relativa al directorio actual.
+    assert "$HOME/perovowl-micromamba/bin/micromamba" in cmd
+
+
+def test_sh_respeta_home_pero_cita_lo_demas():
+    from buho.setup_wizard import _sh
+
+    assert _sh("$HOME/perovowl-micromamba/bin/micromamba") == "$HOME/perovowl-micromamba/bin/micromamba"
+    # Nada mas se deja sin comillas: lo que venga de la config se cita.
+    assert _sh("/opt/mm/bin/micromamba") == "/opt/mm/bin/micromamba"
+    assert "'" in _sh("/opt/x y/mm")
+    assert "'" in _sh("$HOME/../../etc/passwd; rm -rf /")
+
+
+# ── El aprendizaje activo tiene que cerrar el ciclo ───────────────────────────
+
+
+def test_la_cascada_prefiere_el_modelo_reentrenado(tmp_path):
+    """El bucle reentrenaba cada ronda y seguia cribando con el de fabrica.
+
+    Sin esto el "aprendizaje activo" no aprendia: proponia la misma quimica
+    ronda tras ronda mientras el DFT la desmentia.
+    """
+    from buho.screening.cascade import ScreeningCascade
+
+    (tmp_path / "models" / "discovery").mkdir(parents=True)
+    base = tmp_path.joinpath(*ScreeningCascade.SURROGATE_BASE)
+    actual = tmp_path.joinpath(*ScreeningCascade.SURROGATE_ACTUAL)
+
+    cargados: list[Path] = []
+
+    class _Falso:
+        feature_cols = ["a"]
+
+        @staticmethod
+        def load(p):
+            cargados.append(Path(p))
+            return _Falso()
+
+    import ml_surrogate.model as mm
+
+    original = mm.SurrogateEnsemble
+    mm.SurrogateEnsemble = _Falso
+    try:
+        # Solo el de fabrica: se usa como respaldo.
+        base.write_bytes(b"x")
+        c = ScreeningCascade({"screening": {"tier1_surrogate": True}}, project_root=tmp_path)
+        c._load_surrogate()
+        assert cargados[-1] == base
+
+        # Con el reentrenado publicado, gana ese.
+        actual.write_bytes(b"y")
+        c2 = ScreeningCascade({"screening": {"tier1_surrogate": True}}, project_root=tmp_path)
+        c2._load_surrogate()
+        assert cargados[-1] == actual
+    finally:
+        mm.SurrogateEnsemble = original
+
+
+def test_un_modelo_publicado_corrupto_cae_al_de_fabrica(tmp_path):
+    from buho.screening.cascade import ScreeningCascade
+
+    (tmp_path / "models" / "discovery").mkdir(parents=True)
+    tmp_path.joinpath(*ScreeningCascade.SURROGATE_BASE).write_bytes(b"ok")
+    tmp_path.joinpath(*ScreeningCascade.SURROGATE_ACTUAL).write_bytes(b"roto")
+
+    intentos: list[Path] = []
+
+    class _Falso:
+        feature_cols = ["a"]
+
+        @staticmethod
+        def load(p):
+            intentos.append(Path(p))
+            if Path(p).name.endswith("current.pkl"):
+                raise ValueError("pickle corrupto")
+            return _Falso()
+
+    import ml_surrogate.model as mm
+
+    original = mm.SurrogateEnsemble
+    mm.SurrogateEnsemble = _Falso
+    try:
+        c = ScreeningCascade({"screening": {"tier1_surrogate": True}}, project_root=tmp_path)
+        with pytest.warns(UserWarning):
+            assert c._load_surrogate() is not None
+    finally:
+        mm.SurrogateEnsemble = original
+    # Probo el publicado y, al fallar, siguio con el de fabrica.
+    assert [p.name for p in intentos] == [
+        "surrogate_bandgap_current.pkl", "surrogate_bandgap.pkl",
+    ]

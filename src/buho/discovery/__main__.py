@@ -12,6 +12,35 @@ def cli() -> None:
     """Discovery loop: ML ranking -> DFT -> retrain -> repeat."""
 
 
+def _roots(func):
+    """Raices de datos, como opciones compartidas.
+
+    El monitor lanza este CLI como subproceso y no comparte su configuracion de
+    rutas con el: sin poder pasarlas, el bucle escribiria el estado en la raiz
+    por defecto del repositorio en vez de en la que el monitor esta leyendo, y
+    la GUI no veria avanzar nada.
+    """
+    for opcion in (
+        click.option("--models-root", default=None, help="Raiz donde viven models/."),
+        click.option("--data-root", default=None, help="Raiz de datos de salida."),
+        click.option("--project-root", default=None, help="Raiz del proyecto."),
+    ):
+        func = opcion(func)
+    return func
+
+
+def _build(config: str, project_root: str | None = None, data_root: str | None = None,
+           models_root: str | None = None) -> DiscoveryLoop:
+    from pathlib import Path
+
+    return DiscoveryLoop(
+        config_path=config,
+        project_root=Path(project_root) if project_root else None,
+        data_root=Path(data_root) if data_root else None,
+        models_root=Path(models_root) if models_root else None,
+    )
+
+
 @cli.command("init")
 @click.option("--config", default="config/generator.yaml", show_default=True)
 @click.option("--reset", is_flag=True, help="Recrear candidatos, ledger y estado.")
@@ -28,8 +57,11 @@ def init(config: str, reset: bool, as_json: bool) -> None:
 @click.option("--no-mlff", is_flag=True, help="No ejecutar el Tier 2 MLFF en esta pasada.")
 @click.option("--max-rounds", type=int, default=None, help="Limite de rondas para esta invocacion.")
 @click.option("--json", "as_json", is_flag=True, help="Imprimir salida como JSON.")
-def run(config: str, dry_run: bool, no_runner: bool, no_mlff: bool, max_rounds: int | None, as_json: bool) -> None:
-    loop = DiscoveryLoop(config_path=config)
+@_roots
+def run(config: str, dry_run: bool, no_runner: bool, no_mlff: bool, max_rounds: int | None,
+        as_json: bool, project_root: str | None, data_root: str | None,
+        models_root: str | None) -> None:
+    loop = _build(config, project_root, data_root, models_root)
     _emit(
         loop.run_forever(
             dry_run=dry_run,

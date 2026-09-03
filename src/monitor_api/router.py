@@ -1125,6 +1125,21 @@ async def discovery_pause(request: Request) -> dict:
     return result
 
 
+@router.post("/api/discovery/stop")
+async def discovery_stop(request: Request) -> dict:
+    """Termina el subproceso del bucle.
+
+    `pause` pide al bucle que pare en el siguiente punto de control, que puede
+    tardar una ronda entera; esto lo corta. Los cálculos DFT ya lanzados siguen
+    su curso: son procesos aparte, igual que antes.
+    """
+    from .services.discovery import stop
+
+    result = stop()
+    _auditar(request, "discovery_stop")
+    return result
+
+
 @router.post("/api/discovery/resume")
 async def discovery_resume(request: Request) -> dict:
     from .services.discovery import resume

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -34,6 +35,16 @@ from buho import mlff_runtime
 #: Rueda de torch por defecto. La CPU basta: MEGNet/M3GNet sobre estas celdas
 #: tardan ~0.5 s por candidato en un core, y la rueda CUDA pesa 3 veces mas.
 TORCH_CPU_INDEX = "https://download.pytorch.org/whl/cpu"
+
+#: Rutas que empiezan por $HOME se dejan sin comillas para que bash las expanda.
+#: Solo se acepta el prefijo literal y un juego de caracteres cerrado: cualquier
+#: otra cosa (incluido lo que venga de la config) se cita como siempre.
+_HOME_SEGURO = re.compile(r"^\$HOME(/[A-Za-z0-9._-]+)*$")
+
+
+def _sh(ruta: str) -> str:
+    """Cita una ruta para el shell, respetando un `$HOME` inicial."""
+    return ruta if _HOME_SEGURO.match(ruta) else shlex.quote(ruta)
 
 #: Version de Python del entorno MLFF. Fijada porque matgl publica ruedas por
 #: version y 3.13+ todavia no siempre las tiene.
@@ -394,9 +405,12 @@ def _mlff_paths(config: dict[str, Any] | None, env_name: str) -> dict[str, str]:
             raiz = str(gpaw_python).split("/envs/")[0]
             micromamba = f"{raiz}/bin/micromamba"
         else:
-            micromamba = "micromamba"
+            # Sin nada de donde deducir (maquina limpia): ruta absoluta bajo
+            # $HOME. Un "micromamba" pelado dejaria el binario en el directorio
+            # actual y el resto del plan no lo encontraria.
+            micromamba = "$HOME/perovowl-micromamba/bin/micromamba"
 
-    raiz = micromamba.rsplit("/bin/", 1)[0] if "/bin/" in micromamba else "$HOME/micromamba"
+    raiz = micromamba.rsplit("/bin/", 1)[0] if "/bin/" in micromamba else "$HOME/perovowl-micromamba"
     return {
         "micromamba": micromamba,
         "root_prefix": raiz,
@@ -437,17 +451,32 @@ def plan_mlff(config: dict[str, Any] | None = None, *,
                     opcional=opcional, timeout=timeout)
 
     steps: list[Step] = []
+    # micromamba puede no existir: aquí ya estaba porque el entorno de GPAW se
+    # creó con él, pero en una máquina limpia el plan fallaba en el primer paso
+    # con un "command not found" que no decía qué hacer. Se descarga si falta;
+    # si está, el `test -x` corta y no se toca nada.
+    steps.append(wsl_step(
+        "asegurar-micromamba",
+        f"test -x {_sh(mm)} || {{ "
+        f"mkdir -p {_sh(os.path.dirname(mm))} && "
+        f"curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest "
+        f"| tar -xvj -C /tmp bin/micromamba && "
+        f"mv /tmp/bin/micromamba {_sh(mm)} && "
+        f"chmod +x {_sh(mm)}; }}",
+        descripcion="Comprueba micromamba y lo descarga solo si falta.",
+        timeout=900,
+    ))
     if recrear:
         steps.append(wsl_step(
             "limpiar",
-            f"{shlex.quote(mm)} env remove -y -r {shlex.quote(root_prefix)} -n {shlex.quote(env)} || true",
+            f"{_sh(mm)} env remove -y -r {_sh(root_prefix)} -n {shlex.quote(env)} || true",
             descripcion=f"Elimina el entorno {env} si existía.",
             opcional=True, timeout=600,
         ))
 
     steps.append(wsl_step(
         "crear-entorno",
-        f"{shlex.quote(mm)} create -y -r {shlex.quote(root_prefix)} -n {shlex.quote(env)} "
+        f"{_sh(mm)} create -y -r {_sh(root_prefix)} -n {shlex.quote(env)} "
         f"python={MLFF_PYTHON} pip",
         descripcion=f"Crea el entorno micromamba {env} con Python {MLFF_PYTHON}.",
         timeout=1800,
@@ -473,7 +502,7 @@ def plan_mlff(config: dict[str, Any] | None = None, *,
         worker = f"{str(proyecto).rstrip('/')}/{mlff_runtime.WORKER_REL}"
         steps.append(wsl_step(
             "verificar",
-            f"{shlex.quote(env_python)} {shlex.quote(worker)} --preflight-only",
+            f"{_sh(env_python)} {shlex.quote(worker)} --preflight-only",
             descripcion="Comprueba que el worker importa torch/matgl/pymatgen.",
             timeout=600,
         ))

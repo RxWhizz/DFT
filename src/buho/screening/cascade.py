@@ -115,21 +115,38 @@ class ScreeningCascade:
         self._pv_min, self._pv_max = float(pv[0]), float(pv[1])
 
         self._surrogate = None  # lazy
+        self._surrogate_path = None
         self._gnn = None        # lazy
 
     # ── Carga perezosa de modelos ─────────────────────────────────────────────
+    #: Modelo que deja cada reentrenamiento del bucle de descubrimiento. Se
+    #: prefiere al de fábrica: si no, el bucle reentrena cada ronda y sigue
+    #: cribando con el modelo original — aprende y tira lo aprendido.
+    SURROGATE_ACTUAL = ("models", "discovery", "surrogate_bandgap_current.pkl")
+    SURROGATE_BASE = ("models", "surrogate_bandgap.pkl")
+
     def _load_surrogate(self):
         if self._surrogate is not None or not self._use_surrogate:
             return self._surrogate
         from ml_surrogate.model import SurrogateEnsemble
-        mp = self._root / "models" / "surrogate_bandgap.pkl"
-        if mp.exists():
+
+        candidatos = [self._root.joinpath(*self.SURROGATE_ACTUAL),
+                      self._root.joinpath(*self.SURROGATE_BASE)]
+        for mp in candidatos:
+            if not mp.exists():
+                continue
             try:
                 self._surrogate = SurrogateEnsemble.load(mp)
+                self._surrogate_path = mp
+                return self._surrogate
             except Exception as e:
-                warnings.warn(f"Cascade: surrogate no cargó ({e}); Tier 1 omitido.")
-        else:
-            warnings.warn(f"Cascade: surrogate no encontrado en {mp}; Tier 1 omitido.")
+                # Un modelo corrupto no debe dejar sin Tier 1: se avisa y se
+                # prueba el siguiente.
+                warnings.warn(f"Cascade: surrogate no cargó desde {mp} ({e}).")
+        warnings.warn(
+            "Cascade: no se encontró ningún surrogate en "
+            f"{' ni '.join(str(c) for c in candidatos)}; Tier 1 omitido."
+        )
         return self._surrogate
 
     def _runtime(self):

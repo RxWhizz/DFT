@@ -5,8 +5,10 @@ from __future__ import annotations
 import hashlib
 import copy
 import json
+import logging
 import math
 import os
+import shutil
 import shlex
 import subprocess
 import sys
@@ -26,6 +28,8 @@ from buho.mlff_runtime import MLFFUnavailableError
 from buho.screening.cascade import ScreeningCascade
 
 ROOT = Path(__file__).resolve().parents[3]
+
+log = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = {"pending", "running", "stalled", "oscillating"}
 DFT_LEDGER_STATUSES = {
@@ -92,6 +96,70 @@ WSL_RUNNER_ENV_KEYS = {
 
 def _utc() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+#: Particiones de la validación cruzada del surrogate. Cinco es el compromiso
+#: habitual, y con las decenas de muestras que produce una ronda cada pliegue
+#: sigue teniendo suficientes puntos para que el MAE no sea ruido.
+CV_FOLDS = 5
+
+
+def _cv_metrics(X: Any, y: Any, feat_cols: list[str],  # noqa: N803 - X matriz / y vector, como el resto del fichero
+                *, folds: int = CV_FOLDS) -> dict[str, Any]:
+    """MAE fuera de muestra del surrogate, y el de predecir la media.
+
+    `train_mae_eV` se calcula sobre las mismas filas del ajuste, así que **baja**
+    al crecer el conjunto: con cinco features y un ensemble de árboles, ochenta
+    puntos se memorizan casi exactos. Leerlo como "el modelo mejora" es leerlo al
+    revés. Esto entrena en k-1 pliegues y mide en el que queda fuera, que es lo
+    único que dice si generaliza.
+
+    `baseline_mae_eV` es el MAE de predecir siempre la media del entrenamiento.
+    Es la vara: si `cv_mae_eV` no baja de ahí, el surrogate no está aportando
+    nada sobre no tener modelo, por bonito que sea su error de ajuste.
+    """
+    from ml_surrogate.model import SurrogateEnsemble
+
+    n = int(len(y))
+    if n < 2 * folds:
+        # Con pliegues de un par de puntos el MAE es ruido; mejor decir que no
+        # se pudo medir que publicar un número que no significa nada.
+        return {
+            "cv_mae_eV": None,
+            "cv_folds": None,
+            "baseline_mae_eV": None,
+            "cv_skipped_reason": f"hacen falta {2 * folds} muestras y hay {n}",
+        }
+
+    from sklearn.model_selection import KFold
+
+    errores: list[float] = []
+    base: list[float] = []
+    kf = KFold(n_splits=folds, shuffle=True, random_state=42)
+    for train_idx, test_idx in kf.split(X):
+        try:
+            m = SurrogateEnsemble().fit(X[train_idx], y[train_idx], feat_cols)
+            pred, _ = m.predict_batch(X[test_idx])
+        except Exception:
+            # Un pliegue que no converge no debe tumbar la ronda entera: el
+            # reentrenamiento ya ocurrió y el modelo está guardado.
+            continue
+        errores.extend(np.abs(np.asarray(pred) - y[test_idx]).tolist())
+        base.extend(np.abs(y[train_idx].mean() - y[test_idx]).tolist())
+
+    if not errores:
+        return {
+            "cv_mae_eV": None,
+            "cv_folds": None,
+            "baseline_mae_eV": None,
+            "cv_skipped_reason": "ningún pliegue pudo evaluarse",
+        }
+
+    return {
+        "cv_mae_eV": round(float(np.mean(errores)), 5),
+        "cv_folds": int(folds),
+        "baseline_mae_eV": round(float(np.mean(base)), 5),
+    }
 
 
 def _finite(value: Any, default: float | None = None) -> float | None:
@@ -1322,6 +1390,23 @@ class DiscoveryLoop:
         version_path = model_dir / f"surrogate_bandgap_round_{round_id:03d}.pkl"
         model.save(version_path)
 
+        # Publicar el modelo donde la cascada lo lee. Sin esto el bucle
+        # reentrenaba cada ronda, guardaba el .pkl versionado y seguía cribando
+        # con el modelo de fábrica: proponía la misma química una y otra vez
+        # mientras el DFT la desmentía, y el aprendizaje activo no cerraba.
+        # La copia se hace a un temporal y se renombra para que nadie lea un
+        # fichero a medio escribir.
+        current_path = model_dir / "surrogate_bandgap_current.pkl"
+        try:
+            tmp_path = current_path.with_suffix(".pkl.tmp")
+            shutil.copyfile(version_path, tmp_path)
+            os.replace(tmp_path, current_path)
+        except OSError as exc:
+            # Que no se pueda publicar no invalida la ronda, pero hay que
+            # decirlo: significa que la siguiente criba usará el modelo viejo.
+            log.warning("no se pudo publicar el surrogate en %s: %s", current_path, exc)
+            current_path = None
+
         preds, _ = model.predict_batch(X)
         train_mae = float(np.mean(np.abs(preds - y)))
         rec = {
@@ -1329,8 +1414,16 @@ class DiscoveryLoop:
             "status": "ok",
             "n_samples": int(len(df)),
             "n_features": int(len(feat_cols)),
+            # Error de AJUSTE, no de generalización: se predice sobre las mismas
+            # filas con las que se entrenó. Se conserva porque delata problemas
+            # (si sube mucho, el modelo ni siquiera ajusta), pero no mide
+            # calidad: ver cv_mae_eV.
             "train_mae_eV": round(train_mae, 5),
+            **_cv_metrics(X, y, feat_cols),
             "model_path": str(version_path),
+            # Qué modelo usará la siguiente criba. Si sale None, el bucle
+            # seguirá cribando con el anterior y hay que mirarlo.
+            "published_to": str(current_path) if current_path else None,
             "trained_at": _utc(),
         }
         self.metrics_path.parent.mkdir(parents=True, exist_ok=True)
