@@ -9,6 +9,11 @@ ROOT = Path(SPECPATH).resolve().parent
 
 datas = [
     (str(ROOT / "configs" / "monitor.example.yaml"), "configs"),
+    # Config del generador/descubrimiento. `services.discovery` la busca primero
+    # en la raiz de datos del usuario y, si no esta, en el bundle. Sin esto, el
+    # bucle de descubrimiento en el binario congelado moria con FileNotFoundError
+    # en una instalacion nueva (la raiz de datos aun no tiene su copia).
+    (str(ROOT / "config" / "generator.yaml"), "config"),
 ]
 
 estructuras = ROOT / "build" / "structures"
