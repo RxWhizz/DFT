@@ -1049,3 +1049,49 @@ def test_ge_no_se_contrae():
     from buho.structure.build_abx3 import BOND_CONTRACTION
 
     assert "Ge" not in BOND_CONTRACTION
+
+
+# ── Riesgo de politipo: el filtro geometrico no confirma la fase ──────────────
+
+
+def _filtro(**gold):
+    from buho.filters.physical_filters import PhysicalFilter
+
+    return PhysicalFilter({"filters": {"goldschmidt": gold}})
+
+
+def test_cspbi3_sale_marcado_como_marginal():
+    """Pasa el filtro (t=0.851) pero su fase real a 25 C es la delta."""
+    from ml_surrogate.features import IONIC_RADII as R
+    from ml_surrogate.features import goldschmidt
+
+    t = goldschmidt(R["Cs"], R["Pb"], R["I"])
+    f = _filtro()
+    assert f.t_min <= t <= f.t_max, "sigue pasando el filtro duro"
+    aviso = f.riesgo_politipo(t)
+    assert aviso is not None and "fonones" in aviso
+
+
+def test_zona_segura_no_marca_nada():
+    f = _filtro()
+    assert f.riesgo_politipo(0.95) is None
+
+
+def test_riesgo_avisa_por_los_dos_lados():
+    f = _filtro()
+    assert "por debajo" in f.riesgo_politipo(0.82)
+    assert "por encima" in f.riesgo_politipo(1.05)
+
+
+def test_el_riesgo_no_rechaza_candidatos():
+    """Es una etiqueta, no un filtro: no puede reducir el espacio de busqueda."""
+    from buho.generator.heuristic_generator import GeneratedCandidate
+
+    f = _filtro()
+    # t marginal pero dentro del rango duro -> el check de Goldschmidt pasa.
+    c = GeneratedCandidate.__new__(GeneratedCandidate)
+    object.__setattr__(c, "tolerance_t", 0.82) if hasattr(
+        GeneratedCandidate, "__dataclass_fields__") else setattr(c, "tolerance_t", 0.82)
+    ok, _ = f._check_goldschmidt(c)
+    assert ok
+    assert f.riesgo_politipo(0.82) is not None
