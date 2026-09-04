@@ -995,3 +995,57 @@ def test_estructural_y_features_coinciden_en_cn12():
             f"{cation}: structural.py dice {ESTRUCTURAL[cation]['CN12']}, "
             f"features.py usa {FEATURES[cation]}"
         )
+
+
+# ── Scissor SOC y geometria de la celda ───────────────────────────────────────
+
+
+def test_scissor_depende_del_elemento_b():
+    """Un chi unico para toda la familia sesgaria la comparacion entre elementos."""
+    from buho.bandgap_scissor import chi_soc
+
+    tabla = {"Pb": -0.6302, "Sn": -0.0607, "Ge": -0.2205}
+    chi_pb = chi_soc({"Pb": 1.0}, tabla)
+    chi_sn = chi_soc({"Sn": 1.0}, tabla)
+    # El SOC crece con el numero atomico: Pb (Z=82) mucho mas que Sn (Z=50).
+    assert chi_pb < chi_sn < 0
+    assert abs(chi_pb - chi_sn) > 0.5, "la diferencia entre elementos no es despreciable"
+
+
+def test_scissor_interpola_sitio_b_mezclado():
+    from buho.bandgap_scissor import chi_soc
+
+    tabla = {"Pb": -0.60, "Sn": -0.10}
+    assert chi_soc({"Pb": 0.5, "Sn": 0.5}, tabla) == pytest.approx(-0.35)
+
+
+def test_scissor_no_inventa_elementos_sin_calibrar():
+    """Sin valor medido aporta 0: corregir de menos antes que adivinar."""
+    from buho.bandgap_scissor import chi_soc
+
+    assert chi_soc({"Bi": 1.0}, {"Pb": -0.63}) == 0.0
+
+
+def test_scissor_no_recorta_gaps_negativos():
+    """Un gap corregido negativo significa metalico; esconderlo seria mentir."""
+    from buho.bandgap_scissor import corregir
+
+    assert corregir(0.2, {"Pb": 1.0}, {"Pb": -0.63}) < 0
+    assert corregir(None, {"Pb": 1.0}, {"Pb": -0.63}) is None
+
+
+def test_contraccion_reproduce_las_redes_experimentales():
+    """a = 2(r_B+r_X) sobreestima el enlace B-X ~9%; la contraccion lo corrige."""
+    from buho.structure.build_abx3 import BOND_CONTRACTION
+    from ml_surrogate.features import IONIC_RADII as R
+
+    for b_site, a_exp in (("Pb", 6.18), ("Sn", 6.22)):
+        a = 2.0 * (R[b_site] + R["I"]) * BOND_CONTRACTION[b_site]
+        assert abs(a / a_exp - 1.0) < 0.01, f"{b_site}: a={a:.3f} vs exp {a_exp}"
+
+
+def test_ge_no_se_contrae():
+    """Con el factor de Pb/Sn, CsGeI3 sale metalico: peor que el error original."""
+    from buho.structure.build_abx3 import BOND_CONTRACTION
+
+    assert "Ge" not in BOND_CONTRACTION

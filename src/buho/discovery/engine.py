@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from buho import bandgap_scissor
 from buho.discovery.pareto import pareto_front
 from buho.discovery.space import ChemicalSpaceEnumerator, fraction_grid
 from buho.generator.heuristic_generator import GeneratedCandidate, HeuristicGenerator
@@ -1395,11 +1396,22 @@ class DiscoveryLoop:
         led = ledger[[c for c in feature_cols if c in ledger.columns]].copy()
         merged = trusted.merge(led, on="candidate_id", how="left", suffixes=("", "_ledger"))
 
+        candidatos = self._load_candidates()
+        tabla_soc = bandgap_scissor.cargar_tabla()
+
         rows = []
         for _, row in merged.iterrows():
             eg = _finite(row.get("bandgap_preliminary_eV"))
             if eg is None:
                 continue
+            # El gap de PBE del cribado no lleva acoplamiento espín-órbita, que
+            # es un efecto grande y dependiente del elemento B. Se corrige antes
+            # de que el número se convierta en etiqueta de entrenamiento: si se
+            # corrigiera después, el surrogate ya habría aprendido el sesgo.
+            # `band_gap_gga_eV` conserva el valor crudo para poder auditar.
+            cand = candidatos.get(str(row.get("candidate_id")))
+            fracciones_b = cand.fractions.get("B", {}) if cand is not None else {}
+            eg_corregido = bandgap_scissor.corregir(eg, fracciones_b, tabla_soc)
             rows.append({
                 "material_id": row.get("candidate_id"),
                 "candidate_id": row.get("candidate_id"),
@@ -1410,7 +1422,8 @@ class DiscoveryLoop:
                 "Eform_eV_atom": row.get("Eform_eV_atom"),
                 "band_gap_gga_eV": eg,
                 "energy_per_atom_eV": row.get("energy_per_atom_eV"),
-                "Eg_target_eV": eg,
+                "chi_soc_eV": round(eg_corregido - eg, 5),
+                "Eg_target_eV": eg_corregido,
                 "split": _split_for_candidate(str(row.get("candidate_id"))),
                 "source": f"discovery_round_{round_id:03d}",
                 "added_at": _utc(),
