@@ -12,12 +12,14 @@ from ase import Atoms
 logger = logging.getLogger(__name__)
 
 # Shannon ionic radii (Å) - Shannon 1976 Acta Cryst A32:751
+# Los CN12 de Cs y Rb eran en realidad los de CN8 (1.74 y 1.61); corregidos a
+# los de coordinacion 12 reales. El de K (1.64) ya era correcto.
 IONIC_RADII = {
-    "Cs":  {"CN12": 1.74, "CN6": 1.67},
+    "Cs":  {"CN12": 1.88, "CN8": 1.74, "CN6": 1.67},
     "MA":  {"CN12": 2.17, "CN6": 2.17},
     "FA":  {"CN12": 2.53, "CN6": 2.53},
-    "Rb":  {"CN12": 1.61, "CN6": 1.52},
-    "K":   {"CN12": 1.64, "CN6": 1.38},
+    "Rb":  {"CN12": 1.72, "CN8": 1.61, "CN6": 1.52},
+    "K":   {"CN12": 1.64, "CN8": 1.51, "CN6": 1.38},
     "Pb":  {"CN6": 1.19},
     "Sn":  {"CN6": 1.10},
     "Ge":  {"CN6": 0.73},
