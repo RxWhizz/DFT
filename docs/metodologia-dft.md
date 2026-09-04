@@ -254,11 +254,21 @@ de verdad, el surrogate aprendió que esta familia Sn–I tiene `Eg_PBE ≈ 1.0`
 eV, la ventana lo descartó en bloque, y el protocolo se declaró terminado
 tras una sola ronda con miles de candidatos sin verificar. Documentado en
 detalle, con datos, en
-[issue #7](https://github.com/RxWhizz/PEROVOWL/issues/7). No es un fallo de
-código: es una decisión de calibración pendiente — aplicar un scissor
-(sección 6) antes de comparar contra la ventana, o entrenar el surrogate
-contra un `Eg` ya corregido usando `band_gap_gga_eV` como insumo en vez de
-objetivo directo.
+[issue #7](https://github.com/RxWhizz/PEROVOWL/issues/7).
+
+**Corrección propuesta.** Aplicar el scissor de la sección 6
+(`Eg_corregido = Eg_PBE + χ_SOC(B) + χ_HSE`) **por elemento B**, antes de
+escribir la etiqueta de entrenamiento — no después. `χ_SOC` depende
+fuertemente del elemento (escala con número atómico) y hoy solo está
+calibrado para Pb; hace falta un PBE+SOC de celda pequeña por elemento B
+(Sn, Ge, Bi, In — 5 cálculos extra, no 5000) para tener un `χ_SOC(B)` propio
+de cada uno. `χ_HSE` varía mucho menos con el elemento y puede compartirse
+mientras no se calibre lo contrario. Alternativas más baratas pero menos
+rigurosas: recalibrar la ventana empíricamente contra el PBE crudo de este
+pipeline (parche, no corrige la dependencia con B), o mover la corrección al
+modelo en vez del dato usando `band_gap_gga_eV` como insumo (misma
+calibración por elemento, aplicada un paso más tarde). No implementado
+todavía — cambia qué candidatos se descartan, así que espera decisión.
 
 ### 7.2 El filtro geométrico no compite contra el politipo real — **importante**
 
@@ -273,31 +283,55 @@ fotovoltaico), no la α cúbica que el resto del pipeline construye y evalúa
 (que compara contra elementos, no contra el competidor no-perovskita — sección
 4) no tienen ningún mecanismo para atrapar esto: solo el cálculo de fonones
 de la caracterización profunda (sección 6) lo haría, y ese paso nunca se
-ejecuta sobre el grueso del espacio de búsqueda por costo. Cualquier
-candidato con `t` cerca del extremo inferior de la ventana debería tratarse
-como "geométricamente plausible", no como "confirmado cúbico a temperatura
-ambiente".
+ejecuta sobre el grueso del espacio de búsqueda por costo.
 
-### 7.3 El radio del sitio A puede estar usando la coordinación equivocada — **verificar**
+**Corrección propuesta, en dos capas.** No es corregible con una regla
+barata universal — confirmar el ganador termodinámico real exige fonones, y
+eso no escala a decenas de miles de candidatos. (1) Capa barata, sobre todo
+el espacio: no rechazar por `t` marginal, pero sí **etiquetar** — `t` cerca
+de los extremos de `[0.80, 1.10]` se marca "geometría marginal: riesgo de
+politipo no-perovskita" en vez de quedar indistinguible de un `t` central.
+(2) Capa cara, solo sobre finalistas: el paso `phonons`/`hessian` de la
+sección 6 ya existe y ya detecta esto (modo blando → inestabilidad hacia otra
+fase); la corrección es hacerlo **obligatorio** antes de llamar "candidato
+verificado" a cualquier material que salga de la frontera Pareto, no dejarlo
+opcional. Son decenas de materiales, no miles — el costo es asumible ahí
+donde no lo es en cribado masivo. No implementado todavía.
+
+### 7.3 El radio del sitio A usa la coordinación equivocada — **confirmado**
 
 `src/ml_surrogate/features.py` documenta `r_A` como radio de Shannon a
 coordinación 12 — la coordinación real del sitio A en una perovskita ABX₃,
 rodeado por 12 aniones X en los vértices del cuboctaedro que forman los
-octaedros vecinos. Pero los valores usados (Cs 1.67, Rb 1.52, K 1.38 Å)
-coinciden exactamente con los que **el propio**
-`src/dft_cspbi3/analysis/structural.py`, en la misma base de código, etiqueta
-como coordinación **6** (`CN6`) para esos mismos iones, listando además unos
-valores de `CN12` distintos (Cs 1.74, Rb 1.61, K 1.64 Å) que no se usan en
-ninguna parte del cribado. El radio a 12 coordinaciones es mayor que a 6 (a
-más vecinos, la nube electrónica del ion se estira más) — usar el número más
-pequeño **subestima** `r_A` de forma sistemática para cada candidato del
-espacio de búsqueda, lo que desplaza hacia abajo el factor de tolerancia de
-todos ellos por igual. El efecto neto es una traslación sistemática del
-umbral de aceptación, no un ruido aleatorio: candidatos genuinamente
-próximos a `t_min = 0.80` con la coordinación correcta podrían estar
-entrando o saliendo del cribado por este desajuste. Ameritа una
-verificación directa contra Shannon (1976) *Acta Cryst.* A32:751 antes de
-recalibrar cualquier umbral.
+octaedros vecinos. Verificado contra Shannon (1976) *Acta Cryst.* A32:751:
+los valores que usa (Cs 1.67, Rb 1.52, K 1.38 Å) son los de coordinación
+**6**, no 12 (Cs: CN6=1.67, CN12=1.88; Rb: CN6=1.52, CN12=1.72; K: CN6=1.38,
+CN12=1.64 Å). El mismo patrón aparece, con otro error, en
+`src/dft_cspbi3/analysis/structural.py`: su columna "CN12" (Cs 1.74, Rb 1.61)
+en realidad son los valores de coordinación 8, no 12 — coincide con CN12 solo
+para K (1.64), por casualidad.
+
+El radio a 12 coordinaciones es mayor que a 6 (más vecinos, nube electrónica
+más estirada) — usar el número pequeño **subestima** `r_A` de forma
+sistemática, lo que traslada hacia abajo el factor de tolerancia de todo el
+espacio de búsqueda por igual. Cuantificado con la propia fórmula del
+repositorio: con el radio corregido, `RbPbI₃`, `RbSnI₃`, `KPbI₃` y `KSnI₃`
+—hoy rechazados por `t < 0.80`— pasarían a `t ≈ 0.80–0.82` y entrarían al
+cribado. No es un ajuste decimal: es una familia composicional entera (Rb y
+K con Pb/Sn) excluida del espacio de búsqueda por esta mezcla de
+coordinaciones.
+
+**Corrección propuesta.** `IONIC_RADII["Cs"|"Rb"|"K"] = 1.88, 1.72, 1.64` Å
+en `ml_surrogate/features.py`. No tocar MA/FA (los radios efectivos de
+Kieslich 2014 ya están calibrados para usarse así, no son de Shannon y no
+tienen un análogo "CN6" del que confundirse). No tocar `r_B`/`r_X`
+(correctamente a coordinación 6, la que corresponde al octaedro BX₆ y al
+anión X). `r_A` no entra en `lattice_est` —solo depende de `r_B`, `r_X`— así
+que el fix no invalida ninguna estructura DFT ya calculada, solo el filtro
+Tier 0 y el vector de features del surrogate; los tres modelos ya entrenados
+(rondas 0–2) quedarían con features inconsistentes y conviene reentrenarlos
+desde el CSV en vez de parchearlos. No implementado todavía — cambia qué
+candidatos entran al cribado.
 
 ### 7.4 La mezcla composicional es lineal; el bandgap real no siempre lo es — **menor, ya mitigado en parte**
 
