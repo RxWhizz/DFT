@@ -234,6 +234,19 @@ pipeline. Ninguno es un error de programación — son lugares donde una
 simplificación razonable en aislamiento deja de serlo al conectarse con el
 resto del sistema.
 
+**Estado de las correcciones.** Al ir a implementarlas apareció una causa más
+grande que ninguno de los cuatro hallazgos originales: la constante de red
+estaba un 9.7 % dilatada, y eso pesa más sobre el bandgap que el efecto que se
+iba a corregir. La sección 7.5 lo documenta.
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| 7.1 | Ventana PV contra Eg de PBE crudo | Parcial: SOC corregido por elemento; fase y XC siguen abiertos |
+| 7.2 | El filtro geométrico no confirma la fase | Etiquetado implementado; fonones siguen sin ser obligatorios |
+| 7.3 | Radio del sitio A con coordinación equivocada | **Corregido** |
+| 7.4 | Mezcla lineal sin relajación local | Abierto |
+| 7.5 | Constante de red 9.7 % dilatada | **Corregido** para Pb y Sn; Ge sin calibrar |
+
 ### 7.1 La ventana fotovoltaica compara un PBE crudo contra un límite experimental — **crítico**
 
 La sección 1 deriva `[1.1, 1.8]` eV del límite Shockley-Queisser, que se
@@ -256,19 +269,37 @@ tras una sola ronda con miles de candidatos sin verificar. Documentado en
 detalle, con datos, en
 [issue #7](https://github.com/RxWhizz/PEROVOWL/issues/7).
 
-**Corrección propuesta.** Aplicar el scissor de la sección 6
-(`Eg_corregido = Eg_PBE + χ_SOC(B) + χ_HSE`) **por elemento B**, antes de
-escribir la etiqueta de entrenamiento — no después. `χ_SOC` depende
-fuertemente del elemento (escala con número atómico) y hoy solo está
-calibrado para Pb; hace falta un PBE+SOC de celda pequeña por elemento B
-(Sn, Ge, Bi, In — 5 cálculos extra, no 5000) para tener un `χ_SOC(B)` propio
-de cada uno. `χ_HSE` varía mucho menos con el elemento y puede compartirse
-mientras no se calibre lo contrario. Alternativas más baratas pero menos
-rigurosas: recalibrar la ventana empíricamente contra el PBE crudo de este
-pipeline (parche, no corrige la dependencia con B), o mover la corrección al
-modelo en vez del dato usando `band_gap_gga_eV` como insumo (misma
-calibración por elemento, aplicada un paso más tarde). No implementado
-todavía — cambia qué candidatos se descartan, así que espera decisión.
+**Corregido en parte.** `scripts/calibrate_soc_scissor.py` mide `χ_SOC(B)` por
+elemento, con los mismos parámetros y la misma geometría del cribado. El método
+se validó antes de usarse: a la geometría experimental reproduce los valores
+que el propio repositorio tenía calculados para α-CsPbI₃ (`Eg(PBE)` 1.088 frente
+a 1.089 de referencia; `χ_SOC` −0.734 frente a −0.789).
+
+| B | Z | χ_SOC medido |
+|---|---:|---:|
+| Pb | 82 | −0.630 eV |
+| Ge | 32 | −0.221 eV |
+| Sn | 50 | −0.061 eV |
+
+Confirma lo que motivaba el hallazgo: un valor único para toda la familia se
+equivocaría en más de medio electrón-voltio entre Pb y Sn.
+`buho/bandgap_scissor.py` lo aplica **antes** de que el número se convierta en
+etiqueta de entrenamiento — corregirlo después no serviría de nada, el
+surrogate ya habría aprendido el sesgo. El valor crudo se conserva en
+`band_gap_gga_eV` y la corrección aplicada en `chi_soc_eV`, para poder auditar.
+
+Bi e In no se calibran porque **no pueden existir en este espacio**: con carga
+3+ no cumplen neutralidad en ABX₃ (1+3−3 = +1) y, efectivamente, no aparecen en
+ninguno de los candidatos del registro pese a estar listados como sitio B en la
+configuración. Los haluros de Bi(III) forman A₃B₂X₉ o dobles perovskitas
+A₂B'B''X₆, estequiometrías que este generador no representa.
+
+**Lo que sigue abierto**: la corrección de SOC no cierra el hallazgo por sí
+sola. Quedan dos términos del mismo error, ambos medidos aquí y ninguno
+resuelto — la fase (7.2) y el error de intercambio-correlación de PBE, que
+exigiría HSE06. Para CsSnI₃ el cúbico ideal da 0.26 eV frente a 1.3 eV
+experimentales: la inclinación octaédrica de su fase real abre el gap, y aquí
+nunca ocurre.
 
 ### 7.2 El filtro geométrico no compite contra el politipo real — **importante**
 
@@ -285,18 +316,23 @@ fotovoltaico), no la α cúbica que el resto del pipeline construye y evalúa
 de la caracterización profunda (sección 6) lo haría, y ese paso nunca se
 ejecuta sobre el grueso del espacio de búsqueda por costo.
 
-**Corrección propuesta, en dos capas.** No es corregible con una regla
-barata universal — confirmar el ganador termodinámico real exige fonones, y
-eso no escala a decenas de miles de candidatos. (1) Capa barata, sobre todo
-el espacio: no rechazar por `t` marginal, pero sí **etiquetar** — `t` cerca
-de los extremos de `[0.80, 1.10]` se marca "geometría marginal: riesgo de
-politipo no-perovskita" en vez de quedar indistinguible de un `t` central.
-(2) Capa cara, solo sobre finalistas: el paso `phonons`/`hessian` de la
-sección 6 ya existe y ya detecta esto (modo blando → inestabilidad hacia otra
-fase); la corrección es hacerlo **obligatorio** antes de llamar "candidato
-verificado" a cualquier material que salga de la frontera Pareto, no dejarlo
-opcional. Son decenas de materiales, no miles — el costo es asumible ahí
-donde no lo es en cribado masivo. No implementado todavía.
+**Capa barata implementada.** `PhysicalFilter.riesgo_politipo` marca los
+candidatos cuyo `t` cae fuera de `[0.90, 1.00]`, la zona donde el descriptor
+sigue siendo buen predictor de la fase. **No rechaza**: el espacio de búsqueda
+no se reduce, solo se anota lo que no está confirmado. La etiqueta viaja por la
+cascada y el ledger hasta el informe exportado, que ahora trae una columna
+`fase` y una sección diciendo explícitamente que ninguna fila tiene la fase
+confirmada, con el comando de fonones que haría falta. Se dice donde se leen
+los resultados, no solo en la documentación.
+
+**Capa cara, pendiente.** El paso `phonons`/`hessian` de la sección 6 ya existe
+y ya detecta esto — un modo blando señala la inestabilidad hacia otra fase. Lo
+que falta es hacerlo **obligatorio** antes de llamar "candidato verificado" a
+cualquier material que salga de la frontera Pareto. Son decenas de materiales,
+no miles: el costo es asumible ahí donde no lo es en cribado masivo.
+
+La magnitud del error que esto oculta ya está medida (7.1): para CsSnI₃, el
+cúbico ideal da 0.26 eV frente a 1.3 eV experimentales. No es un matiz.
 
 ### 7.3 El radio del sitio A usa la coordinación equivocada — **confirmado**
 
@@ -321,17 +357,53 @@ cribado. No es un ajuste decimal: es una familia composicional entera (Rb y
 K con Pb/Sn) excluida del espacio de búsqueda por esta mezcla de
 coordinaciones.
 
-**Corrección propuesta.** `IONIC_RADII["Cs"|"Rb"|"K"] = 1.88, 1.72, 1.64` Å
-en `ml_surrogate/features.py`. No tocar MA/FA (los radios efectivos de
-Kieslich 2014 ya están calibrados para usarse así, no son de Shannon y no
-tienen un análogo "CN6" del que confundirse). No tocar `r_B`/`r_X`
-(correctamente a coordinación 6, la que corresponde al octaedro BX₆ y al
-anión X). `r_A` no entra en `lattice_est` —solo depende de `r_B`, `r_X`— así
-que el fix no invalida ninguna estructura DFT ya calculada, solo el filtro
-Tier 0 y el vector de features del surrogate; los tres modelos ya entrenados
-(rondas 0–2) quedarían con features inconsistentes y conviene reentrenarlos
-desde el CSV en vez de parchearlos. No implementado todavía — cambia qué
-candidatos entran al cribado.
+**Corregido.** `IONIC_RADII["Cs"|"Rb"|"K"] = 1.88, 1.72, 1.64` Å, y la tabla de
+`structural.py` alineada, con un test que impide que las dos vuelvan a
+divergir. MA y FA no se tocan: sus radios efectivos son de Kieslich 2014,
+ajustados contra estructuras híbridas reales, y ya están en la base correcta
+para la fórmula de Goldschmidt. `r_B` y `r_X` tampoco: coordinación 6 es la que
+corresponde al octaedro BX₆ y al anión.
+
+Efecto medido sobre el espacio de búsqueda: **de 53.676 a 86.035 candidatos
+viables (+60 %)**, con Rb y K apareciendo por primera vez como familias de
+sitio A completas. `scripts/migrate_tolerance_factor_cn12.py` recalcula
+`tolerance_t` en el registro y en el conjunto de entrenamiento (22.005
+candidatos y 110 de 111 filas cambian) sin tocar las etiquetas DFT, que son
+medidas y no derivadas. Surrogate reentrenado: `cv_mae` 0.00202 frente a
+0.04356 de la línea base.
+
+### 7.5 La constante de red estaba un 9.7 % dilatada — **corregido (Pb, Sn)**
+
+Apareció al calibrar el scissor de 7.1, y resultó pesar más que él. La celda se
+fijaba con `a = 2·(r_B + r_X)`, que supone el enlace B–X puramente iónico. En
+estas perovskitas el enlace metal–haluro tiene covalencia apreciable y sale más
+corto:
+
+| Material | Fórmula | Experimental | Exceso |
+|---|---:|---:|---:|
+| CsPbI₃ | 6.78 Å | 6.18 Å | +9.7 % |
+| CsSnI₃ | 6.76 Å | 6.22 Å | +8.7 % |
+
+No es un detalle geométrico. Medido sobre CsPbI₃ con los parámetros del
+cribado, la celda dilatada da `Eg(PBE) = 1.78 eV`; a la geometría real, 1.09 eV.
+**Casi 0.7 eV de error solo por la red** — más de lo que introduce ignorar el
+acoplamiento espín-órbita, que era el hallazgo que se estaba persiguiendo. La
+razón física: al separar los octaedros se reduce el solapamiento entre los
+estados antienlazantes B-s / X-p que forman el borde de la banda de valencia,
+lo que hunde el VBM y abre el gap artificialmente.
+
+Corregido con un factor de contracción **por elemento**, calibrado contra
+estructura experimental: 0.912 para Pb, 0.920 para Sn. Las celdas resultantes
+caen a un 0.4 % del experimento.
+
+Ge se deja deliberadamente **sin contraer**. Aplicarle el factor de Pb/Sn lo
+sobrecorrige —su radio iónico (0.73 Å) es mucho menor— y el cálculo sale
+**metálico** (`Eg = 0.00 eV`), peor que el error de partida. Sin una referencia
+experimental verificada para CsGeI₃, el elemento se queda como estaba.
+
+Este hallazgo también invalida cualquier calibración hecha sobre la geometría
+vieja: `χ_SOC(CsPbI₃)` medido con la celda dilatada da −1.62 eV, y con la
+corregida −0.63 eV. Un factor de dos y medio, por la geometría.
 
 ### 7.4 La mezcla composicional es lineal; el bandgap real no siempre lo es — **menor, ya mitigado en parte**
 
