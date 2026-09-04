@@ -372,6 +372,21 @@ candidatos y 110 de 111 filas cambian) sin tocar las etiquetas DFT, que son
 medidas y no derivadas. Surrogate reentrenado: `cv_mae` 0.00202 frente a
 0.04356 de la línea base.
 
+### 7.4 La mezcla composicional es lineal; el bandgap real no siempre lo es — **menor, ya mitigado en parte**
+
+Los radios, electronegatividades y cargas efectivos de un sitio mixto se
+calculan como promedio lineal ponderado por fracción (tipo Vegard). Es la
+aproximación estándar de primer orden y una entrada razonable para que un
+modelo de árboles aprenda no-linealidad a partir de datos reales. El punto
+débil no está en usarla como *descriptor de entrada* — está en que, como
+establece la sección 5, la estructura DFT que produce la *etiqueta* de
+entrenamiento nunca relaja localmente alrededor de un átomo de tamaño
+distinto al del resto del sitio, que es el origen microscópico dominante de
+la curvatura de mezcla (*band-gap bowing*) en aleaciones semiconductoras
+reales. El surrogate puede aprender la tendencia composicional gruesa; no
+puede aprender la curvatura fina porque el proceso físico que la produce no
+está en ninguna parte de los datos con los que se entrena.
+
 ### 7.5 La constante de red estaba un 9.7 % dilatada — **corregido (Pb, Sn)**
 
 Apareció al calibrar el scissor de 7.1, y resultó pesar más que él. La celda se
@@ -404,21 +419,6 @@ experimental verificada para CsGeI₃, el elemento se queda como estaba.
 Este hallazgo también invalida cualquier calibración hecha sobre la geometría
 vieja: `χ_SOC(CsPbI₃)` medido con la celda dilatada da −1.62 eV, y con la
 corregida −0.63 eV. Un factor de dos y medio, por la geometría.
-
-### 7.4 La mezcla composicional es lineal; el bandgap real no siempre lo es — **menor, ya mitigado en parte**
-
-Los radios, electronegatividades y cargas efectivos de un sitio mixto se
-calculan como promedio lineal ponderado por fracción (tipo Vegard). Es la
-aproximación estándar de primer orden y una entrada razonable para que un
-modelo de árboles aprenda no-linealidad a partir de datos reales. El punto
-débil no está en usarla como *descriptor de entrada* — está en que, como
-establece la sección 5, la estructura DFT que produce la *etiqueta* de
-entrenamiento nunca relaja localmente alrededor de un átomo de tamaño
-distinto al del resto del sitio, que es el origen microscópico dominante de
-la curvatura de mezcla (*band-gap bowing*) en aleaciones semiconductoras
-reales. El surrogate puede aprender la tendencia composicional gruesa; no
-puede aprender la curvatura fina porque el proceso físico que la produce no
-está en ninguna parte de los datos con los que se entrena.
 
 ## 8. Referencias
 
