@@ -20,8 +20,10 @@ sys.path.insert(0, str(ROOT / "src"))
 def test_extract_cspbi3():
     from ml_surrogate.features import extract, goldschmidt, octahedral_factor
     f = extract("Cs", "Pb", "I")
-    # Goldschmidt should be ~0.807
-    assert abs(f["tolerance_t"] - 0.807) < 0.01
+    # Goldschmidt ~0.851 con r_A(Cs) a coordinacion 12 (1.88 A), que es la del
+    # sitio A en una perovskita. Antes daba 0.807 porque se usaba el radio de
+    # coordinacion 6 (1.67 A) etiquetado como CN12.
+    assert abs(f["tolerance_t"] - 0.851) < 0.01
     # Octahedral factor Pb/I = 1.19/2.20 ≈ 0.541
     assert abs(f["oct_factor"] - 0.541) < 0.01
     # Lattice constant estimate: 2√2*(1.19+2.20) ≈ 9.59 Å — Cs perovskite primitive is ~6.3

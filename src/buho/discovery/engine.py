@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from buho import bandgap_scissor
 from buho.discovery.pareto import pareto_front
 from buho.discovery.space import ChemicalSpaceEnumerator, fraction_grid
 from buho.generator.heuristic_generator import GeneratedCandidate, HeuristicGenerator
@@ -42,6 +43,7 @@ DFT_LEDGER_STATUSES = {
 }
 TEXT_LEDGER_COLUMNS = {
     "candidate_id",
+    "riesgo_politipo",
     "formula",
     "generation_mode",
     "A_site",
@@ -847,6 +849,9 @@ class DiscoveryLoop:
             "band_score", "stab_score", "transport_score", "dielectric_score",
             "exciton_score", "pv_score_ml", "acquisition_score", "mlff_evaluated",
             "dropped_at_tier", "drop_reason", "passed_eform",
+            # La fase no se confirma en el cribado; que el aviso viaje al ledger
+            # y de ahi a la frontera y al informe.
+            "riesgo_politipo",
         ]
         for col in cols:
             if col not in ledger:
@@ -1395,11 +1400,22 @@ class DiscoveryLoop:
         led = ledger[[c for c in feature_cols if c in ledger.columns]].copy()
         merged = trusted.merge(led, on="candidate_id", how="left", suffixes=("", "_ledger"))
 
+        candidatos = self._load_candidates()
+        tabla_soc = bandgap_scissor.cargar_tabla()
+
         rows = []
         for _, row in merged.iterrows():
             eg = _finite(row.get("bandgap_preliminary_eV"))
             if eg is None:
                 continue
+            # El gap de PBE del cribado no lleva acoplamiento espín-órbita, que
+            # es un efecto grande y dependiente del elemento B. Se corrige antes
+            # de que el número se convierta en etiqueta de entrenamiento: si se
+            # corrigiera después, el surrogate ya habría aprendido el sesgo.
+            # `band_gap_gga_eV` conserva el valor crudo para poder auditar.
+            cand = candidatos.get(str(row.get("candidate_id")))
+            fracciones_b = cand.fractions.get("B", {}) if cand is not None else {}
+            eg_corregido = bandgap_scissor.corregir(eg, fracciones_b, tabla_soc)
             rows.append({
                 "material_id": row.get("candidate_id"),
                 "candidate_id": row.get("candidate_id"),
@@ -1410,7 +1426,8 @@ class DiscoveryLoop:
                 "Eform_eV_atom": row.get("Eform_eV_atom"),
                 "band_gap_gga_eV": eg,
                 "energy_per_atom_eV": row.get("energy_per_atom_eV"),
-                "Eg_target_eV": eg,
+                "chi_soc_eV": round(eg_corregido - eg, 5),
+                "Eg_target_eV": eg_corregido,
                 "split": _split_for_candidate(str(row.get("candidate_id"))),
                 "source": f"discovery_round_{round_id:03d}",
                 "added_at": _utc(),
@@ -1763,19 +1780,50 @@ class DiscoveryLoop:
             "",
             "## Top frontera Pareto",
             "",
-            "| Fórmula | Eg ML | Eform | PV ML | adquisición | estado |",
-            "|---|---:|---:|---:|---:|---|",
+            "| Fórmula | Eg ML | Eform | PV ML | adquisición | estado | fase |",
+            "|---|---:|---:|---:|---:|---|---|",
         ]
+        n_riesgo = 0
         for item in status["frontier"][:30]:
+            riesgo = item.get("riesgo_politipo")
+            if riesgo:
+                n_riesgo += 1
             lines.append(
-                "| {formula} | {eg} | {eform} | {pv} | {acq} | {st} |".format(
+                "| {formula} | {eg} | {eform} | {pv} | {acq} | {st} | {fase} |".format(
                     formula=item.get("formula") or "",
                     eg=item.get("Eg_surrogate_eV") if item.get("Eg_surrogate_eV") is not None else "",
                     eform=item.get("Eform_eV_atom") if item.get("Eform_eV_atom") is not None else "",
                     pv=item.get("pv_score_ml") if item.get("pv_score_ml") is not None else "",
                     acq=item.get("acquisition_score") if item.get("acquisition_score") is not None else "",
                     st=item.get("status") or "",
+                    fase="marginal" if riesgo else "plausible",
                 )
             )
+
+        # El cribado no confirma en qué fase cristaliza un material: el factor de
+        # tolerancia dice si los iones empaquetan en una perovskita cúbica, no si
+        # esa es la fase que gana a temperatura ambiente. Decirlo aquí, donde se
+        # leen los resultados, y no solo en la documentación.
+        lines += [
+            "",
+            "## Sobre la fase",
+            "",
+            "Ninguna fila de esta tabla tiene la fase confirmada. El cribado",
+            "evalúa la perovskita cúbica ideal; que sea la fase estable a",
+            "temperatura ambiente es una hipótesis, no un resultado. El",
+            "contraejemplo conocido es CsPbI₃: pasa el filtro geométrico y su",
+            "fase estable a 25 °C es la δ, sin comportamiento de perovskita.",
+            "",
+            f"De los {min(30, len(status['frontier']))} mostrados, {n_riesgo} están",
+            "marcados `marginal` por factor de tolerancia lejos de 1.",
+            "",
+            "Confirmar la fase exige fonones — frecuencias reales y positivas",
+            "indican un mínimo verdadero; una imaginaria señala que el material",
+            "quiere caer a otra estructura:",
+            "",
+            "```bash",
+            "buho calc step phonons --phase <material>",
+            "```",
+        ]
         report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return {"report": str(report_path), "ledger": str(self.ledger_path), "frontier": str(self.frontier_path)}

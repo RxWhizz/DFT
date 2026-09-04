@@ -931,3 +931,167 @@ def test_advance_se_rinde_con_error_tras_demasiados_relanzamientos(tmp_path, mon
 
     assert loop._load_state()["status"] == "error"
     assert "no progresa" in loop._load_state()["last_error"]
+
+
+# ── Radios ionicos: coordinacion del sitio A ──────────────────────────────────
+
+
+def test_radio_sitio_a_es_coordinacion_12():
+    """El sitio A esta rodeado por 12 aniones X; el radio tiene que ser CN12.
+
+    Hasta 2026-09 se usaban los de CN6, etiquetados como CN12, lo que
+    subestimaba el factor de tolerancia de todo el espacio de busqueda.
+    Valores de Shannon 1976 (Acta Cryst A32:751).
+    """
+    from ml_surrogate.features import IONIC_RADII, IONIC_RADII_A_CN6
+
+    assert IONIC_RADII["Cs"] == 1.88
+    assert IONIC_RADII["Rb"] == 1.72
+    assert IONIC_RADII["K"] == 1.64
+    # Los de CN6 quedan disponibles, pero fuera de la tabla activa.
+    assert IONIC_RADII_A_CN6 == {"Cs": 1.67, "Rb": 1.52, "K": 1.38}
+    for cation, r6 in IONIC_RADII_A_CN6.items():
+        assert IONIC_RADII[cation] > r6, "CN12 tiene que ser mayor que CN6"
+
+
+def test_los_organicos_no_se_tocan():
+    """MA/FA son radios efectivos de Kieslich, no de Shannon: no tienen CN6/CN12."""
+    from ml_surrogate.features import IONIC_RADII
+
+    assert IONIC_RADII["MA"] == 2.17
+    assert IONIC_RADII["FA"] == 2.53
+
+
+def test_sitios_b_y_x_siguen_en_coordinacion_6():
+    """B esta en un octaedro BX6 y X entre dos octaedros: CN6 es lo correcto."""
+    from ml_surrogate.features import IONIC_RADII
+
+    assert IONIC_RADII["Pb"] == 1.19
+    assert IONIC_RADII["Sn"] == 1.18
+    assert IONIC_RADII["I"] == 2.20
+    assert IONIC_RADII["Br"] == 1.96
+    assert IONIC_RADII["Cl"] == 1.81
+
+
+def test_rb_y_k_entran_al_cribado_con_el_radio_correcto():
+    """La familia Rb/K con Pb/Sn estaba excluida por t<0.80 con el radio de CN6."""
+    from ml_surrogate.features import IONIC_RADII, goldschmidt
+
+    for a_site in ("Rb", "K"):
+        for b_site in ("Pb", "Sn"):
+            t = goldschmidt(IONIC_RADII[a_site], IONIC_RADII[b_site], IONIC_RADII["I"])
+            assert 0.80 <= t <= 1.10, (
+                f"{a_site}{b_site}I3 deberia pasar el filtro, da t={t:.4f}"
+            )
+
+
+def test_estructural_y_features_coinciden_en_cn12():
+    """Dos modulos con la misma tabla no pueden discrepar sobre la coordinacion."""
+    from dft_cspbi3.analysis.structural import IONIC_RADII as ESTRUCTURAL
+    from ml_surrogate.features import IONIC_RADII as FEATURES
+
+    for cation in ("Cs", "Rb", "K"):
+        assert ESTRUCTURAL[cation]["CN12"] == FEATURES[cation], (
+            f"{cation}: structural.py dice {ESTRUCTURAL[cation]['CN12']}, "
+            f"features.py usa {FEATURES[cation]}"
+        )
+
+
+# ── Scissor SOC y geometria de la celda ───────────────────────────────────────
+
+
+def test_scissor_depende_del_elemento_b():
+    """Un chi unico para toda la familia sesgaria la comparacion entre elementos."""
+    from buho.bandgap_scissor import chi_soc
+
+    tabla = {"Pb": -0.6302, "Sn": -0.0607, "Ge": -0.2205}
+    chi_pb = chi_soc({"Pb": 1.0}, tabla)
+    chi_sn = chi_soc({"Sn": 1.0}, tabla)
+    # El SOC crece con el numero atomico: Pb (Z=82) mucho mas que Sn (Z=50).
+    assert chi_pb < chi_sn < 0
+    assert abs(chi_pb - chi_sn) > 0.5, "la diferencia entre elementos no es despreciable"
+
+
+def test_scissor_interpola_sitio_b_mezclado():
+    from buho.bandgap_scissor import chi_soc
+
+    tabla = {"Pb": -0.60, "Sn": -0.10}
+    assert chi_soc({"Pb": 0.5, "Sn": 0.5}, tabla) == pytest.approx(-0.35)
+
+
+def test_scissor_no_inventa_elementos_sin_calibrar():
+    """Sin valor medido aporta 0: corregir de menos antes que adivinar."""
+    from buho.bandgap_scissor import chi_soc
+
+    assert chi_soc({"Bi": 1.0}, {"Pb": -0.63}) == 0.0
+
+
+def test_scissor_no_recorta_gaps_negativos():
+    """Un gap corregido negativo significa metalico; esconderlo seria mentir."""
+    from buho.bandgap_scissor import corregir
+
+    assert corregir(0.2, {"Pb": 1.0}, {"Pb": -0.63}) < 0
+    assert corregir(None, {"Pb": 1.0}, {"Pb": -0.63}) is None
+
+
+def test_contraccion_reproduce_las_redes_experimentales():
+    """a = 2(r_B+r_X) sobreestima el enlace B-X ~9%; la contraccion lo corrige."""
+    from buho.structure.build_abx3 import BOND_CONTRACTION
+    from ml_surrogate.features import IONIC_RADII as R
+
+    for b_site, a_exp in (("Pb", 6.18), ("Sn", 6.22)):
+        a = 2.0 * (R[b_site] + R["I"]) * BOND_CONTRACTION[b_site]
+        assert abs(a / a_exp - 1.0) < 0.01, f"{b_site}: a={a:.3f} vs exp {a_exp}"
+
+
+def test_ge_no_se_contrae():
+    """Con el factor de Pb/Sn, CsGeI3 sale metalico: peor que el error original."""
+    from buho.structure.build_abx3 import BOND_CONTRACTION
+
+    assert "Ge" not in BOND_CONTRACTION
+
+
+# ── Riesgo de politipo: el filtro geometrico no confirma la fase ──────────────
+
+
+def _filtro(**gold):
+    from buho.filters.physical_filters import PhysicalFilter
+
+    return PhysicalFilter({"filters": {"goldschmidt": gold}})
+
+
+def test_cspbi3_sale_marcado_como_marginal():
+    """Pasa el filtro (t=0.851) pero su fase real a 25 C es la delta."""
+    from ml_surrogate.features import IONIC_RADII as R
+    from ml_surrogate.features import goldschmidt
+
+    t = goldschmidt(R["Cs"], R["Pb"], R["I"])
+    f = _filtro()
+    assert f.t_min <= t <= f.t_max, "sigue pasando el filtro duro"
+    aviso = f.riesgo_politipo(t)
+    assert aviso is not None and "fonones" in aviso
+
+
+def test_zona_segura_no_marca_nada():
+    f = _filtro()
+    assert f.riesgo_politipo(0.95) is None
+
+
+def test_riesgo_avisa_por_los_dos_lados():
+    f = _filtro()
+    assert "por debajo" in f.riesgo_politipo(0.82)
+    assert "por encima" in f.riesgo_politipo(1.05)
+
+
+def test_el_riesgo_no_rechaza_candidatos():
+    """Es una etiqueta, no un filtro: no puede reducir el espacio de busqueda."""
+    from buho.generator.heuristic_generator import GeneratedCandidate
+
+    f = _filtro()
+    # t marginal pero dentro del rango duro -> el check de Goldschmidt pasa.
+    c = GeneratedCandidate.__new__(GeneratedCandidate)
+    object.__setattr__(c, "tolerance_t", 0.82) if hasattr(
+        GeneratedCandidate, "__dataclass_fields__") else setattr(c, "tolerance_t", 0.82)
+    ok, _ = f._check_goldschmidt(c)
+    assert ok
+    assert f.riesgo_politipo(0.82) is not None

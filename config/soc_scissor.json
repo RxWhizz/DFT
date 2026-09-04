@@ -1,0 +1,39 @@
+{
+  "generado": "2026-09-04T15:20:40.432241Z",
+  "metodo": "SCF PBE (ecut=300 eV, kpts=[2, 2, 2], gamma-centrada) sobre CsBI3 cubica; SOC perturbativo post-SCF.",
+  "nota": "chi_SOC es la correccion a sumar al Eg de PBE del cribado. Es negativa: el SOC hunde el minimo de la banda de conduccion y cierra el gap. Depende del elemento B porque es un efecto relativista que crece con el numero atomico.",
+  "chi_soc_eV": {
+    "Pb": -0.6302,
+    "Sn": -0.0607,
+    "Ge": -0.2205
+  },
+  "detalle": [
+    {
+      "B": "Pb",
+      "referencia": "CsPbI3",
+      "a_lat_A": 6.1834,
+      "n_electrones": 44,
+      "Eg_pbe_eV": 1.0305,
+      "Eg_pbe_soc_eV": 0.4004,
+      "chi_soc_eV": -0.6302
+    },
+    {
+      "B": "Sn",
+      "referencia": "CsSnI3",
+      "a_lat_A": 6.2192,
+      "n_electrones": 44,
+      "Eg_pbe_eV": 0.2599,
+      "Eg_pbe_soc_eV": 0.1992,
+      "chi_soc_eV": -0.0607
+    },
+    {
+      "B": "Ge",
+      "referencia": "CsGeI3",
+      "a_lat_A": 5.86,
+      "n_electrones": 34,
+      "Eg_pbe_eV": 0.2543,
+      "Eg_pbe_soc_eV": 0.0337,
+      "chi_soc_eV": -0.2205
+    }
+  ]
+}

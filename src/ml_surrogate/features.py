@@ -38,11 +38,26 @@ import pandas as pd
 # ── Physical constants ─────────────────────────────────────────────────────────
 
 # Shannon 1976 (12-coord for A, 6-coord for B/X) + Kieslich 2014 for organics
+#
+# El sitio A de una perovskita ABX3 esta rodeado por 12 aniones X (cuboctaedro),
+# asi que el radio que entra en el factor de tolerancia es el de coordinacion 12.
+# Hasta 2026-09 aqui habia valores de coordinacion 6 (Cs 1.67, Rb 1.52, K 1.38)
+# etiquetados como CN12: subestimaban r_A y con el, el factor de tolerancia de
+# todo el espacio de busqueda. Con los valores correctos, RbPbI3/RbSnI3/KPbI3/
+# KSnI3 pasan de t<0.80 (rechazados) a t~0.80-0.82 (aceptados).
+#
+# MA y FA no son de Shannon: son radios efectivos de Kieslich 2014, ajustados
+# contra estructuras de perovskitas hibridas reales, ya en la base correcta para
+# usarse en la formula de Goldschmidt. No tienen analogo CN6/CN12 que confundir.
 IONIC_RADII: Dict[str, float] = {
-    "Cs": 1.67, "Rb": 1.52, "K": 1.38, "MA": 2.17, "FA": 2.53,
+    "Cs": 1.88, "Rb": 1.72, "K": 1.64, "MA": 2.17, "FA": 2.53,
     "Pb": 1.19, "Sn": 1.18, "Ge": 0.73, "Bi": 1.03, "In": 0.80,
     "I":  2.20, "Br": 1.96, "Cl": 1.81,
 }
+
+#: Los mismos cationes A a coordinacion 6, que es lo que estaba en uso por error.
+#: Se conservan para poder reproducir resultados anteriores a la correccion.
+IONIC_RADII_A_CN6: Dict[str, float] = {"Cs": 1.67, "Rb": 1.52, "K": 1.38}
 
 # Pauling electronegativities (organics: effective from N-C-H bonds)
 ELECTRONEG: Dict[str, float] = {

@@ -61,6 +61,11 @@ class PhysicalFilter:
         self.mu_max: float = float(oct_.get("max", 0.90))
         self.vol_min: float = float(vol.get("min", 50.0))
         self.vol_max: float = float(vol.get("max", 2000.0))
+        # Zona donde el factor de tolerancia deja de ser buen predictor de que
+        # la fase estable sea la perovskita de vertices compartidos: ver
+        # `riesgo_politipo`. No rechaza, solo etiqueta.
+        self.t_seguro_min: float = float(gold.get("safe_min", 0.90))
+        self.t_seguro_max: float = float(gold.get("safe_max", 1.00))
 
     # ── Pipeline ────────────────────────────────────────────────────────────────
 
@@ -120,6 +125,33 @@ class PhysicalFilter:
         result.stats["total_in"] = len(candidates)
         result.stats["total_passed"] = result.n_passed
         return result
+
+    def riesgo_politipo(self, t: float) -> str | None:
+        """Aviso cuando el factor de tolerancia no basta para fiarse de la fase.
+
+        El factor de Goldschmidt es condición **necesaria, no suficiente**: dice
+        si los iones empaquetan en una perovskita cúbica ideal, no si esa es la
+        fase que gana a temperatura ambiente. El contraejemplo lo tiene este
+        mismo proyecto: CsPbI₃ da t = 0.851, dentro del rango aceptado, y sin
+        embargo su fase estable a 25 °C es la δ — ortorrómbica, con octaedros de
+        arista compartida en vez de vértice, Eg ≈ 2.82 eV y sin comportamiento
+        de perovskita. La α cúbica que este pipeline construye y evalúa solo
+        existe por encima de 330 °C.
+
+        Cuanto más se aleja t de 1, más grande es el desajuste que la estructura
+        tiene que absorber inclinando o reorganizando los octaedros, y más
+        probable es que acabe en un politipo distinto del que aquí se supone.
+        Esto no descarta el candidato: marca que su fase no está confirmada, y
+        que confirmarla exige fonones (`buho calc step phonons`), no geometría.
+        """
+        if self.t_seguro_min <= t <= self.t_seguro_max:
+            return None
+        lado = "por debajo" if t < self.t_seguro_min else "por encima"
+        return (
+            f"t={t:.3f} {lado} de la zona segura "
+            f"[{self.t_seguro_min}, {self.t_seguro_max}]: la fase perovskita de "
+            f"vértices compartidos no está confirmada, hacen falta fonones"
+        )
 
     # ── Individual checks ───────────────────────────────────────────────────────
 

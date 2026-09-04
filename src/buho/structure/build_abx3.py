@@ -32,6 +32,22 @@ _ORG_WARNING = (
     "Reemplazar con geometría molecular explícita antes de DFT de producción."
 )
 
+#: Cuánto se acorta el enlace B–X respecto a la suma de radios iónicos, por
+#: elemento del sitio B. Los radios iónicos suponen enlace puramente iónico; en
+#: estas perovskitas el enlace metal–haluro tiene covalencia apreciable y sale
+#: más corto. Calibrado contra estructura experimental donde la hay:
+#:
+#:   Pb: CsPbI3 a=6.18 Å frente a 6.78 de la fórmula -> 0.912
+#:   Sn: CsSnI3 a=6.22 Å frente a 6.76             -> 0.920
+#:
+#: Ge se deja SIN contraer a propósito. No tengo una referencia experimental
+#: verificada para CsGeI3, y aplicarle el factor de Pb/Sn lo sobrecorrige: con
+#: 0.915 la celda baja a 5.36 Å y el cálculo sale **metálico** (Eg = 0.00 eV),
+#: que es peor que el error original. Con el radio de Ge (0.73 Å, mucho menor
+#: que Pb/Sn) la suma de radios ya cae cerca de lo razonable. Un elemento sin
+#: entrada aquí no se contrae.
+BOND_CONTRACTION: dict[str, float] = {"Pb": 0.912, "Sn": 0.920}
+
 
 class ABX3StructureBuilder:
     """Construye estructuras ASE para candidatos ABX3 generados.
@@ -48,6 +64,12 @@ class ABX3StructureBuilder:
         self._supercell_mixed: list[int] = list(st.get("supercell_mixed", [2, 2, 2]))
         self._organic_placeholder: str = st.get("organic_A_placeholder", "Cs")
         self._formats: list[str] = list(st.get("export_formats", ["cif", "poscar", "traj"]))
+        # Contracción del enlace B–X por elemento; ver BOND_CONTRACTION. Un
+        # dict vacío en la config reproduce el comportamiento anterior.
+        contraccion = st.get("bond_contraction")
+        self._bond_contraction: dict[str, float] = (
+            dict(contraccion) if isinstance(contraccion, dict) else dict(BOND_CONTRACTION)
+        )
         self._seed = random_seed
 
     def build(
@@ -103,7 +125,18 @@ class ABX3StructureBuilder:
         # Se corrige aquí y no en `lattice_est` porque ese valor es además la
         # característica 11 del surrogate (`a_lat_est_A`), con la que se
         # entrenó el modelo: cambiarla invalidaría las predicciones.
-        a0 = lattice_est(r_B_eff, r_X_eff) / math.sqrt(2.0)
+        #
+        # La contracción corrige que `r_B + r_X` sobreestima el enlace B–X (ver
+        # BOND_CONTRACTION). El exceso no es inocuo: sobre CsPbI3, con la celda
+        # dilatada un 9.7 % el Eg de PBE sale 1.78 eV en vez de 1.09 eV. Casi
+        # 0.7 eV de error — más que el que introduce ignorar el acoplamiento
+        # espín-órbita. Se pondera por fracción igual que los radios, para que
+        # una composición con el sitio B mezclado interpole entre sus factores.
+        factor = sum(
+            candidate.fractions["B"][sp] * self._bond_contraction.get(sp, 1.0)
+            for sp in candidate.B_site_species
+        )
+        a0 = lattice_est(r_B_eff, r_X_eff) / math.sqrt(2.0) * factor
 
         # ── Build primitive cell ─────────────────────────────────────────────
         atoms = StructureBuilder.build_perovskite_cubic(A_struct, B_struct, X_struct, a0)
