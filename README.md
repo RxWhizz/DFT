@@ -128,6 +128,35 @@ sería fácil.
 Cada lote deja su rastro en `data/batches/batch_NNN/`: los candidatos, las
 puntuaciones de la cascada, los seleccionados, los resultados y un manifiesto.
 
+### Protocolo de descubrimiento autónomo
+
+Lo de arriba es el ciclo por lotes: cada vuelta la dispara un comando. `buho
+active-learning discovery` (`src/buho/discovery/`) es un ciclo distinto que
+encadena rondas solo — cribar, seleccionar, lanzar DFT, recolectar, reentrenar
+y volver a cribar — sin que nadie vuelva a invocarlo entre medias. Corre como
+**proceso aparte** del monitor, precisamente para que cribar decenas de miles de
+candidatos con pandas no deje muda la API mientras tanto.
+
+Cada reentrenamiento **publica** el modelo en
+`models/discovery/surrogate_bandgap_current.pkl`, que la cascada prefiere
+sobre el de fábrica: la ronda siguiente criba con lo que la ronda anterior
+aprendió. Si el runner DFT muere a media ronda, el bucle lo detecta por falta
+de progreso, reintenta, y se rinde con un estado de error legible en vez de
+colgarse.
+
+```bash
+buho active-learning discovery run       # una vuelta, o varias con --max-rounds
+buho active-learning discovery status    # ronda, cobertura, frontera
+buho active-learning discovery pause     # y resume
+```
+
+Desde la app es la pestaña **Protocolo**. Limitación conocida: la ventana
+fotovoltaica del Tier 1 asume bandgap experimental, y el surrogate aprende el
+bandgap PBE de la criba —sistemáticamente más bajo—, así que el protocolo
+puede declararse terminado tras pocas rondas aunque queden miles de candidatos
+sin verificar. Ver
+[#7](https://github.com/RxWhizz/PEROVOWL/issues/7).
+
 ### 5. Un potencial propio
 
 El Tier 2 del cribado se apoya en MEGNet y M3GNet, que son modelos generales:
@@ -186,6 +215,9 @@ empaquetado dentro: no necesita Python, Node ni el repositorio.
 - **En vivo**: qué está haciendo el sistema y cuánto le queda, estimado con la
   mediana real de los trabajos ya terminados.
 - **Cribado**: lanza la cascada y enseña cuántos caen en cada tier.
+- **Protocolo**: el ciclo autónomo de descubrimiento — ronda, cobertura,
+  frontera Pareto, y los controles para lanzarlo, pausarlo o exportar el
+  reporte.
 - **Candidatos**: los viables, verificados por DFT, ordenados por score
   fotovoltaico. Exportables a CSV.
 - **Predictor**: precisión del modelo contra los cálculos hechos.
@@ -195,6 +227,8 @@ empaquetado dentro: no necesita Python, Node ni el repositorio.
   la máquina.
 - **Trabajos**: cada cálculo con su estado, sus artefactos y sus logs.
 - **Diagnóstico**: qué ve el motor, dónde tiene los datos y qué le falta.
+- **Entorno**: una tarjeta por runtime (núcleo, API, GPAW, PAW, MLFF), con lo
+  que falta y un botón para instalarlo.
 
 Se descarga desde [Releases](https://github.com/RxWhizz/PEROVOWL/releases). Hay una
 versión de escritorio y otra que se abre en el navegador. La puesta en marcha,
@@ -409,7 +443,7 @@ buho candidates list     # candidatos viables y verificados
 
 | Grupo | Cmds | Para qué |
 |---|---:|---|
-| `active-learning` | 4 | Bucle de aprendizaje activo por lotes |
+| `active-learning` | 5 | Bucle de aprendizaje activo por lotes; `discovery` es el protocolo autónomo multironda |
 | `activity` | 2 | Actividad real de runners y procesos |
 | `agent` | 5 | Agente local del monitor |
 | `analysis` | 13 | Análisis científico de salidas DFT |

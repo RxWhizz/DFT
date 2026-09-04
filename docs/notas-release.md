@@ -1,5 +1,8 @@
 # Monitor DFT 0.4.0
 
+**Prerelease.** Construida desde `feature/autonomous-discovery-loop`, pendiente
+de fusionar a `main`. No sustituye a v0.3.0 como release estable.
+
 Interfaz gráfica del pipeline de cribado de perovskitas: genera candidatos, los
 criba con la cascada HTS, prepara y lanza los cálculos DFT, y sigue el progreso
 en vivo.
@@ -91,6 +94,25 @@ sha256sum -c SHA256SUMS-gui-deliverables.txt
 
 ### Nuevo en 0.4.0
 
+- **Protocolo de descubrimiento autónomo**: un ciclo ML → DFT → reentrenar →
+  repetir que encadena rondas solo, sin volver a invocarlo entre medias.
+  `buho active-learning discovery run` en consola, pestaña **Protocolo** en la
+  app.
+- **El aprendizaje activo ahora aprende**: cada reentrenamiento publica el
+  modelo (`surrogate_bandgap_current.pkl`) y la siguiente ronda criba con él.
+  Antes se reentrenaba y se descartaba — el bucle nunca usaba lo que acababa
+  de aprender.
+- **El bucle corre como proceso aparte**, no como hilo del servidor: cribar
+  decenas de miles de candidatos con pandas ya no deja la API sin responder
+  mientras tanto.
+- **Sobrevive a un runner DFT que muere a media ronda**: lo detecta por falta
+  de progreso (no solo por si el runner nunca llegó a arrancar), reintenta, y
+  se rinde con un estado de error legible tras varios intentos en vez de
+  colgarse indefinidamente.
+- **Métrica honesta del reentrenamiento**: junto al `train_mae_eV` (que solo
+  mide ajuste y baja artificialmente al crecer los datos) se registran
+  `cv_mae_eV` (validación cruzada 5-fold) y `baseline_mae_eV` (predecir la
+  media), para saber si el surrogate generaliza de verdad.
 - **Pantalla Entorno**: una tarjeta por runtime (núcleo, API, GPAW, datasets
   PAW, MLFF) con lo que hay instalado, lo que falta y un botón para instalarlo,
   con el log en vivo. El equivalente en consola es `buho setup check` /
@@ -143,6 +165,15 @@ sha256sum -c SHA256SUMS-gui-deliverables.txt
   procesos largos ya no heredan los descriptores del motor.
 - **Seguimiento de lotes**: el monitor se quedaba mirando el lote configurado al
   arrancar y no veía los lanzados después.
+
+## Limitación conocida
+
+El protocolo autónomo puede declararse `done` tras pocas rondas aunque queden
+miles de candidatos sin verificar: la ventana fotovoltaica del Tier 1 asume
+bandgap experimental, y el surrogate aprende el bandgap PBE de la criba, que es
+sistemáticamente más bajo. No es un fallo del código — es una calibración
+pendiente. Detalle y opciones de arreglo en
+[#7](https://github.com/RxWhizz/PEROVOWL/issues/7).
 
 ## Licencias
 
