@@ -28,6 +28,19 @@ datas = [
     (str(_gen_stage), "config"),
 ]
 
+# Tabla de correccion scissor por elemento del sitio B. Sin ella,
+# `buho.bandgap_scissor` no corrige el bandgap por acoplamiento espin-orbita y
+# las etiquetas de entrenamiento salen crudas -- en silencio. Estaba fuera del
+# bundle, asi que la correccion nunca se aplico en un binario publicado.
+_soc = ROOT / "config" / "soc_scissor.json"
+if _soc.is_file():
+    datas.append((str(_soc), "config"))
+else:
+    raise SystemExit(
+        f"Falta {_soc}. Generala con:\n"
+        "  python scripts/calibrate_soc_scissor.py --out config/soc_scissor.json"
+    )
+
 estructuras = ROOT / "build" / "structures"
 if estructuras.is_dir():
     datas.append((str(estructuras), "structures"))

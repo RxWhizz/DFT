@@ -26,6 +26,7 @@ sabe cuál se usó.
 from __future__ import annotations
 
 import math
+import sys
 import warnings
 from pathlib import Path
 from typing import Optional
@@ -57,6 +58,24 @@ _PV_MIN_DEFAULT = 1.1
 _PV_MAX_DEFAULT = 1.8
 
 
+def _raiz_o_fallo(project_root, quien: str):
+    r"""Raíz explícita, o el CWD solo fuera del binario.
+
+    Congelado, el directorio de trabajo no significa nada: al abrir la app desde
+    un acceso directo de Windows es `C:\Windows\System32`. Ahí no hay
+    proyecto ni permisos de escritura, y el fallo aparece mucho después y
+    disfrazado. Si el llamador no pasa raíz, es un error de programación.
+    """
+    if project_root:
+        return Path(project_root)
+    if getattr(sys, "frozen", False):
+        raise ValueError(
+            f"{quien} necesita project_root explícito en el binario: "
+            "el directorio de trabajo no es la raíz del proyecto."
+        )
+    return Path.cwd()
+
+
 def _band_score(eg: float) -> float:
     """Gaussiana centrada en el óptimo fotovoltaico (1.45 eV)."""
     if eg is None or math.isnan(eg):
@@ -83,9 +102,13 @@ class ScreeningCascade:
     """
 
     def __init__(self, config: dict, project_root: Optional[Path] = None,
-                 mlff_runtime=None):
+                 mlff_runtime=None, extra_roots: tuple[Path, ...] = ()):
         self._cfg = config
-        self._root = Path(project_root) if project_root else Path.cwd()
+        self._root = _raiz_o_fallo(project_root, "ScreeningCascade")
+        # Raíces adicionales SOLO para leer modelos. Los de fábrica viajan
+        # dentro del binario y los reentrenados se escriben en la raíz de datos:
+        # sin mirar en los dos sitios, uno de los dos se pierde.
+        self._extra_roots = tuple(Path(r) for r in extra_roots if r)
         self._mlff_runtime = mlff_runtime
         self._scr = config.get("screening", {})
         self._acq = config.get("acquisition", {})
@@ -130,8 +153,14 @@ class ScreeningCascade:
             return self._surrogate
         from ml_surrogate.model import SurrogateEnsemble
 
-        candidatos = [self._root.joinpath(*self.SURROGATE_ACTUAL),
-                      self._root.joinpath(*self.SURROGATE_BASE)]
+        # Por cada modelo, se mira primero la raíz principal y luego las extra.
+        # El reentrenado gana al de fábrica esté donde esté.
+        raices = (self._root, *self._extra_roots)
+        candidatos = [
+            raiz.joinpath(*rel)
+            for rel in (self.SURROGATE_ACTUAL, self.SURROGATE_BASE)
+            for raiz in raices
+        ]
         for mp in candidatos:
             if not mp.exists():
                 continue

@@ -14,7 +14,9 @@ from buho.phase2_force import ROOT, U_SCAN
 
 
 OUT_DIR = ROOT / "data" / "mace_finetune"
-EXTERNAL_RUNS_ROOT = Path(os.environ.get("DFT_RUNS_ROOT", "/media/luis-ochoa/Nuevo vol/dft/runs"))
+# Sin default a un disco externo concreto: en otra maquina apuntaba a una
+# ruta inexistente. Si no hay DFT_RUNS_ROOT, se cae al arbol del proyecto.
+EXTERNAL_RUNS_ROOT = Path(os.environ.get("DFT_RUNS_ROOT") or (ROOT / "runs"))
 
 
 def _default_runs_dir() -> Path:

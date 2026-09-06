@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import shutil
 import string
+import sys
 import textwrap
 from datetime import datetime
 from pathlib import Path
@@ -176,6 +177,24 @@ mpirun -n {n_cores} {python} input.py
 '''
 
 
+def _raiz_o_fallo(project_root, quien: str):
+    r"""Raíz explícita, o el CWD solo fuera del binario.
+
+    Congelado, el directorio de trabajo no significa nada: al abrir la app desde
+    un acceso directo de Windows es `C:\Windows\System32`. Ahí no hay
+    proyecto ni permisos de escritura, y el fallo aparece mucho después y
+    disfrazado. Si el llamador no pasa raíz, es un error de programación.
+    """
+    if project_root:
+        return Path(project_root)
+    if getattr(sys, "frozen", False):
+        raise ValueError(
+            f"{quien} necesita project_root explícito en el binario: "
+            "el directorio de trabajo no es la raíz del proyecto."
+        )
+    return Path.cwd()
+
+
 class RelaxationJobPreparer:
     """Prepara directorios de trabajo para relajaciones DFT básicas.
 
@@ -195,7 +214,7 @@ class RelaxationJobPreparer:
         python: str = "python3",
     ):
         self._cfg = config
-        self._root = Path(project_root) if project_root else Path.cwd()
+        self._root = _raiz_o_fallo(project_root, "prepare_relaxation_jobs")
         self._n_cores = n_cores
         self._python = python
         self._dft = config.get("dft_basic", {})

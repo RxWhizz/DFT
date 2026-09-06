@@ -23,10 +23,29 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+
+
+def _raiz_o_fallo(project_root, quien: str):
+    r"""Raíz explícita, o el CWD solo fuera del binario.
+
+    Congelado, el directorio de trabajo no significa nada: al abrir la app desde
+    un acceso directo de Windows es `C:\Windows\System32`. Ahí no hay
+    proyecto ni permisos de escritura, y el fallo aparece mucho después y
+    disfrazado. Si el llamador no pasa raíz, es un error de programación.
+    """
+    if project_root:
+        return Path(project_root)
+    if getattr(sys, "frozen", False):
+        raise ValueError(
+            f"{quien} necesita project_root explícito en el binario: "
+            "el directorio de trabajo no es la raíz del proyecto."
+        )
+    return Path.cwd()
 
 
 class ResultCollector:
@@ -40,8 +59,7 @@ class ResultCollector:
     FIDELITY = "relax_basic"
 
     def __init__(self, project_root: Optional[Path] = None):
-        import sys
-        self._root = Path(project_root) if project_root else Path.cwd()
+        self._root = _raiz_o_fallo(project_root, "collect_results")
         if str(self._root / "src") not in sys.path:
             sys.path.insert(0, str(self._root / "src"))
 

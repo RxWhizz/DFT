@@ -56,6 +56,94 @@ def test_ningun_modulo_calcula_la_raiz_desde_su_ubicacion():
     )
 
 
+#: `buho/` y `ml_surrogate/` sí anclan al repositorio vía `__file__`, y en la
+#: mayoría de sitios es legítimo. Esta lista es un trinquete: fija los que hay
+#: hoy, con su justificación, para que uno nuevo tenga que argumentarse.
+#:
+#: Congelado, `__file__` cuelga del directorio de extracción, así que
+#: `parents[N]` apunta fuera del bundle. Sirve como *default* cuando el llamador
+#: siempre pasa la raíz, o en código que solo corre por CLI desde el repo. NO
+#: sirve para localizar recursos empaquetados: ahí hay que mirar `sys._MEIPASS`.
+#: Regresión real: `bandgap_scissor` lo hacía y la corrección SOC quedó muerta
+#: en todos los binarios publicados, en silencio.
+ANCLAJE_PERMITIDO = {
+    # Solo CLI, desde el repositorio: nunca se ejecutan dentro del binario.
+    "buho/generator/__main__.py",
+    "buho/dft_jobs/__main__.py",
+    "buho/phase2_force/__init__.py",
+    "buho/active_learning/batch_loop.py",
+    "ml_surrogate/train.py",
+    "ml_surrogate/predict.py",
+    "ml_surrogate/inference.py",
+    "ml_surrogate/structure_builder.py",
+    # Default de una raíz que el llamador del monitor siempre pasa explícita.
+    "buho/discovery/engine.py",
+    "buho/mlff_runtime.py",
+    "buho/generator/heuristic_generator.py",
+    "ml_surrogate/config.py",
+    # Consulta `sys._MEIPASS` primero; esto es el fallback desde fuentes.
+    "buho/bandgap_scissor.py",
+}
+
+
+def test_el_anclaje_al_repo_fuera_de_monitor_api_no_crece():
+    """Trinquete sobre `buho/` y `ml_surrogate/`.
+
+    El test hermano cubre `monitor_api`, donde el anclaje está prohibido del
+    todo. Aquí se tolera lo que ya existe y se bloquea lo nuevo.
+    """
+    src = ROOT / "src"
+    encontrados = {
+        p.relative_to(src).as_posix()
+        for paquete in ("buho", "ml_surrogate")
+        for p in sorted((src / paquete).rglob("*.py"))
+        for linea in p.read_text(encoding="utf-8").splitlines()
+        if ANCLAJE.search(linea)
+    }
+
+    nuevos = encontrados - ANCLAJE_PERMITIDO
+    assert not nuevos, (
+        "Anclaje nuevo a __file__. Congelado no resuelve dentro del bundle;\n"
+        "usa sys._MEIPASS o recibe la raíz del llamador:\n  "
+        + "\n  ".join(sorted(nuevos))
+    )
+
+    obsoletos = ANCLAJE_PERMITIDO - encontrados
+    assert not obsoletos, (
+        "Ya no anclan; quítalos de ANCLAJE_PERMITIDO:\n  " + "\n  ".join(sorted(obsoletos))
+    )
+
+
+def test_el_scissor_soc_se_resuelve_dentro_del_bundle(tmp_path, monkeypatch):
+    """Regresión: la tabla no cargaba en el binario y no se corregía nada.
+
+    `parents[2]` desde `_MEIPASS/buho/bandgap_scissor.py` cae fuera del bundle.
+    """
+    from buho import bandgap_scissor as bs
+
+    mei = tmp_path / "engine" / "_internal"
+    (mei / "buho").mkdir(parents=True)
+    (mei / "config").mkdir()
+    (mei / "config" / "soc_scissor.json").write_text(
+        json.dumps({"chi_soc_eV": {"Pb": -0.63}}), encoding="utf-8"
+    )
+
+    _congelar(monkeypatch, mei)
+    monkeypatch.setattr(bs, "__file__", str(mei / "buho" / "bandgap_scissor.py"))
+    bs._cache.clear()
+    try:
+        assert bs.cargar_tabla() == {"Pb": -0.63}
+        assert bs.corregir(1.20, {"Pb": 1.0}) == pytest.approx(0.57)
+    finally:
+        bs._cache.clear()
+
+
+def test_el_spec_empaqueta_la_tabla_del_scissor():
+    """Sin ella, `bandgap_scissor` devuelve tabla vacía y no corrige nada."""
+    spec = (ROOT / "packaging" / "dft-monitor-engine.spec").read_text(encoding="utf-8")
+    assert "soc_scissor.json" in spec
+
+
 def test_paths_no_importa_nada_del_paquete():
     """Debe poder importarse antes que cualquier otra cosa, sin ciclos."""
     fuente = (PAQUETE / "paths.py").read_text(encoding="utf-8")

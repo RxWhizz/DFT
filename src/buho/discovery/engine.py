@@ -261,6 +261,7 @@ class DiscoveryLoop:
         project_root: Path | None = None,
         data_root: Path | None = None,
         models_root: Path | None = None,
+        bundle_root: Path | None = None,
         config_source_path: str | Path | None = None,
     ) -> None:
         self.project_root = Path(project_root) if project_root else ROOT
@@ -276,7 +277,11 @@ class DiscoveryLoop:
                 self.config = yaml.safe_load(fh) or {}
 
         self.discovery = self.config.get("discovery", {}) or {}
+        # `models_root` es donde se ESCRIBE (raiz de datos del usuario).
+        # `bundle_root` es solo de lectura: los modelos de fabrica viajan
+        # dentro del binario y ahi no se puede ni se debe escribir.
         self.models_root = Path(models_root) if models_root else self.project_root
+        self.bundle_root = Path(bundle_root) if bundle_root else None
 
         paths = self.config.get("paths", {}) or {}
         self.output_dir = self._resolve(
@@ -325,7 +330,9 @@ class DiscoveryLoop:
             mappings.insert(
                 0,
                 {
-                    "posix": self.discovery.get("posix_mount_prefix", "/media/luis-ochoa/Nuevo vol"),
+                    # Sin default: era la ruta del disco externo de una
+                    # maquina concreta, inutil en cualquier otra.
+                    "posix": self.discovery.get("posix_mount_prefix", ""),
                     "windows": env_root,
                 },
             )
@@ -460,6 +467,27 @@ class DiscoveryLoop:
 
     def _round_dir(self, round_id: int) -> Path:
         return self.rounds_dir / f"round_{round_id:03d}"
+
+    def _raices_modelos(self) -> list[Path]:
+        """Dónde buscar modelos, en orden: primero los datos, luego el bundle.
+
+        Se escribe siempre en `models_root`. Los de fábrica viajan dentro del
+        binario (`bundle_root`), que en PyInstaller es el directorio de
+        extracción: leerlo está bien, escribirlo no — se pierde al actualizar y
+        falla si la app quedó instalada en un sitio de solo lectura.
+        """
+        raices = [self.models_root]
+        if self.bundle_root and self.bundle_root.resolve() != self.models_root.resolve():
+            raices.append(self.bundle_root)
+        return raices
+
+    def _buscar_modelo(self, *partes: str) -> Path | None:
+        """Primer modelo que exista recorriendo las raíces. `None` si ninguno."""
+        for raiz in self._raices_modelos():
+            candidato = raiz.joinpath(*partes)
+            if candidato.is_file():
+                return candidato
+        return None
 
     def _round_runs_dir(self, round_id: int) -> Path:
         return self.dft_runs_dir / f"round_{round_id:03d}"
@@ -649,7 +677,8 @@ class DiscoveryLoop:
         excluded = set(ledger[ledger["status"].isin(DFT_LEDGER_STATUSES)]["candidate_id"])
         work_candidates = [c for cid, c in candidates.items() if cid not in excluded]
 
-        cascade = ScreeningCascade(self.config, project_root=self.models_root)
+        cascade = ScreeningCascade(self.config, project_root=self.models_root,
+                                   extra_roots=self._raices_modelos()[1:])
         df_light = cascade.screen(work_candidates, run_mlff=False)
         df_light["mlff_evaluated"] = False
 
@@ -747,8 +776,8 @@ class DiscoveryLoop:
             return out
 
         for _, (filename, mean_col, sigma_col) in specs.items():
-            model_path = self.models_root / "models" / filename
-            if not model_path.is_file():
+            model_path = self._buscar_modelo("models", filename)
+            if model_path is None:
                 continue
             try:
                 model = SurrogateEnsemble.load(model_path)

@@ -408,7 +408,12 @@ def _ejecutar(run: ScreeningRun, cfg: dict[str, Any]) -> None:
         run.stage = "tier 0 · física"
         from buho.screening.cascade import ScreeningCascade
 
-        cascada = ScreeningCascade(cfg, project_root=_models_root())
+        # `extra_roots`: el surrogate reentrenado por el protocolo autónomo vive
+        # en la raíz de datos, no junto a los de fábrica. Sin esto, el cribado
+        # manual seguiría usando el modelo original aunque el bucle ya hubiera
+        # aprendido.
+        cascada = ScreeningCascade(cfg, project_root=_models_root(),
+                                   extra_roots=(paths.data_root(),))
         t1 = time.time()
         run.stage = "tier 1 · surrogate" if not run.use_mlff else "tier 1-2 · ML"
         df = cascada.screen(candidatos, run_mlff=run.use_mlff)

@@ -103,13 +103,18 @@ def build_loop():
     """
     from buho.discovery import DiscoveryLoop
 
-    models_parent = paths.find_resource("models").parent
     return DiscoveryLoop(
         config_path=_effective_config(),
         config_source_path=config_path(),
         project_root=paths.data_root(),
         data_root=paths.data_root(),
-        models_root=models_parent,
+        # Escritura en la raíz de datos: antes era `find_resource("models").parent`,
+        # que congelado es el directorio de extracción del binario. Los modelos
+        # reentrenados acababan dentro de la instalación — se perdían al
+        # actualizar y fallaban si la app estaba en un sitio de solo lectura.
+        models_root=paths.data_root(),
+        # Los de fábrica viajan en el binario; se leen de ahí.
+        bundle_root=paths.bundle_root(),
     )
 
 

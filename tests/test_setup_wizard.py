@@ -1095,3 +1095,83 @@ def test_el_riesgo_no_rechaza_candidatos():
     ok, _ = f._check_goldschmidt(c)
     assert ok
     assert f.riesgo_politipo(0.82) is not None
+
+
+# ── Dónde se escriben los modelos reentrenados ────────────────────────────────
+
+
+def test_los_modelos_reentrenados_van_a_los_datos_no_al_bundle(tmp_path, monkeypatch):
+    """Regresión: `models_root` era `find_resource("models").parent`.
+
+    Congelado eso es el directorio de extracción del binario, así que el
+    surrogate reentrenado acababa dentro de la instalación: se perdía al
+    actualizar y fallaba si la app estaba en un sitio de solo lectura.
+    """
+    from monitor_api import paths
+    from monitor_api.services import discovery as svc
+
+    datos = tmp_path / "datos"
+    bundle = tmp_path / "bundle"
+    (bundle / "models").mkdir(parents=True)
+    datos.mkdir()
+
+    monkeypatch.setattr(paths, "data_root", lambda: datos)
+    monkeypatch.setattr(paths, "bundle_root", lambda: bundle)
+    monkeypatch.setattr(paths, "find_resource", lambda *p: bundle.joinpath(*p))
+    monkeypatch.setattr(svc, "_effective_config", lambda update=None: {})
+    monkeypatch.setattr(svc, "config_path", lambda: tmp_path / "generator.yaml")
+
+    loop = svc.build_loop()
+
+    assert loop.models_root == datos, "se escribe en los datos del usuario"
+    assert loop.bundle_root == bundle, "el bundle solo se lee"
+
+
+def test_la_cascada_busca_modelos_en_las_dos_raices(tmp_path):
+    """El de fábrica viaja en el bundle; el reentrenado vive en los datos."""
+    from buho.screening.cascade import ScreeningCascade
+
+    datos = tmp_path / "datos"
+    bundle = tmp_path / "bundle"
+    (datos / "models" / "discovery").mkdir(parents=True)
+    bundle.joinpath(*ScreeningCascade.SURROGATE_BASE).parent.mkdir(parents=True)
+    bundle.joinpath(*ScreeningCascade.SURROGATE_BASE).write_bytes(b"fabrica")
+
+    cargados: list[Path] = []
+
+    class _Falso:
+        feature_cols = ["a"]
+
+        @staticmethod
+        def load(p):
+            cargados.append(Path(p))
+            return _Falso()
+
+    import ml_surrogate.model as mm
+
+    original = mm.SurrogateEnsemble
+    mm.SurrogateEnsemble = _Falso
+    try:
+        cfg = {"screening": {"tier1_surrogate": True}}
+        # Solo el de fábrica, en el bundle: se encuentra desde la raíz extra.
+        c = ScreeningCascade(cfg, project_root=datos, extra_roots=(bundle,))
+        c._load_surrogate()
+        assert cargados[-1] == bundle.joinpath(*ScreeningCascade.SURROGATE_BASE)
+
+        # Con un reentrenado en los datos, ese gana.
+        actual = datos.joinpath(*ScreeningCascade.SURROGATE_ACTUAL)
+        actual.write_bytes(b"reentrenado")
+        c2 = ScreeningCascade(cfg, project_root=datos, extra_roots=(bundle,))
+        c2._load_surrogate()
+        assert cargados[-1] == actual
+    finally:
+        mm.SurrogateEnsemble = original
+
+
+def test_la_cascada_congelada_exige_raiz_explicita(monkeypatch):
+    """Sin raíz, el CWD del binario es System32: mejor fallar aquí."""
+    from buho.screening.cascade import ScreeningCascade
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    with pytest.raises(ValueError, match="project_root"):
+        ScreeningCascade({"screening": {}})

@@ -41,35 +41,61 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
 
-#: Tabla por defecto, relativa a la raíz del repositorio.
+#: Tabla por defecto, relativa a la raíz que la contenga.
 TABLA_REL = "config/soc_scissor.json"
 
 _cache: dict[str, dict[str, float]] = {}
 
 
+def _raices() -> list[Path]:
+    """Raíces donde puede vivir la tabla, en orden de preferencia.
+
+    Congelado con PyInstaller, `__file__` cuelga del directorio de extracción
+    (`sys._MEIPASS`), así que `parents[2]` apunta un nivel POR ENCIMA del bundle
+    y no encuentra nada. Era el caso: en los binarios publicados la tabla no se
+    cargaba y `corregir()` devolvía el gap de PBE sin tocar — en silencio.
+    """
+    raices: list[Path] = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if getattr(sys, "frozen", False) and meipass:
+        raices.append(Path(meipass))
+    # Desde el código fuente: src/buho/bandgap_scissor.py -> raíz del repo.
+    raices.append(Path(__file__).resolve().parents[2])
+    return raices
+
+
 def cargar_tabla(ruta: Path | str | None = None) -> dict[str, float]:
     """Lee `chi_soc_eV` de la tabla de calibración. Vacío si no existe."""
-    if ruta is None:
-        ruta = Path(__file__).resolve().parents[2] / TABLA_REL
-    ruta = Path(ruta)
-    clave = str(ruta)
+    if ruta is not None:
+        candidatas = [Path(ruta)]
+    else:
+        candidatas = [raiz / TABLA_REL for raiz in _raices()]
+
+    clave = str(candidatas[0])
     if clave in _cache:
         return _cache[clave]
 
     tabla: dict[str, float] = {}
-    if ruta.is_file():
+    encontrada = next((c for c in candidatas if c.is_file()), None)
+    if encontrada is not None:
         try:
-            datos = json.loads(ruta.read_text(encoding="utf-8"))
+            datos = json.loads(encontrada.read_text(encoding="utf-8"))
             tabla = {k: float(v) for k, v in (datos.get("chi_soc_eV") or {}).items()}
         except (OSError, ValueError, TypeError) as exc:
-            log.warning("tabla de scissor ilegible en %s: %s", ruta, exc)
+            log.warning("tabla de scissor ilegible en %s: %s", encontrada, exc)
     else:
-        log.info("sin tabla de scissor en %s; el bandgap queda sin corregir", ruta)
+        # A nivel WARNING, no INFO: que la corrección no se aplique cambia las
+        # etiquetas de entrenamiento, y antes se perdía entre el ruido.
+        log.warning(
+            "sin tabla de scissor en %s; el bandgap NO se corrige por SOC",
+            " ni ".join(str(c) for c in candidatas),
+        )
 
     _cache[clave] = tabla
     return tabla
