@@ -779,6 +779,45 @@ def test_el_ejemplo_no_lleva_rutas_personales():
     assert "manage_service: false" in texto
 
 
+def test_el_generator_distribuible_no_lleva_rutas_de_una_maquina():
+    """`config/generator.dist.yaml` es lo que se empaqueta en el binario.
+
+    Regresión: se estaba empaquetando `config/generator.yaml` a secas, con
+    `/home/luis/perovowl-micromamba/...`, `/media/luis-ochoa/...`, `C:/NuevoVol`
+    y `/mnt/c/Users/LUIS/...` dentro. En otra máquina el motor arrancaba pero
+    el cribado y el DFT apuntaban a rutas inexistentes, con fallos confusos en
+    vez de un "no configurado, corre el wizard de Entorno".
+    """
+    dist = ROOT / "config" / "generator.dist.yaml"
+    assert dist.is_file(), "falta config/generator.dist.yaml"
+    texto = dist.read_text(encoding="utf-8")
+    for marca in ("/home/", "/media/", "/mnt/", "C:/Users", "C:/NuevoVol",
+                  "micromamba", "luis-ochoa"):
+        assert marca not in texto, f"generator.dist.yaml contiene {marca!r}"
+
+    import yaml
+
+    cfg = yaml.safe_load(texto)
+    # Las claves que el servicio de descubrimiento y la cascada necesitan.
+    assert "chemical_space" in cfg and "filters" in cfg and "discovery" in cfg
+    # Sin los bloques específicos de la máquina.
+    assert "wsl" not in cfg["discovery"]
+    assert "windows_mounts" not in cfg["discovery"]
+    assert "wsl" not in cfg["discovery"].get("mlff", {})
+    # Rutas de salida relativas, no absolutas.
+    for clave, valor in cfg.get("paths", {}).items():
+        assert not Path(valor).is_absolute(), f"paths.{clave} es absoluta: {valor}"
+
+
+def test_el_spec_empaqueta_el_generator_distribuible():
+    """El spec debe empaquetar la variante `.dist`, renombrada a generator.yaml."""
+    spec = ENGINE_SPEC.read_text(encoding="utf-8")
+    assert "generator.dist.yaml" in spec
+    # Llega al bundle como `config/generator.yaml`, que es lo que el motor busca.
+    assert '"generator.yaml"' in spec
+    assert "generator.yaml\"), \"config\"" not in spec  # no la de dev, a secas
+
+
 def test_un_ollama_caido_no_impide_arrancar():
     """Regresión: `raise SystemExit` tumbaba el monitor entero.
 

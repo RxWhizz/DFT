@@ -122,11 +122,10 @@ class EngineSupervisor extends StateNotifier<EngineState> {
 
       _addLog('starting $executable ${args.join(' ')}');
       _debug('starting $executable ${args.join(' ')}');
-      final process = await Process.start(
-        executable,
-        args,
-        runInShell: Platform.isWindows,
-      );
+      // Sin `runInShell`: `executable` es una ruta absoluta a un exe conocido.
+      // Pasar por `cmd.exe` no aporta nada y añade una capa de parsing (comillas,
+      // espacios en la ruta) y una consola fantasma en Windows.
+      final process = await Process.start(executable, args);
       _process = process;
       _debug('engine process pid=${process.pid}');
 
@@ -229,21 +228,45 @@ class EngineSupervisor extends StateNotifier<EngineState> {
         Platform.isWindows ? 'dft-monitor-engine.exe' : 'dft-monitor-engine';
     final legacyName = Platform.isWindows ? 'dft-monitor.exe' : 'dft-monitor';
     final exeDir = p.dirname(Platform.resolvedExecutable);
+
+    // `engine/<exe>` junto al ejecutable de la app: el layout del paquete.
+    final esperado = p.join(exeDir, 'engine', exeName);
     final candidates = <String>[
-      p.join(exeDir, 'engine', exeName),
+      esperado,
       p.join(exeDir, exeName),
       p.join(exeDir, 'engine', legacyName),
       p.join(exeDir, legacyName),
       p.join(exeDir, 'data', 'flutter_assets', 'assets', 'engine', exeName),
       p.join(exeDir, 'data', 'flutter_assets', 'assets', 'engine', legacyName),
+      // Fallback solo para ejecución desde el repo (dev). En un paquete no
+      // aplica, y depende del directorio de trabajo, así que va el último.
       p.normalize(
           p.join(Directory.current.path, '..', '..', 'bin', 'dft-monitor')),
     ];
     for (final candidate in candidates) {
       if (await File(candidate).exists()) return candidate;
     }
+
+    // Distinguir "no está la carpeta" de "la carpeta está pero el exe no": lo
+    // segundo casi siempre es el antivirus, que pone en cuarentena binarios de
+    // PyInstaller sin firmar.
+    final carpetaEngine = Directory(p.join(exeDir, 'engine'));
+    final hayCarpeta = await carpetaEngine.exists();
+    final diagnostico = hayCarpeta
+        ? 'La carpeta "engine" está junto a la app pero falta '
+            '"$exeName". Suele ser el antivirus (Windows Defender pone en '
+            'cuarentena binarios sin firmar): revisa el historial de '
+            'protección y restaura/permite el archivo. También puede pasar si '
+            'descomprimiste a una ruta muy larga y se truncaron archivos — '
+            'prueba a extraer el .zip en una carpeta corta, p. ej. C:\\perovowl.'
+        : 'No se encontró la carpeta "engine" junto a "$exeName". Descomprime '
+            'el .zip completo y ejecuta la app desde dentro de esa carpeta, '
+            'sin mover "$exeName" fuera de ella.';
     throw StateError(
-      'No se encontro dft-monitor-engine. Define DFT_MONITOR_ENGINE.',
+      '$diagnostico\n'
+      'Ruta esperada: $esperado\n'
+      'Alternativa: en Diagnóstico → "Seleccionar motor" apunta al '
+      'ejecutable a mano, o define la variable DFT_MONITOR_ENGINE.',
     );
   }
 
