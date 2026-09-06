@@ -1,7 +1,8 @@
-# Monitor DFT 0.4.0
+# Monitor DFT 0.4.1
 
-**Prerelease.** Construida desde `feature/autonomous-discovery-loop`, pendiente
-de fusionar a `main`. No sustituye a v0.3.0 como release estable.
+Release de correcciones sobre 0.4.0. Si instalaste 0.4.0, **actualiza**: esa
+versión no arrancaba bien en una Windows limpia y aplicaba mal varias
+correcciones físicas.
 
 Interfaz gráfica del pipeline de cribado de perovskitas: genera candidatos, los
 criba con la cascada HTS, prepara y lanza los cálculos DFT, y sigue el progreso
@@ -11,32 +12,30 @@ en vivo.
 
 Abre la pagina del release:
 
-<https://github.com/RxWhizz/PEROVOWL/releases/tag/v0.4.0>
+<https://github.com/RxWhizz/PEROVOWL/releases/tag/v0.4.1>
 
 En **Assets**, descarga el paquete que corresponda a tu sistema:
 
 | Sistema | Archivo recomendado | Uso |
 |---|---|---|
-| Windows 10/11 x64 | `dft-monitor-desktop-0.4.0-windows-x64.zip` | GUI de escritorio nativa con motor local embebido |
-| Debian/Ubuntu x64 | `perovowl-dft-monitor-0.4.0-linux-amd64.deb` | GUI de escritorio instalable en el sistema |
-| Linux x86_64 portable | `dft-monitor-desktop-0.4.0-linux-x86_64.tar.gz` | GUI portable sin instalador |
-| Linux servidor/web | `dft-monitor-web-0.4.0-linux-x86_64.tar.gz` | Servidor local que abre la interfaz en navegador |
+| Windows 10/11 x64 | `dft-monitor-desktop-0.4.1-windows-x64.zip` | GUI de escritorio nativa con motor local embebido |
+| Debian/Ubuntu x64 | `perovowl-dft-monitor-0.4.1-linux-amd64.deb` | GUI de escritorio instalable en el sistema |
+| Linux x86_64 portable | `dft-monitor-desktop-0.4.1-linux-x86_64.tar.gz` | GUI portable sin instalador |
+| Linux servidor/web | `dft-monitor-web-0.4.1-linux-x86_64.tar.gz` | Servidor local que abre la interfaz en navegador |
 
-Tambien descarga `SHA256SUMS-gui-deliverables.txt` si quieres verificar los
-entregables nuevos, o `SHA256SUMS` para los artefactos Linux publicados
-originalmente.
+`SHA256SUMS` acompaña a los artefactos para verificar la descarga.
 
 ## Instalar y abrir
 
 ### Windows
 
-Descarga `dft-monitor-desktop-0.4.0-windows-x64.zip`, descomprimelo **en una
+Descarga `dft-monitor-desktop-0.4.1-windows-x64.zip`, descomprimelo **en una
 carpeta corta** (p. ej. `C:\perovowl`) y ejecuta el `.exe` desde dentro de la
 carpeta extraida:
 
 ```powershell
-Expand-Archive .\dft-monitor-desktop-0.4.0-windows-x64.zip -DestinationPath C:\perovowl
-C:\perovowl\dft-monitor-desktop-0.4.0-windows-x64\dft_monitor_flutter.exe
+Expand-Archive .\dft-monitor-desktop-0.4.1-windows-x64.zip -DestinationPath C:\perovowl
+C:\perovowl\dft-monitor-desktop-0.4.1-windows-x64\dft_monitor_flutter.exe
 ```
 
 No necesita Python, Node, Flutter ni el repositorio. El motor local viaja dentro
@@ -55,10 +54,10 @@ motor" y apunta al ejecutable a mano.
 
 ### Debian/Ubuntu
 
-Descarga `perovowl-dft-monitor-0.4.0-linux-amd64.deb` e instalalo con:
+Descarga `perovowl-dft-monitor-0.4.1-linux-amd64.deb` e instalalo con:
 
 ```bash
-sudo apt install ./perovowl-dft-monitor-0.4.0-linux-amd64.deb
+sudo apt install ./perovowl-dft-monitor-0.4.1-linux-amd64.deb
 perovowl-dft-monitor
 ```
 
@@ -71,8 +70,8 @@ no defines `DFT_DATA_ROOT`.
 Si no quieres instalar el paquete `.deb`, usa el bundle portable:
 
 ```bash
-tar xzf dft-monitor-desktop-0.4.0-linux-x86_64.tar.gz
-./dft-monitor-desktop-0.4.0-linux-x86_64/dft_monitor_flutter
+tar xzf dft-monitor-desktop-0.4.1-linux-x86_64.tar.gz
+./dft-monitor-desktop-0.4.1-linux-x86_64/dft_monitor_flutter
 ```
 
 ### Linux web/servidor
@@ -80,7 +79,7 @@ tar xzf dft-monitor-desktop-0.4.0-linux-x86_64.tar.gz
 Para abrir la interfaz desde navegador o mirar el pipeline desde otra maquina:
 
 ```bash
-tar xzf dft-monitor-web-0.4.0-linux-x86_64.tar.gz
+tar xzf dft-monitor-web-0.4.1-linux-x86_64.tar.gz
 ./dft-monitor-web/dft-monitor-web --data-root /ruta/a/tus/datos
 ```
 
@@ -92,20 +91,19 @@ exige un token en `monitor.auth.token`.
 En Windows:
 
 ```powershell
-Get-FileHash .\dft-monitor-desktop-0.4.0-windows-x64.zip -Algorithm SHA256
-Get-FileHash .\perovowl-dft-monitor-0.4.0-linux-amd64.deb -Algorithm SHA256
+Get-FileHash .\dft-monitor-desktop-0.4.1-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\perovowl-dft-monitor-0.4.1-linux-amd64.deb -Algorithm SHA256
 ```
 
 En Linux:
 
 ```bash
 sha256sum -c SHA256SUMS
-sha256sum -c SHA256SUMS-gui-deliverables.txt
 ```
 
 ## Qué trae
 
-### Nuevo en 0.4.0
+### Nuevo en la serie 0.4
 
 - **Protocolo de descubrimiento autónomo**: un ciclo ML → DFT → reentrenar →
   repetir que encadena rondas solo, sin volver a invocarlo entre medias.
@@ -151,6 +149,57 @@ sha256sum -c SHA256SUMS-gui-deliverables.txt
   núcleos por trabajo aguanta la máquina.
 
 ## Correcciones importantes
+
+### Corregido en 0.4.1
+
+Todo esto salió de probar 0.4.0 en una Windows limpia y de auditar después el
+patrón común: **un recurso que falta se resolvía a un valor neutro en vez de
+quejarse**, así que el programa seguía dando resultados plausibles pero mal.
+
+**Arranque en una maquina limpia**
+
+- **La app no encontraba el motor.** El mensaje era de desarrollador («define
+  DFT_MONITOR_ENGINE»). Ahora distingue si falta la carpeta `engine/` o si está
+  pero falta el `.exe` —casi siempre el antivirus— y apunta al selector manual.
+- **La raíz de datos caía en `C:\Windows\System32`.** Al abrir desde un acceso
+  directo, el directorio de trabajo es ese, y ahí no se puede escribir ni hay
+  configuración. Ahora usa `~/PEROVOWL-data`, igual que el paquete `.deb`.
+- **El cribado fallaba con «No se encuentra .../config/generator.yaml».** No
+  buscaba la copia que viaja dentro del binario.
+- **El binario llevaba dentro rutas de la máquina de desarrollo** (`/home/...`,
+  `C:/NuevoVol`, discos externos). Ahora se empaqueta una configuración limpia y
+  los runtimes se configuran desde **Entorno**.
+
+**Correcciones de física que no se estaban aplicando**
+
+- **La corrección espín-órbita del bandgap no se aplicaba en ningún binario
+  publicado.** La tabla de calibración ni viajaba en el paquete ni se buscaba
+  donde estaba. El cribado etiquetaba con el bandgap de PBE crudo, en silencio.
+- **El modelo reentrenado se escribía dentro de la instalación**, no en tus
+  datos: se perdía al actualizar y fallaba si la app estaba en una carpeta de
+  solo lectura. El ciclo de aprendizaje volvía a abrirse sin avisar.
+- **Radio iónico del sitio A a la coordinación equivocada.** Se usaban valores de
+  coordinación 6 donde toca coordinación 12. Familias enteras (Rb, K con Pb/Sn)
+  quedaban fuera del espacio de búsqueda por un factor de tolerancia mal
+  calculado.
+- **La celda estaba un 9.7 % dilatada** respecto a la estructura real, lo que
+  vale ~0.7 eV de error de bandgap — más que ignorar el espín-órbita.
+
+**Que ahora se dice en vez de callarse**
+
+- Los candidatos puntuados con **valores por defecto** (porque faltó una
+  predicción) quedan marcados; antes eran indistinguibles de los medidos.
+- Si un modelo no carga —causa habitual: versión de scikit-learn— se dice cuál y
+  por qué, en vez de devolver predicciones vacías.
+- Un cálculo DFT cuyo resumen no se pudo leer ya **no cuenta como convergido**.
+- El **riesgo de politipo** se marca: el factor de tolerancia dice si los iones
+  encajan en una perovskita cúbica, no si esa es la fase estable a temperatura
+  ambiente. Confirmarlo exige fonones.
+
+**Instalación desde fuentes**
+
+- `pip install -e .` traia scikit-learn 1.9, con el que los modelos incluidos no
+  se pueden cargar. El tope estaba solo en CI; ahora protege tambien al usuario.
 
 ### Nuevo en 0.4.0
 
