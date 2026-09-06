@@ -25,6 +25,7 @@ sabe cuál se usó.
 """
 from __future__ import annotations
 
+import logging
 import math
 import sys
 import warnings
@@ -48,6 +49,8 @@ from ml_surrogate.features import (
     lattice_est,
     octahedral_factor,
 )
+
+log = logging.getLogger(__name__)
 
 _PV_CENTER = 1.45
 _PV_SIGMA = 0.35
@@ -170,8 +173,15 @@ class ScreeningCascade:
                 return self._surrogate
             except Exception as e:
                 # Un modelo corrupto no debe dejar sin Tier 1: se avisa y se
-                # prueba el siguiente.
+                # prueba el siguiente. Por log ademas de `warnings`: en un
+                # servicio o en la GUI un warning de Python no va a ninguna
+                # parte, y quedarse sin Tier 1 cambia que candidatos pasan.
+                log.warning("surrogate no cargo desde %s (%s: %s)", mp, type(e).__name__, e)
                 warnings.warn(f"Cascade: surrogate no cargó desde {mp} ({e}).")
+        log.warning(
+            "sin surrogate en %s; Tier 1 omitido y el cribado pierde el filtro "
+            "de bandgap", " ni ".join(str(c) for c in candidatos),
+        )
         warnings.warn(
             "Cascade: no se encontró ningún surrogate en "
             f"{' ni '.join(str(c) for c in candidatos)}; Tier 1 omitido."

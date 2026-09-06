@@ -44,6 +44,7 @@ DFT_LEDGER_STATUSES = {
 TEXT_LEDGER_COLUMNS = {
     "candidate_id",
     "riesgo_politipo",
+    "scores_imputados",
     "formula",
     "generation_mode",
     "A_site",
@@ -759,25 +760,39 @@ class DiscoveryLoop:
         if df.empty:
             return df
         out = df.copy()
+        # `opcional`: `surrogate_energy.pkl` solo lo produce el orquestador de
+        # aprendizaje activo (scripts/active_learning_orchestrator.py) y no
+        # viaja en el binario. Que falte es normal; que falten los otros no.
         specs = {
-            "energy": ("surrogate_energy.pkl", "energy_per_atom_ml_eV", "energy_sigma_eV_atom"),
-            "meff_e": ("surrogate_meff_e.pkl", "meff_e_pred_m0", "meff_e_sigma_m0"),
-            "meff_h": ("surrogate_meff_h.pkl", "meff_h_pred_m0", "meff_h_sigma_m0"),
-            "eps_inf": ("surrogate_eps_inf.pkl", "eps_inf_pred", "eps_inf_sigma"),
+            "energy": ("surrogate_energy.pkl", "energy_per_atom_ml_eV", "energy_sigma_eV_atom", True),
+            "meff_e": ("surrogate_meff_e.pkl", "meff_e_pred_m0", "meff_e_sigma_m0", False),
+            "meff_h": ("surrogate_meff_h.pkl", "meff_h_pred_m0", "meff_h_sigma_m0", False),
+            "eps_inf": ("surrogate_eps_inf.pkl", "eps_inf_pred", "eps_inf_sigma", False),
         }
-        for _, mean_col, sigma_col in specs.values():
+        for _, mean_col, sigma_col, _opt in specs.values():
             out[mean_col] = np.nan
             out[sigma_col] = np.nan
 
         try:
             from ml_surrogate.features import build_X
             from ml_surrogate.model import SurrogateEnsemble
-        except Exception:
+        except Exception as exc:
+            # Antes se devolvía en silencio. Sin estas predicciones, tres de los
+            # términos del score caen a su valor neutro y el ranking deja de
+            # discriminar — conviene que quede dicho.
+            log.warning(
+                "sin predicciones de propiedades (%s: %s); transporte, dieléctrico "
+                "y excitón usarán su valor por defecto",
+                type(exc).__name__, exc,
+            )
             return out
 
-        for _, (filename, mean_col, sigma_col) in specs.items():
+        for _, (filename, mean_col, sigma_col, opcional) in specs.items():
             model_path = self._buscar_modelo("models", filename)
             if model_path is None:
+                nivel = log.debug if opcional else log.warning
+                nivel("modelo de propiedades ausente: %s (columna %s sin poblar)",
+                      filename, mean_col)
                 continue
             try:
                 model = SurrogateEnsemble.load(model_path)
@@ -786,7 +801,11 @@ class DiscoveryLoop:
                         out[col] = np.nan
                 X = build_X(out, model.feature_cols)
                 means, sigmas = model.predict_batch(X)
-            except Exception:
+            except Exception as exc:
+                # Causa habitual: el pickle se serializó con otra versión de
+                # scikit-learn. Se nombra, como hace monitor_api.services.ml.
+                log.warning("no se pudo usar %s (%s: %s); %s queda sin poblar",
+                            model_path.name, type(exc).__name__, exc, mean_col)
                 continue
             out[mean_col] = means
             out[sigma_col] = sigmas
@@ -805,28 +824,58 @@ class DiscoveryLoop:
         dielectric = []
         exciton = []
         exciton_mev = []
+        # Qué términos salieron de una predicción real y cuáles del valor por
+        # defecto. Los tres devuelven 0.5 cuando les falta el dato, y 0.5 no es
+        # neutro: es optimista para un material malo y pesimista para uno bueno.
+        # Sin esta columna, un score imputado es indistinguible de uno medido.
+        imputados = []
         for _, row in out.iterrows():
-            transport.append(_transport_score(row.get("meff_e_pred_m0"), row.get("meff_h_pred_m0")))
-            dielectric.append(_dielectric_score(row.get("eps_inf_pred")))
-            ex_score, ex_mev = _exciton_score(
-                row.get("meff_e_pred_m0"),
-                row.get("meff_h_pred_m0"),
-                row.get("eps_inf_pred"),
-            )
+            m_e, m_h = row.get("meff_e_pred_m0"), row.get("meff_h_pred_m0")
+            eps = row.get("eps_inf_pred")
+            hay_meff = _finite(m_e) is not None or _finite(m_h) is not None
+            hay_eps = _finite(eps) is not None
+
+            transport.append(_transport_score(m_e, m_h))
+            dielectric.append(_dielectric_score(eps))
+            ex_score, ex_mev = _exciton_score(m_e, m_h, eps)
             exciton.append(ex_score)
             exciton_mev.append(ex_mev)
+
+            faltan = []
+            if not hay_meff:
+                faltan.append("transporte")
+            if not hay_eps:
+                faltan.append("dielectrico")
+            if ex_mev is None:
+                faltan.append("exciton")
+            imputados.append(",".join(faltan))
 
         out["transport_score"] = transport
         out["dielectric_score"] = dielectric
         out["exciton_score"] = exciton
         out["exciton_binding_meV"] = exciton_mev
+        out["scores_imputados"] = imputados
+
+        n_imputados = int(sum(1 for v in imputados if v))
+        if n_imputados:
+            log.warning(
+                "%d de %d candidatos puntuados con términos por defecto (%s): "
+                "el ranking discrimina con menos información de la que parece",
+                n_imputados, len(imputados),
+                ", ".join(sorted({t for v in imputados if v for t in v.split(",")})),
+            )
+        # OJO: los dos `0.5` son marcadores de terminos nunca implementados,
+        # con pesos 0.20 y 0.10 -- el 30 % de `pv_score_ml` es una constante.
+        # Al ser constante no altera el ORDEN, asi que cambiarlo moveria los
+        # numeros publicados sin mejorar el ranking; se deja y se documenta.
+        # `dielectric_score` si se calcula, pero solo entra en `acquisition_score`.
         out["pv_score_ml"] = (
             0.25 * out["band_score"]
-            + 0.20 * 0.5
+            + 0.20 * 0.5                      # marcador, sin termino detras
             + 0.20 * out["stab_score"]
             + 0.15 * out["transport_score"]
             + 0.10 * out["exciton_score"]
-            + 0.10 * 0.5
+            + 0.10 * 0.5                      # marcador, sin termino detras
         )
         out["acquisition_score"] = (
             out["pv_score_ml"]
@@ -881,6 +930,8 @@ class DiscoveryLoop:
             # La fase no se confirma en el cribado; que el aviso viaje al ledger
             # y de ahi a la frontera y al informe.
             "riesgo_politipo",
+            # Que se vea si un score salio de una prediccion o de un valor por defecto.
+            "scores_imputados",
         ]
         for col in cols:
             if col not in ledger:

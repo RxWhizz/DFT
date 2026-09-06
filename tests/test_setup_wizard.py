@@ -1175,3 +1175,77 @@ def test_la_cascada_congelada_exige_raiz_explicita(monkeypatch):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     with pytest.raises(ValueError, match="project_root"):
         ScreeningCascade({"screening": {}})
+
+
+# ── El fallo tiene que anunciarse ─────────────────────────────────────────────
+
+
+def test_los_scores_por_defecto_quedan_marcados():
+    """0.5 no es neutro: es optimista para un material malo.
+
+    Sin la marca, un score imputado es indistinguible de uno medido.
+    """
+    import pandas as pd
+
+    from buho.discovery.engine import DiscoveryLoop
+
+    loop = DiscoveryLoop.__new__(DiscoveryLoop)
+    df = pd.DataFrame([
+        # Con predicciones completas.
+        {"candidate_id": "a", "band_score": 0.8, "stab_score": 0.7, "Eg_sigma_eV": 0.1,
+         "meff_e_pred_m0": 0.3, "meff_h_pred_m0": 0.4, "eps_inf_pred": 5.0},
+        # Sin ninguna: los tres terminos caen al valor por defecto.
+        {"candidate_id": "b", "band_score": 0.8, "stab_score": 0.7, "Eg_sigma_eV": 0.1,
+         "meff_e_pred_m0": None, "meff_h_pred_m0": None, "eps_inf_pred": None},
+    ])
+    out = loop._score_objectives(df).set_index("candidate_id")
+
+    # El que tiene predicciones no lleva marca; el que no, las lleva todas.
+    assert out.loc["a", "scores_imputados"] == ""
+    marcados = out.loc["b", "scores_imputados"]
+    for termino in ("transporte", "dielectrico", "exciton"):
+        assert termino in marcados
+
+    # Sin datos no se puede calcular la energia de enlace del exciton.
+    assert pd.isna(out.loc["b", "exciton_binding_meV"])
+
+    # Lo que hace peligroso el 0.5: "b" no tiene NINGUNA propiedad medida y
+    # aun asi puntua a menos del 2 % de "a", que las tiene todas. El score no
+    # delata la diferencia de informacion; solo la columna de marcas lo hace.
+    a, b = out.loc["a", "pv_score_ml"], out.loc["b", "pv_score_ml"]
+    assert abs(a - b) / a < 0.02, (
+        f"pv_score_ml no distingue medido de imputado: a={a:.4f} b={b:.4f}"
+    )
+
+
+def test_un_parseo_fallido_no_cuenta_como_convergido():
+    """Regresión: se marcaba converged=True con gpw_parse_error registrado.
+
+    Colaba en el recuento de la ronda y en la detección de runner atascado.
+    """
+    fuente = (ROOT / "src" / "buho" / "dft_jobs" / "collect_results.py").read_text(
+        encoding="utf-8")
+    bloque = fuente.split('row["error_message"] = f"gpw_parse_error')[1].split("def ")[0]
+    assert 'row["converged"] = True' not in bloque, (
+        "un job cuyo resumen no se pudo leer no dio la ciencia que se le pidió"
+    )
+
+
+def test_el_techo_de_sklearn_protege_al_usuario_no_solo_a_CI():  # noqa: N802
+    """Los models/*.pkl no se despicklizan con scikit-learn 1.9.
+
+    El tope estaba solo en el workflow de release: `pip install -e .` dejaba al
+    usuario sin ningún modelo, en silencio.
+    """
+    import tomllib
+
+    datos = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    deps = " ".join(datos["project"]["dependencies"])
+    assert "scikit-learn>=1.8,<1.9" in deps.replace(" ", "")
+
+
+def test_la_cascada_registra_por_log_no_solo_por_warnings():
+    """En un servicio o GUI, un `warnings.warn` no llega a nadie."""
+    fuente = (ROOT / "src" / "buho" / "screening" / "cascade.py").read_text(encoding="utf-8")
+    bloque = fuente.split("def _load_surrogate")[1].split("def _runtime")[0]
+    assert "log.warning" in bloque

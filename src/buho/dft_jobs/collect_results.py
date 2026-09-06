@@ -225,11 +225,14 @@ class ResultCollector:
             row["bandgap_preliminary_eV"] = summary.get("bandgap_eV")
         except Exception as e:
             row["error_message"] = f"gpw_parse_error: {e}"
-            # Intenta energía directa
+            # Se intenta rescatar la energía, pero NO se marca convergido: el
+            # resumen no se pudo leer, así que no hay bandgap y el job no dio
+            # la ciencia que se le pidió. Marcarlo convergido lo colaba en el
+            # recuento de la ronda —y en la deteccion de runner atascado— como
+            # si hubiera terminado bien.
             try:
                 from dft_cspbi3.postprocessing import get_total_energy
                 row["final_energy_eV"] = get_total_energy(str(gpw))
-                row["converged"] = True
             except Exception:
                 pass
 
