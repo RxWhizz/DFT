@@ -30,15 +30,28 @@ originalmente.
 
 ### Windows
 
-Descarga `dft-monitor-desktop-0.4.0-windows-x64.zip`, descomprimelo y ejecuta:
+Descarga `dft-monitor-desktop-0.4.0-windows-x64.zip`, descomprimelo **en una
+carpeta corta** (p. ej. `C:\perovowl`) y ejecuta el `.exe` desde dentro de la
+carpeta extraida:
 
 ```powershell
-Expand-Archive .\dft-monitor-desktop-0.4.0-windows-x64.zip
-.\dft-monitor-desktop-0.4.0-windows-x64\dft_monitor_flutter.exe
+Expand-Archive .\dft-monitor-desktop-0.4.0-windows-x64.zip -DestinationPath C:\perovowl
+C:\perovowl\dft-monitor-desktop-0.4.0-windows-x64\dft_monitor_flutter.exe
 ```
 
 No necesita Python, Node, Flutter ni el repositorio. El motor local viaja dentro
-de la carpeta `engine/`.
+de la carpeta `engine/`, que tiene que quedar **al lado** del `.exe`.
+
+**Ruta corta a proposito**: el motor embebido anida directorios profundos y el
+descompresor de Windows puede saltarse archivos por el limite de 260 caracteres
+si extraes a `Descargas\...`.
+
+**Si la app dice que no encuentra el motor**: casi siempre es el antivirus.
+Windows Defender pone en cuarentena binarios de PyInstaller sin firmar como
+`engine\dft-monitor-engine.exe`. Ve a *Seguridad de Windows -> Proteccion
+antivirus y contra amenazas -> Historial de proteccion* y restaura/permite el
+archivo. Alternativa: en la pestana **Diagnostico** de la app, "Seleccionar
+motor" y apunta al ejecutable a mano.
 
 ### Debian/Ubuntu
 

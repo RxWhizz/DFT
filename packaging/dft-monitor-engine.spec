@@ -1,19 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec for the embedded local engine used by the Flutter app."""
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files
 
 ROOT = Path(SPECPATH).resolve().parent
 
+# Config del generador/descubrimiento. El binario la busca como
+# `config/generator.yaml`, pero lo que se empaqueta es la variante `.dist`, SIN
+# las rutas de la maquina de desarrollo (Python de WSL, mounts de disco externo,
+# directorios absolutos). Con `config/generator.yaml` a secas, una instalacion
+# nueva heredaba `/home/luis/...` y `C:/NuevoVol/...` y fallaba de forma confusa
+# en vez de decir "no configurado, corre el wizard de Entorno".
+# PyInstaller conserva el nombre de origen, asi que se copia a un temporal ya
+# renombrado.
+_gen_dist = ROOT / "config" / "generator.dist.yaml"
+if not _gen_dist.is_file():
+    raise SystemExit(f"Falta {_gen_dist}")
+_gen_stage = Path(tempfile.mkdtemp(prefix="perovowl-spec-")) / "generator.yaml"
+shutil.copyfile(_gen_dist, _gen_stage)
+
 datas = [
     (str(ROOT / "configs" / "monitor.example.yaml"), "configs"),
-    # Config del generador/descubrimiento. `services.discovery` la busca primero
-    # en la raiz de datos del usuario y, si no esta, en el bundle. Sin esto, el
-    # bucle de descubrimiento en el binario congelado moria con FileNotFoundError
-    # en una instalacion nueva (la raiz de datos aun no tiene su copia).
-    (str(ROOT / "config" / "generator.yaml"), "config"),
+    (str(_gen_stage), "config"),
 ]
 
 estructuras = ROOT / "build" / "structures"
