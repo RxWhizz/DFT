@@ -97,12 +97,17 @@ def reset_data_root() -> None:
     _data_root = None
 
 
+#: Raíz de datos por defecto del binario cuando no hay ninguna pista. Igual que
+#: la que fija el paquete .deb en Linux, para que ambos coincidan.
+CARPETA_DATOS_USUARIO = "PEROVOWL-data"
+
+
 def data_root() -> Path:
     """Raíz de los datos del proyecto.
 
     Orden: `--data-root` → `DFT_DATA_ROOT` → el repositorio si se ejecuta desde
     el código fuente → un directorio con pinta de proyecto hacia arriba desde el
-    actual → el directorio actual.
+    actual → `~/PEROVOWL-data`.
     """
     if _data_root is not None:
         return _data_root
@@ -115,16 +120,29 @@ def data_root() -> Path:
     if not is_frozen():
         return _repo_root()
 
-    return _buscar_raiz_proyecto()
+    hallada = _buscar_raiz_proyecto()
+    if hallada is not None:
+        return hallada
+
+    # Sin pistas: una carpeta por-usuario escribible, NUNCA el directorio de
+    # trabajo. Al abrir el binario desde un acceso directo de Windows, el CWD es
+    # `C:\Windows\System32`: ahí no se puede escribir y `config/generator.yaml`
+    # no existe. `~/PEROVOWL-data` es lo mismo que usa el .deb.
+    destino = (Path.home() / CARPETA_DATOS_USUARIO).resolve()
+    try:
+        destino.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    return destino
 
 
-def _buscar_raiz_proyecto() -> Path:
-    """Busca hacia arriba desde el directorio actual algo con pinta de proyecto."""
+def _buscar_raiz_proyecto() -> Path | None:
+    """Directorio con pinta de proyecto hacia arriba desde el CWD, o None."""
     actual = Path.cwd().resolve()
     for candidato in (actual, *actual.parents):
         if any((candidato / m).is_dir() for m in MARCADORES_PROYECTO):
             return candidato
-    return actual
+    return None
 
 
 def resolve_data(rel: str | Path) -> Path:

@@ -111,13 +111,24 @@ def test_congelado_busca_una_raiz_con_pinta_de_proyecto(tmp_path, monkeypatch):
     assert paths.data_root() == proyecto.resolve()
 
 
-def test_congelado_sin_pistas_usa_el_directorio_actual(tmp_path, monkeypatch):
+def test_congelado_sin_pistas_usa_una_carpeta_del_usuario(tmp_path, monkeypatch):
+    """Nunca el CWD: al abrir desde un acceso directo de Windows es System32.
+
+    Regresión real: v0.4.0 daba `No se encuentra
+    C:\\Windows\\System32\\config\\generator.yaml` en el cribado.
+    """
     vacio = tmp_path / "vacio"
     vacio.mkdir()
+    casa = tmp_path / "home"
+    casa.mkdir()
     _congelar(monkeypatch, tmp_path / "bundle")
     monkeypatch.chdir(vacio)
+    monkeypatch.setattr(paths.Path, "home", classmethod(lambda cls: casa))
 
-    assert paths.data_root() == vacio.resolve()
+    raiz = paths.data_root()
+    assert raiz == (casa / paths.CARPETA_DATOS_USUARIO).resolve()
+    assert raiz.is_dir()          # se crea
+    assert raiz != vacio.resolve()
 
 
 def test_resolve_data_respeta_las_rutas_absolutas(tmp_path):

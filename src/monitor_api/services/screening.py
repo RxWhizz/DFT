@@ -36,7 +36,17 @@ _runs: dict[str, ScreeningRun] = {}
 # ── Configuración ────────────────────────────────────────────────────────────
 
 def config_path() -> Path:
-    return paths.resolve_data("config/generator.yaml")
+    """Config del generador: primero la del usuario, si no la empaquetada.
+
+    Sin el fallback al bundle, el cribado en el binario congelado fallaba con
+    `No se encuentra <data_root>/config/generator.yaml` en cuanto la raíz de
+    datos no tenía una copia propia — que es el caso en cualquier instalación
+    nueva. `services.discovery.config_path` ya hacía esto.
+    """
+    data_cfg = paths.resolve_data("config/generator.yaml")
+    if data_cfg.is_file():
+        return data_cfg
+    return paths.bundle_file("config", "generator.yaml")
 
 
 def load_generator_config() -> dict[str, Any]:
